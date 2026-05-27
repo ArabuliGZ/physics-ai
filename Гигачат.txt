@@ -1,0 +1,10 @@
+
+Client ID: 019e1805-73b0-7b96-8a33-84a75cf94cf3
+
+Authorization Key: MDE5ZTE4MDUtNzNiMC03Yjk2LThhMzMtODRhNzVjZjk0Y2YzOmFiYWJkMzZhLTlmMmItNDQ4NS05ZDI3LTFkNDM1ODUwYmVjMw==
+
+Scope: GIGACHAT_API_PERS
+
+Запуск:
+venv\Scripts\activate
+uvicorn main:app --reload

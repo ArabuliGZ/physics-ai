@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+
+<!-- ========================================= -->
+<!-- ===== ГЛАВНАЯ HTML СТРАНИЦА САЙТА ===== -->
+<!-- ========================================= -->
+
+<html lang="ru">
+
+<head>
+
+    <!-- Кодировка UTF-8 -->
+    <meta charset="UTF-8">
+
+    <!-- Заголовок вкладки браузера -->
+    <title>AI-репетитор по физике</title>
+
+    <!-- ================================= -->
+    <!-- ===== CSS СТИЛИ СТРАНИЦЫ ===== -->
+    <!-- ================================= -->
+
+    <style>
+
+        /* ===== ОБЩИЕ СТИЛИ BODY ===== */
+
+        body {
+
+            /* Шрифт страницы */
+            font-family: Arial;
+
+            /* Максимальная ширина контента */
+            max-width: 900px;
+
+            /* Центрирование */
+            margin: 30px auto;
+
+            /* Внутренние отступы */
+            padding: 20px;
+
+            /* Цвет фона */
+            background: #f5f5f5;
+        }
+
+        /* ===== ГЛАВНЫЙ ЗАГОЛОВОК ===== */
+
+        h1 {
+
+            text-align: center;
+        }
+
+        /* ===== ОКНО ЧАТА ===== */
+
+        .chat {
+
+            background: white;
+
+            border-radius: 10px;
+
+            padding: 20px;
+
+            min-height: 300px;
+
+            margin-bottom: 20px;
+
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        /* ===== ОБЩИЙ СТИЛЬ СООБЩЕНИЙ ===== */
+
+        .message {
+
+            padding: 12px;
+
+            border-radius: 10px;
+
+            margin-bottom: 15px;
+
+            /* Сохраняем переносы строк */
+            white-space: pre-wrap;
+        }
+
+        /* ===== СООБЩЕНИЕ ПОЛЬЗОВАТЕЛЯ ===== */
+
+		.user {
+
+ 		   background: #dbeafe;
+
+  		   margin-left: 120px;
+
+  		   text-align: right;
+		}
+
+        /* ===== СООБЩЕНИЕ AI ===== */
+
+		.assistant {
+
+ 	       background: #e5e7eb;
+
+ 	       margin-right: 120px;
+
+  	       text-align: left;
+		}
+
+        /* ===== ПОЛЯ ВВОДА ===== */
+
+        textarea {
+
+            width: 100%;
+
+            padding: 10px;
+
+            border-radius: 8px;
+        }
+
+        /* ===== ВЫПАДАЮЩИЕ СПИСКИ ===== */
+
+        select {
+
+            padding: 5px;
+
+            margin-right: 10px;
+        }
+
+        /* ===== КНОПКА ===== */
+
+        button {
+
+            padding: 10px 20px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            background: #2563eb;
+
+            color: white;
+
+            cursor: pointer;
+
+            font-size: 16px;
+        }
+
+        /* ===== ЭФФЕКТ НАВЕДЕНИЯ ===== */
+
+        button:hover {
+
+            background: #1d4ed8;
+        }
+
+        /* ===== БЕЛЫЕ БЛОКИ ===== */
+
+        .block {
+
+            background: white;
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            margin-bottom: 20px;
+
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+    </style>
+
+
+    <!-- ================================= -->
+    <!-- ===== НАСТРОЙКА MATHJAX ===== -->
+    <!-- ================================= -->
+
+<script>
+
+window.MathJax = {
+
+    tex: {
+
+        /* Формулы вида $ ... $ */
+        inlineMath: [['$', '$']],
+
+        /* Формулы вида $$ ... $$ */
+        displayMath: [['$$', '$$']],
+
+        /* Собственные LaTeX команды */
+        macros: {
+
+            degree: "\, ^{\\circ}"
+        }
+    }
+};
+
+</script>
+
+
+<!-- Подключение библиотеки MathJax -->
+
+<script
+src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+
+</head>
+
+
+<!-- ================================= -->
+<!-- ===== ТЕЛО СТРАНИЦЫ ===== -->
+<!-- ================================= -->
+
+<body>
+
+    <!-- Заголовок сайта -->
+
+    <h1>AI-репетитор по физике</h1>
+
+
+    <!-- ================================= -->
+    <!-- ===== ОБЛАСТЬ ЧАТА ===== -->
+    <!-- ================================= -->
+
+    <div class="chat" id="chat"></div>
+
+
+    <!-- ================================= -->
+    <!-- ===== ВЫБОР ЗАДАЧИ ===== -->
+    <!-- ================================= -->
+
+    <div class="block">
+
+        <h3>Способ выбора задачи</h3>
+
+
+        <!-- ===== РЕЖИМ РУЧНОГО ВВОДА ===== -->
+
+        <label>
+
+            <input
+                type="radio"
+                name="mode"
+                value="manual"
+                checked
+                onclick="switchMode()"
+            >
+
+            Ввести условие вручную
+
+        </label>
+
+        <br><br>
+
+
+        <!-- ===== РЕЖИМ ВЫБОРА ИЗ БАЗЫ ===== -->
+
+        <label>
+
+            <input
+                type="radio"
+                name="mode"
+                value="select"
+                onclick="switchMode()"
+            >
+
+            Выбрать задачу
+
+        </label>
+
+        <hr>
+
+
+        <!-- ================================= -->
+        <!-- ===== УСЛОВИЕ ЗАДАЧИ ===== -->
+        <!-- ================================= -->
+
+	    <div class="block">
+
+            <h3>Условие задачи</h3>
+
+
+            <!-- ===== РУЧНОЙ ВВОД ===== -->
+
+            <textarea
+                id="problem"
+                rows="5"
+            ></textarea>
+
+
+            <!-- ===== ОТОБРАЖЕНИЕ ВЫБРАННОЙ ЗАДАЧИ ===== -->
+
+            <div
+                id="problem_view"
+                class="block"
+                style="display:none;"
+            ></div>
+
+
+            <!-- ===== БЛОК ДЛЯ КАРТИНКИ ===== -->
+
+            <div
+                id="problem_image"
+
+                style="
+                    margin-top:20px;
+                    text-align:center;
+                "
+            ></div>
+
+        </div>
+
+
+        <!-- Блок ручного режима -->
+
+        <div id="manual_block"></div>
+
+
+        <!-- ================================= -->
+        <!-- ===== ВЫБОР ИЗ БАЗЫ ===== -->
+        <!-- ================================= -->
+
+        <div id="select_block" style="display:none;">
+
+            <h3>Выбор задачи</h3>
+
+
+            <!-- ===== ВЫБОР КЛАССА ===== -->
+
+		    <select
+                id="group_select"
+                onchange="fillChapters()"
+            ></select>
+
+
+            <!-- ===== ВЫБОР ГЛАВЫ ===== -->
+
+            <select
+                id="chapter_select"
+                onchange="fillTopics()"
+            ></select>
+
+
+            <!-- ===== ВЫБОР ТЕМЫ ===== -->
+
+            <select
+                id="topic_select"
+                onchange="fillTasks()"
+            ></select>
+
+
+            <!-- ===== ВЫБОР НОМЕРА ЗАДАЧИ ===== -->
+
+            <select
+                id="task_select"
+                onchange="showSelectedTask()"
+            ></select>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================= -->
+    <!-- ===== РЕШЕНИЕ УЧЕНИКА ===== -->
+    <!-- ================================= -->
+
+    <div class="block">
+
+        <h3>Решение ученика</h3>
+
+        <textarea
+            id="solution"
+            rows="8"
+        ></textarea>
+
+        <br><br>
+
+
+        <!-- Кнопка отправки -->
+
+        <button onclick="checkSolution()">
+
+            Отправить
+
+        </button>
+
+    </div>
+
+
+<!-- ================================= -->
+<!-- ===== JAVASCRIPT ЛОГИКА ===== -->
+<!-- ================================= -->
+
+<script>
+
+//
+// Массив всех задач,
+// загружается с backend
+//
+// Все задачи из базы
+let TASKS = [];
+
+// История переписки с AI
+let HISTORY = [];
+
+// ==================================
+// ===== ЗАГРУЗКА ЗАДАЧ =====
+// ==================================
+
+async function loadTasks() {
+
+    // Запрашиваем задачи у FastAPI
+
+    const response = await fetch(
+        "http://127.0.0.1:8000/tasks"
+    );
+
+    // Превращаем JSON в JS объект
+
+    TASKS = await response.json();
+
+    // Заполняем список классов
+
+    fillGroups();
+}
+
+
+// ==================================
+// ===== ЗАПОЛНЕНИЕ КЛАССОВ =====
+// ==================================
+
+function fillGroups() {
+
+    const groupSelect =
+        document.getElementById("group_select");
+
+    // Получаем уникальные группы
+
+    const groups = [
+        ...new Set(TASKS.map(t => t.group))
+    ];
+
+    groupSelect.innerHTML = "";
+
+    for (const group of groups) {
+
+        const option = document.createElement("option");
+
+        option.value = group;
+
+        option.textContent = group;
+
+        groupSelect.appendChild(option);
+    }
+
+    fillChapters();
+}
+
+
+// ==================================
+// ===== ЗАПОЛНЕНИЕ ГЛАВ =====
+// ==================================
+
+function fillChapters() {
+
+    const group =
+        document.getElementById("group_select").value;
+
+    const chapterSelect =
+        document.getElementById("chapter_select");
+
+    chapterSelect.innerHTML = "";
+
+    // Фильтруем задачи по классу
+
+    const filtered = TASKS.filter(
+        t => t.group === group
+    );
+
+    // Берем первую часть ID:
+    // 3.5.2 -> 3
+
+    const chapters = [
+        ...new Set(
+            filtered.map(
+                t => t.id.split(".")[0]
+            )
+        )
+    ];
+
+    for (const chapter of chapters) {
+
+        const option = document.createElement("option");
+
+        option.value = chapter;
+
+        option.textContent = chapter;
+
+        chapterSelect.appendChild(option);
+    }
+
+    fillTopics();
+}
+
+
+// ==================================
+// ===== ЗАПОЛНЕНИЕ ТЕМ =====
+// ==================================
+
+function fillTopics() {
+
+    const group =
+        document.getElementById("group_select").value;
+
+    const chapter =
+        document.getElementById("chapter_select").value;
+
+    const topicSelect =
+        document.getElementById("topic_select");
+
+    topicSelect.innerHTML = "";
+
+    // Фильтруем задачи
+
+    const filtered = TASKS.filter(t => {
+
+        const parts = t.id.split(".");
+
+        return (
+            t.group === group &&
+            parts[0] === chapter
+        );
+    });
+
+    // Получаем темы
+
+    const topics = [
+        ...new Set(
+            filtered.map(
+                t => t.id.split(".")[1]
+            )
+        )
+    ];
+
+    for (const topic of topics) {
+
+        const option = document.createElement("option");
+
+        option.value = topic;
+
+        option.textContent = topic;
+
+        topicSelect.appendChild(option);
+    }
+
+    if (topics.length > 0) {
+
+        topicSelect.value = topics[0];
+    }
+
+    fillTasks();
+}
+
+
+// ==================================
+// ===== ЗАПОЛНЕНИЕ ЗАДАЧ =====
+// ==================================
+
+function fillTasks() {
+
+    const group =
+        document.getElementById("group_select").value;
+
+    const chapter =
+        document.getElementById("chapter_select").value;
+
+    const topic =
+        document.getElementById("topic_select").value;
+
+    const taskSelect =
+        document.getElementById("task_select");
+
+    taskSelect.innerHTML = "";
+
+    // Фильтруем задачи
+
+    const filtered = TASKS.filter(t => {
+
+        const parts = t.id.split(".");
+
+        return (
+            t.group === group &&
+            parts[0] === chapter &&
+            parts[1] === topic
+        );
+    });
+
+    // Добавляем задачи
+
+    for (const task of filtered) {
+
+        const option = document.createElement("option");
+
+        option.value = task.id;
+
+        option.textContent =
+            task.id.split(".")[2];
+
+        taskSelect.appendChild(option);
+    }
+
+    if (filtered.length > 0) {
+
+        taskSelect.value = filtered[0].id;
+    }
+
+    showSelectedTask();
+}
+
+
+// ==================================
+// ===== ПОКАЗ ВЫБРАННОЙ ЗАДАЧИ =====
+// ==================================
+
+function showSelectedTask() {
+    HISTORY = [];
+    document.getElementById(
+        "chat"
+    ).innerHTML = "";
+    
+    const group =
+        document.getElementById("group_select").value;
+
+    const taskId =
+        document.getElementById("task_select").value;
+
+    // Ищем нужную задачу
+
+    const task = TASKS.find(t => {
+
+        return (
+            t.group === group &&
+            t.id === taskId
+        );
+    });
+
+    if (!task)
+        return;
+
+    const view =
+        document.getElementById("problem_view");
+
+    // Показываем условие
+
+    view.innerHTML = task.problem;
+
+    const imageBlock =
+        document.getElementById("problem_image");
+
+    imageBlock.innerHTML = "";
+
+    // Если есть картинка
+
+    if (task.image) {
+
+        const img = document.createElement("img");
+
+        img.src =
+            `/tasks/images/${task.group}/${task.image}.png`;
+
+        img.style.maxWidth = "100%";
+
+        img.style.borderRadius = "10px";
+
+        img.style.marginTop = "10px";
+
+        imageBlock.appendChild(img);
+    }
+
+    // Перерисовываем LaTeX
+
+    MathJax.typesetClear([view]);
+
+    MathJax.typesetPromise([view]);
+}
+
+
+// ==================================
+// ===== ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ =====
+// ==================================
+
+function switchMode() {
+
+    const mode =
+        document.querySelector(
+            'input[name="mode"]:checked'
+        ).value;
+
+    // ===== РУЧНОЙ ВВОД =====
+
+    if (mode === "manual") {
+
+        document.getElementById(
+            "manual_block"
+        ).style.display = "block";
+
+        document.getElementById(
+            "select_block"
+        ).style.display = "none";
+
+        document.getElementById(
+            "problem"
+        ).style.display = "block";
+
+        document.getElementById(
+            "problem_view"
+        ).style.display = "none";
+
+    }
+
+    // ===== ВЫБОР ИЗ БАЗЫ =====
+
+    else {
+
+        document.getElementById(
+            "manual_block"
+        ).style.display = "none";
+
+        document.getElementById(
+            "select_block"
+        ).style.display = "block";
+
+        document.getElementById(
+            "problem"
+        ).style.display = "none";
+
+        document.getElementById(
+            "problem_view"
+        ).style.display = "block";
+    }
+}
+
+
+// ==================================
+// ===== ДОБАВЛЕНИЕ СООБЩЕНИЯ =====
+// ==================================
+
+function addMessage(text, sender) {
+
+    const chat = document.getElementById("chat");
+
+    const div = document.createElement("div");
+
+    div.classList.add("message");
+
+    div.classList.add(sender);
+
+    div.innerHTML = text;
+
+    chat.appendChild(div);
+
+    // Перерисовываем формулы
+
+    MathJax.typesetPromise([div]);
+
+    // Автопрокрутка вниз
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+
+// ==================================
+// ===== ОТПРАВКА РЕШЕНИЯ =====
+// ==================================
+
+async function checkSolution() {
+
+    // Получаем условие
+
+    let problem = "";
+
+    const mode =
+        document.querySelector(
+            'input[name="mode"]:checked'
+        ).value;
+
+    if (mode === "manual") {
+
+        problem =
+            document.getElementById("problem").value;
+
+    } else {
+
+        problem =
+            document.getElementById("problem_view").innerText;
+    }
+
+    // Получаем решение ученика
+
+    const solution =
+        document.getElementById("solution").value;
+
+    // Добавляем решения в историю
+    HISTORY.push({
+        role: "user",
+        content: solution
+    });
+
+        // Добавляем сообщение ученика в чат
+
+    addMessage(  
+        solution,
+        "user"
+    );
+
+    // Чтобы юзер знал, что запрос ушел.
+    addMessage(
+        "AI анализирует решение...",
+        "assistant"
+    );
+    
+    // Отправляем запрос на backend
+    const response = await fetch(
+        "http://127.0.0.1:8000/check",
+
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+                problem: problem,
+                solution: solution,
+                history: HISTORY
+            })
+        }
+    );
+
+    // Получаем JSON ответ
+
+    const data = await response.json();
+
+    HISTORY.push({
+        role: "assistant",
+        content: data.message
+    });
+
+    // Показываем ответ AI
+
+    addMessage(
+        data.message,
+        "assistant"
+    );
+
+    // Очищаем поле ввода
+
+    document.getElementById("solution").value = "";
+}
+
+
+// ==================================
+// ===== ЗАГРУЗКА ПРИ СТАРТЕ =====
+// ==================================
+
+loadTasks();
+
+</script>
+
+</body>
+
+</html>
