@@ -20,18 +20,43 @@
 
     <style>
 
-        /* ===== ОБЩИЕ СТИЛИ BODY ===== */
+        /* ===== ОБЩИЕ СТИЛИ layout ===== */
+        .layout {
 
+            display: flex;
+
+            gap: 20px;
+
+            align-items: flex-start;
+        }
+        
+        .left-column {
+
+            flex: 1;
+        }
+
+        .right-column {
+            flex: 1;
+
+            display: flex;
+
+            flex-direction: column;
+
+            height: 80vh;
+        }
+        
+        /* ===== ОБЩИЕ СТИЛИ BODY ===== */
+        
         body {
 
             /* Шрифт страницы */
             font-family: Arial;
 
             /* Максимальная ширина контента */
-            max-width: 900px;
+            max-width: 1600px;
 
             /* Центрирование */
-            margin: 30px auto;
+            margin: 10px auto;
 
             /* Внутренние отступы */
             padding: 20px;
@@ -51,17 +76,26 @@
 
         .chat {
 
-            background: white;
+            background: #f9fafb;
 
             border-radius: 10px;
 
             padding: 20px;
 
-            min-height: 300px;
+            
+            overflow-y: auto;
 
             margin-bottom: 20px;
 
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+
+            flex: 1;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 10px;
         }
 
         /* ===== ОБЩИЙ СТИЛЬ СООБЩЕНИЙ ===== */
@@ -74,30 +108,35 @@
 
             margin-bottom: 15px;
 
-            /* Сохраняем переносы строк */
             white-space: pre-wrap;
+
+            word-break: break-word;
+
+            
         }
 
         /* ===== СООБЩЕНИЕ ПОЛЬЗОВАТЕЛЯ ===== */
 
 		.user {
 
- 		   background: #dbeafe;
+ 		   background: #2563eb;
 
-  		   margin-left: 120px;
+           color: white;
 
-  		   text-align: right;
+  		   margin-left: auto;
 		}
 
         /* ===== СООБЩЕНИЕ AI ===== */
 
 		.assistant {
 
- 	       background: #e5e7eb;
+ 	       background: white;
 
- 	       margin-right: 120px;
+           border: 1px solid #e5e7eb;
 
-  	       text-align: left;
+ 	       margin-right: auto;
+
+  	       
 		}
 
         /* ===== ПОЛЯ ВВОДА ===== */
@@ -109,6 +148,14 @@
             padding: 10px;
 
             border-radius: 8px;
+
+            box-sizing: border-box;
+
+            min-height: 120px;
+
+            overflow-y: hidden;
+
+            resize: none;
         }
 
         /* ===== ВЫПАДАЮЩИЕ СПИСКИ ===== */
@@ -210,182 +257,194 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
     <h1>AI-репетитор по физике</h1>
 
+    <div class="layout">
 
     <!-- ================================= -->
     <!-- ===== ОБЛАСТЬ ЧАТА ===== -->
     <!-- ================================= -->
 
-    <div class="chat" id="chat"></div>
-
-
-    <!-- ================================= -->
-    <!-- ===== ВЫБОР ЗАДАЧИ ===== -->
-    <!-- ================================= -->
-
-    <div class="block">
-
-        <h3>Способ выбора задачи</h3>
-
-
-        <!-- ===== РЕЖИМ РУЧНОГО ВВОДА ===== -->
-
-        <label>
-
-            <input
-                type="radio"
-                name="mode"
-                value="manual"
-                checked
-                onclick="switchMode()"
-            >
-
-            Ввести условие вручную
-
-        </label>
-
-        <br><br>
-
-
-        <!-- ===== РЕЖИМ ВЫБОРА ИЗ БАЗЫ ===== -->
-
-        <label>
-
-            <input
-                type="radio"
-                name="mode"
-                value="select"
-                onclick="switchMode()"
-            >
-
-            Выбрать задачу
-
-        </label>
-
-        <hr>
-
-
+    <div class="left-column">
+        
         <!-- ================================= -->
-        <!-- ===== УСЛОВИЕ ЗАДАЧИ ===== -->
+        <!-- ===== ВЫБОР ЗАДАЧИ ===== -->
         <!-- ================================= -->
 
-	    <div class="block">
+        <div class="block">
 
-            <h3>Условие задачи</h3>
+            <h3>Способ выбора задачи</h3>
 
 
-            <!-- ===== РУЧНОЙ ВВОД ===== -->
+            <!-- ===== РЕЖИМ РУЧНОГО ВВОДА ===== -->
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="mode"
+                    value="manual"
+                    checked
+                    onclick="switchMode()"
+                >
+
+                Ввести условие вручную
+
+            </label>
+
+            <br><br>
+
+
+            <!-- ===== РЕЖИМ ВЫБОРА ИЗ БАЗЫ ===== -->
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="mode"
+                    value="select"
+                    onclick="switchMode()"
+                >
+
+                Выбрать задачу
+
+            </label>
+
+            <hr>
+
+
+            <!-- ================================= -->
+            <!-- ===== УСЛОВИЕ ЗАДАЧИ ===== -->
+            <!-- ================================= -->
+
+            <div class="block">
+
+                <h3>Условие задачи</h3>
+
+
+                <!-- ===== РУЧНОЙ ВВОД ===== -->
+
+                <textarea
+                    id="problem"
+                    rows="5"
+                ></textarea>
+
+
+                <!-- ===== ОТОБРАЖЕНИЕ ВЫБРАННОЙ ЗАДАЧИ ===== -->
+
+                <div
+                    id="problem_view"
+                    class="block"
+                    style="display:none;"
+                ></div>
+
+
+                <!-- ===== БЛОК ДЛЯ КАРТИНКИ ===== -->
+
+                <div
+                    id="problem_image"
+
+                    style="
+                        margin-top:20px;
+                        text-align:center;
+                    "
+                ></div>
+
+            </div>
+
+
+            <!-- Блок ручного режима -->
+
+            <div id="manual_block"></div>
+
+
+            <!-- ================================= -->
+            <!-- ===== ВЫБОР ИЗ БАЗЫ ===== -->
+            <!-- ================================= -->
+
+            <div id="select_block" style="display:none;">
+
+                <h3>Выбор задачи</h3>
+
+
+                <!-- ===== ВЫБОР КЛАССА ===== -->
+
+                <select
+                    id="group_select"
+                    onchange="fillChapters()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР ГЛАВЫ ===== -->
+
+                <select
+                    id="chapter_select"
+                    onchange="fillTopics()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР ТЕМЫ ===== -->
+
+                <select
+                    id="topic_select"
+                    onchange="fillTasks()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР НОМЕРА ЗАДАЧИ ===== -->
+
+                <select
+                    id="task_select"
+                    onchange="showSelectedTask()"
+                ></select>
+
+            </div>
+
+        </div>
+    </div>
+    
+    <div class="right-column">
+        <!-- ================================= -->
+        <!-- ===== РЕШЕНИЕ УЧЕНИКА ===== -->
+        <!-- ================================= -->
+        <div class="chat" id="chat"></div>
+        <div class="block">
+
+            <h3>Решение ученика</h3>
 
             <textarea
-                id="problem"
-                rows="5"
+                id="solution"
+                rows="1"
+                onkeydown="handleEnter(event)"
+                oninput="autoResize(this)"
             ></textarea>
 
-
-            <!-- ===== ОТОБРАЖЕНИЕ ВЫБРАННОЙ ЗАДАЧИ ===== -->
-
-            <div
-                id="problem_view"
-                class="block"
-                style="display:none;"
-            ></div>
+            <br><br>
 
 
-            <!-- ===== БЛОК ДЛЯ КАРТИНКИ ===== -->
+            <!-- Кнопка отправки -->
 
-            <div
-                id="problem_image"
+            <button onclick="checkSolution()">
 
-                style="
-                    margin-top:20px;
-                    text-align:center;
-                "
-            ></div>
+                Отправить
+
+            </button>
 
         </div>
-
-
-        <!-- Блок ручного режима -->
-
-        <div id="manual_block"></div>
-
-
-        <!-- ================================= -->
-        <!-- ===== ВЫБОР ИЗ БАЗЫ ===== -->
-        <!-- ================================= -->
-
-        <div id="select_block" style="display:none;">
-
-            <h3>Выбор задачи</h3>
-
-
-            <!-- ===== ВЫБОР КЛАССА ===== -->
-
-		    <select
-                id="group_select"
-                onchange="fillChapters()"
-            ></select>
-
-
-            <!-- ===== ВЫБОР ГЛАВЫ ===== -->
-
-            <select
-                id="chapter_select"
-                onchange="fillTopics()"
-            ></select>
-
-
-            <!-- ===== ВЫБОР ТЕМЫ ===== -->
-
-            <select
-                id="topic_select"
-                onchange="fillTasks()"
-            ></select>
-
-
-            <!-- ===== ВЫБОР НОМЕРА ЗАДАЧИ ===== -->
-
-            <select
-                id="task_select"
-                onchange="showSelectedTask()"
-            ></select>
-
-        </div>
-
     </div>
-
-
-    <!-- ================================= -->
-    <!-- ===== РЕШЕНИЕ УЧЕНИКА ===== -->
-    <!-- ================================= -->
-
-    <div class="block">
-
-        <h3>Решение ученика</h3>
-
-        <textarea
-            id="solution"
-            rows="8"
-        ></textarea>
-
-        <br><br>
-
-
-        <!-- Кнопка отправки -->
-
-        <button onclick="checkSolution()">
-
-            Отправить
-
-        </button>
-
-    </div>
-
+</div>
 
 <!-- ================================= -->
 <!-- ===== JAVASCRIPT ЛОГИКА ===== -->
 <!-- ================================= -->
 
 <script>
+
+function autoResize(textarea) {
+
+    textarea.style.height = "auto";
+
+    textarea.style.height =
+        textarea.scrollHeight + "px";
+}
 
 //
 // Массив всех задач,
@@ -400,6 +459,18 @@ let HISTORY = [];
 // ==================================
 // ===== ЗАГРУЗКА ЗАДАЧ =====
 // ==================================
+function handleEnter(event) {
+
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
+
+        event.preventDefault();
+
+        checkSolution();
+    }
+}
 
 async function loadTasks() {
 
@@ -791,9 +862,15 @@ async function checkSolution() {
 
     // Получаем решение ученика
 
-    const solution =
-        document.getElementById("solution").value;
+    const solutionInput =
+        document.getElementById("solution");
 
+    const solution =
+        solutionInput.value;
+
+    solutionInput.value = "";
+    solutionInput.style.height = "auto";
+   
     // Добавляем решения в историю
     HISTORY.push({
         role: "user",
@@ -808,10 +885,18 @@ async function checkSolution() {
     );
 
     // Чтобы юзер знал, что запрос ушел.
-    addMessage(
-        "AI анализирует решение...",
+    const loadingDiv = document.createElement("div");
+
+    loadingDiv.classList.add(
+        "message",
         "assistant"
     );
+
+    loadingDiv.innerHTML = "AI анализирует решение...";
+
+    document
+        .getElementById("chat")
+        .appendChild(loadingDiv);
     
     // Отправляем запрос на backend
     const response = await fetch(
@@ -835,23 +920,21 @@ async function checkSolution() {
 
     // Получаем JSON ответ
 
-    const data = await response.json();
+   const data = await response.json();
 
     HISTORY.push({
         role: "assistant",
         content: data.message
     });
 
-    // Показываем ответ AI
+    // Удаляем loading сообщение
+    loadingDiv.remove();
 
+    // Показываем ответ AI
     addMessage(
         data.message,
         "assistant"
     );
-
-    // Очищаем поле ввода
-
-    document.getElementById("solution").value = "";
 }
 
 
