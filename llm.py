@@ -52,8 +52,8 @@ urllib3.disable_warnings(
 # ==================================
 
 # Какую модель использовать
-# MODEL_PROVIDER = "gigachat"
-MODEL_PROVIDER = "openrouter"
+MODEL_PROVIDER = "gigachat"
+#MODEL_PROVIDER = "openrouter"
 
 # ==========================================
 # ===== КЛЮЧ АВТОРИЗАЦИИ GIGACHAT =====
@@ -230,7 +230,7 @@ def ask_openrouter(
                 "content": user_prompt
             }
         ],
-        "max_tokens": 500,
+        "max_tokens": 200,
         
         "reasoning": {
             "enabled": False
@@ -357,13 +357,6 @@ def ask_gigachat(
 
     # Выводим статус для отладки
     print("AUTH STATUS:", response.status_code)
-
-    # Выводим ответ сервера
-    print(
-        raw["choices"][0]
-        ["message"]
-        ["content"]
-    )
 
     # Преобразуем ответ в JSON
     auth_data = response.json()
