@@ -18,14 +18,14 @@ import json
 import urllib3
 
 from dotenv import load_dotenv
+
 load_dotenv()
+
+from config import *
+
 # ==================================
 # ===== ОТКЛЮЧЕНИЕ ПРОКСИ =====
 # ==================================
-
-# Иногда Windows или IDE автоматически
-# подставляют прокси.
-# Это может ломать запросы к GigaChat.
 
 os.environ.pop("HTTP_PROXY", None)
 os.environ.pop("HTTPS_PROXY", None)
@@ -38,28 +38,14 @@ os.environ.pop("https_proxy", None)
 # ===== ОТКЛЮЧЕНИЕ WARNING ДЛЯ verify=False =====
 # ==================================================
 
-# verify=False отключает проверку SSL сертификата.
-# Python начинает спамить warning.
-# Мы их отключаем.
-
 urllib3.disable_warnings(
     urllib3.exceptions.InsecureRequestWarning
 )
 
-
-# ==================================
-# ===== ВЫБОР LLM ПРОВАЙДЕРА =====
-# ==================================
-
-# Какую модель использовать
-#MODEL_PROVIDER = "gigachat"
-MODEL_PROVIDER = "openrouter"
-
 # ==========================================
-# ===== КЛЮЧ АВТОРИЗАЦИИ GIGACHAT =====
+# ===== КЛЮЧИ АВТОРИЗАЦИИ =====
 # ==========================================
 
-# Base64 ключ из личного кабинета Гигачата и Router
 GIGACHAT_AUTH_KEY = os.getenv(
     "GIGACHAT_AUTH_KEY"
 )
@@ -72,10 +58,6 @@ OPENROUTER_API_KEY = os.getenv(
 # ==================================
 # ===== SYSTEM PROMPT ДЛЯ LLM =====
 # ==================================
-
-# Это главный системный промпт.
-# Он определяет поведение модели.
-
 
 SYSTEM_PROMPT = """
 Ты — репетитор по физике.
@@ -145,153 +127,45 @@ SYSTEM_PROMPT = """
 - максимум 200 символов
 """
 
-# ==========================================
-# ===== ОСНОВНАЯ ФУНКЦИЯ ОБРАЩЕНИЯ К LLM =====
-# ==========================================
 
-def ask_llm(
-    problem_text,
-    solution_text,
+# ==================================
+# ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+# ==================================
+
+def build_system_prompt(hint_level):
+
+    return SYSTEM_PROMPT.format(
+        hint_level=hint_level
+    )
+
+
+def build_messages(
+    system_prompt,
     history,
-    hint_level
+    user_prompt
 ):
 
-    # Если выбран GigaChat
-    if MODEL_PROVIDER == "gigachat":
+    return [
 
-        return ask_gigachat(
-            problem_text,
-            solution_text,
-            history,
-            hint_level
-        )
+        {
+            "role": "system",
+            "content": system_prompt
+        },
 
-    # Заглушка для YandexGPT
-    elif MODEL_PROVIDER == "yandex":
+        *history,
 
-        return {
-            "status": "error",
-            "message": "YandexGPT пока не подключен"
+        {
+            "role": "user",
+            "content": user_prompt
         }
-
-    # Заглушка для Qwen
-    elif MODEL_PROVIDER == "qwen":
-
-        return {
-            "status": "error",
-            "message": "Qwen пока не подключен"
-        }
-
-    elif MODEL_PROVIDER == "openrouter":
-        return ask_openrouter(
-            problem_text,
-            solution_text,
-            history,
-            hint_level
-        )
-
-    # Если provider неизвестен
-    else:
-
-        return {
-            "status": "error",
-            "message": "Неизвестный provider"
-        }
-
-# ==========================================
-# ===== ФУНКЦИЯ ЗАПРОСА К OpenRouter =====
-# ==========================================
-def ask_openrouter(
-    problem_text,
-    solution_text,
-    history,
-    hint_level
-):
-
-    # Адрес OpenRouter API
-    url = (
-        "https://openrouter.ai/api/v1/"
-        "chat/completions"
-    )
-
-    # Текст нового сообщения
-    user_prompt = f"""
-Задача:
-{problem_text}
-
-Решение ученика:
-{solution_text}
-"""
-
-    # Тело запроса
-    system_prompt = SYSTEM_PROMPT.format(hint_level=hint_level)
-
-    payload = {
-
-        # Модель
-        #"model": "qwen/qwen3.7-max",
-        "model": "openrouter/auto",
-        
-        # История сообщений
-        "messages": [
-
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-
-            *history,
-
-            {
-                "role": "user",
-                "content": user_prompt
-            }
-        ],
-
-        "max_tokens": 200,
-    }
-
-    # Заголовки
-    headers = {
-
-        "Authorization":
-            f"Bearer {OPENROUTER_API_KEY}",
-
-        "Content-Type":
-            "application/json"
-    }
-
-    # Отправляем запрос
-    response = requests.post(
-        url,
-        json=payload,
-        headers=headers
-    )
-
-    print("OPENROUTER STATUS:",
-          response.status_code)
+    ]
 
 
+def clean_json_response(content):
 
-    raw = response.json()
+    if content is None:
 
-    if "choices" not in raw:
-
-        print(raw)
-
-        return {
-            "status": "error",
-            "message": str(raw)
-        }
-
-    # Текст ответа модели
-    content = (
-        raw["choices"][0]
-           ["message"]
-           ["content"]
-    )
-
-    print(content)
+        return None
 
     content = content.replace(
         "```json",
@@ -303,9 +177,21 @@ def ask_openrouter(
         ""
     )
 
-    content = content.strip()
+    return content.strip()
 
-    # Пытаемся распарсить JSON
+def parse_json_response(content):
+
+    content = clean_json_response(
+        content
+    )
+
+    if content is None:
+
+        return {
+            "status": "error",
+            "message": "Модель не вернула текст"
+        }
+
     try:
 
         return json.loads(content)
@@ -316,6 +202,147 @@ def ask_openrouter(
             "status": "error",
             "message": content
         }
+
+# ==========================================
+# ===== ОСНОВНАЯ ФУНКЦИЯ ОБРАЩЕНИЯ К LLM =====
+# ==========================================
+
+def ask_llm(
+    problem_text,
+    solution_text,
+    history,
+    hint_level
+):
+
+    if MODEL_PROVIDER == "gigachat":
+
+        return ask_gigachat(
+            problem_text,
+            solution_text,
+            history,
+            hint_level
+        )
+
+    elif MODEL_PROVIDER == "yandex":
+
+        return {
+            "status": "error",
+            "message": "YandexGPT пока не подключен"
+        }
+
+    elif MODEL_PROVIDER == "qwen":
+
+        return {
+            "status": "error",
+            "message": "Qwen пока не подключен"
+        }
+
+    elif MODEL_PROVIDER == "openrouter":
+
+        return ask_openrouter(
+            problem_text,
+            solution_text,
+            history,
+            hint_level
+        )
+
+    else:
+
+        return {
+            "status": "error",
+            "message": "Неизвестный provider"
+        }
+
+
+
+
+# ==========================================
+# ===== ФУНКЦИЯ ЗАПРОСА К OPENROUTER =====
+# ==========================================
+
+def ask_openrouter(
+    problem_text,
+    solution_text,
+    history,
+    hint_level
+):
+
+    url = (
+        "https://openrouter.ai/api/v1/"
+        "chat/completions"
+    )
+
+    user_prompt = f"""
+Задача:
+{problem_text}
+
+Решение ученика:
+{solution_text}
+"""
+
+    system_prompt = build_system_prompt(
+        hint_level
+    )
+
+    payload = {
+
+        # "model": "qwen/qwen3.7-max",
+        "model": OPENROUTER_MODEL,
+
+        "messages": build_messages(
+            system_prompt,
+            history,
+            user_prompt
+        ),
+
+        "max_tokens": MAX_TOKENS
+    }
+
+    headers = {
+
+        "Authorization":
+            f"Bearer {OPENROUTER_API_KEY}",
+
+        "Content-Type":
+            "application/json"
+    }
+
+    response = requests.post(
+        url,
+        json=payload,
+        headers=headers
+    )
+
+    print(
+        "OPENROUTER STATUS:",
+        response.status_code
+    )
+
+    raw = response.json()
+
+    if "choices" not in raw:
+
+        error_message = (
+            raw.get("error", {})
+            .get("message",
+                    "Ошибка OpenRouter")
+        )
+
+        return {
+            "status": "error",
+            "message": error_message
+        }
+
+    content = (
+        raw["choices"][0]
+           ["message"]
+           ["content"]
+    )
+
+    return parse_json_response(
+            content
+        )
+
 
 # ==========================================
 # ===== ФУНКЦИЯ ЗАПРОСА К GIGACHAT =====
@@ -332,63 +359,50 @@ def ask_gigachat(
     # ===== ПОЛУЧЕНИЕ ACCESS TOKEN =====
     # ==================================
 
-    # URL авторизации
     auth_url = (
         "https://ngw.devices.sberbank.ru:9443/"
         "api/v2/oauth"
     )
 
-    # Что запрашиваем
     auth_payload = {
         "scope": "GIGACHAT_API_PERS"
     }
 
-    # Заголовки авторизации
     auth_headers = {
 
-        # Тип данных
         "Content-Type":
             "application/x-www-form-urlencoded",
 
-        # Хотим получить JSON
         "Accept":
             "application/json",
 
-        # Уникальный ID запроса
         "RqUID":
             str(uuid.uuid4()),
 
-        # Basic авторизация
         "Authorization":
             f"Basic {GIGACHAT_AUTH_KEY}"
     }
 
-    # Отправляем POST запрос
     response = requests.post(
 
-        # URL
         auth_url,
 
-        # Заголовки
         headers=auth_headers,
 
-        # Данные
         data=auth_payload,
 
-        # Отключаем SSL проверку
         verify=False,
 
-        # Отключаем прокси
         proxies={}
     )
 
-    # Выводим статус для отладки
-    print("AUTH STATUS:", response.status_code)
+    print(
+        "AUTH STATUS:",
+        response.status_code
+    )
 
-    # Преобразуем ответ в JSON
     auth_data = response.json()
 
-    # Достаем access token
     access_token = auth_data["access_token"]
 
 
@@ -396,13 +410,11 @@ def ask_gigachat(
     # ===== ЗАПРОС К МОДЕЛИ =====
     # ==================================
 
-    # URL chat API
     chat_url = (
         "https://gigachat.devices.sberbank.ru/"
         "api/v1/chat/completions"
     )
 
-    # Формируем prompt для пользователя
     user_prompt = f"""
 Задача:
 {problem_text}
@@ -411,52 +423,32 @@ def ask_gigachat(
 {solution_text}
 """
 
-    # Тело запроса
-    system_prompt = SYSTEM_PROMPT.format(
-        hint_level=hint_level
+    system_prompt = build_system_prompt(
+        hint_level
     )
 
     chat_payload = {
 
-        # Какая модель используется
-        "model": "GigaChat",
+        "model": GIGACHAT_MODEL,
 
-        # История сообщений
-        "messages": [
+        "messages": build_messages(
+            system_prompt,
+            history,
+            user_prompt
+        ),
 
-            # SYSTEM PROMPT
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            
-            *history,
-
-            # Сообщение пользователя
-            {
-                "role": "user",
-                "content": user_prompt
-            }
-        ],
-
-        # Температура:
-        # маленькая = более стабильные ответы
-        "temperature": 0.2
+        "temperature": TEMPERATURE
     }
 
-    # Заголовки запроса
     chat_headers = {
 
-        # Bearer токен авторизации
         "Authorization":
             f"Bearer {access_token}",
 
-        # Отправляем JSON
         "Content-Type":
             "application/json"
     }
 
-    #####TEST
     print("\n===== MESSAGES =====")
 
     for msg in chat_payload["messages"]:
@@ -465,69 +457,36 @@ def ask_gigachat(
         print(msg["content"])
 
     print("\n====================\n")
- #####TEST
 
-
-    # Отправляем запрос к модели
     chat_response = requests.post(
 
-        # URL API
         chat_url,
 
-        # JSON тело
         json=chat_payload,
 
-        # Заголовки
         headers=chat_headers,
 
-        # SSL off
         verify=False,
 
-        # Без прокси
         proxies={}
     )
 
-    # Статус ответа
-    print("CHAT STATUS:", chat_response.status_code)
+    print(
+        "CHAT STATUS:",
+        chat_response.status_code
+    )
 
-    # Полный ответ сервера
     print(chat_response.text)
 
-    # Переводим ответ в JSON
     raw = chat_response.json()
 
-    # Достаем текст ответа модели
     content = (
         raw["choices"][0]
            ["message"]
            ["content"]
     )
 
-    # ==================================
-    # ===== ПАРСИНГ JSON ОТ МОДЕЛИ =====
-    # ==================================
-    content = content.replace(
-        "```json",
-        ""
+    return parse_json_response(
+        content
     )
 
-    content = content.replace(
-        "```",
-        ""
-    )
-
-    content = content.strip()
-    try:
-
-        # Пробуем превратить строку в JSON
-        return json.loads(content)
-
-    except Exception:
-
-        # Если модель ответила не JSON,
-        # возвращаем ошибку
-
-        return {
-            "status": "error",
-            "message": content
-        }
