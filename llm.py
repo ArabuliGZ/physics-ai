@@ -466,8 +466,6 @@ def ask_gigachat(
 
         headers=chat_headers,
 
-        verify=False,
-
         proxies={}
     )
 

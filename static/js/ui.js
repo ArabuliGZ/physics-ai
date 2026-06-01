@@ -78,3 +78,79 @@ function switchMode() {
         ).style.display = "block";
     }
 }
+
+const imageInput =
+    document.getElementById(
+        "imageInput"
+    );
+
+imageInput.addEventListener(
+    "change",
+    previewImage
+);
+
+let ATTACHED_FILE = null;
+
+function previewImage(event) {
+
+    const file =
+        event.target.files[0];
+
+    if (!file)
+        return;
+
+    ATTACHED_FILE = file;
+
+    const preview =
+        document.getElementById(
+            "imagePreview"
+        );
+
+    preview.innerHTML = "";
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.classList.add(
+        "preview-wrapper"
+    );
+
+    const img =
+        document.createElement("img");
+
+    img.src =
+        URL.createObjectURL(file);
+
+    img.classList.add(
+        "preview-image"
+    );
+
+    const remove =
+        document.createElement("button");
+
+    remove.classList.add(
+        "remove-image"
+    );
+
+    remove.innerHTML = "×";
+
+    remove.onclick = removeImage;
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(remove);
+
+    preview.appendChild(wrapper);
+}
+
+function removeImage() {
+
+    ATTACHED_FILE = null;
+
+    document.getElementById(
+        "imagePreview"
+    ).innerHTML = "";
+
+    document.getElementById(
+        "imageInput"
+    ).value = "";
+}
