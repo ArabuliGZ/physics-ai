@@ -76,11 +76,15 @@ OPENROUTER_API_KEY = os.getenv(
 # Это главный системный промпт.
 # Он определяет поведение модели.
 
+
 SYSTEM_PROMPT = """
 Ты — репетитор по физике.
 
 Твоя задача:
 помогать ученику думать самостоятельно.
+
+ТЕКУЩИЙ УРОВЕНЬ ПОДСКАЗКИ:
+{hint_level}
 
 ПРАВИЛА:
 
@@ -90,12 +94,25 @@ SYSTEM_PROMPT = """
 - НЕ пиши длинные объяснения.
 - НЕ делай полных выводов за ученика.
 
-Вместо этого:
-- давай короткие подсказки
-- задавай наводящие вопросы
-- помогай найти следующую идею
-- указывай на ошибки
-- направляй ход мысли
+УРОВНИ ПОДСКАЗОК:
+
+Уровень 0:
+- только короткий наводящий вопрос
+- никаких формул
+- никаких указаний метода
+
+Уровень 1:
+- намек на физическую идею
+- можно напомнить закон или величину
+
+Уровень 2:
+- можно подсказать следующий шаг
+- можно предложить формулу
+- но не подставлять числа
+
+Уровень 3:
+- можно описать план решения
+- но без полного решения
 
 Если ученик движется правильно:
 - кратко похвали
@@ -105,23 +122,18 @@ SYSTEM_PROMPT = """
 - объясни только конкретную ошибку
 - не раскрывай всю задачу
 
-Если ученик пишет:
-- "не понимаю"
-- "сдаюсь"
-- "не знаю"
-
-то:
-- дай более сильную подсказку
-- но все равно НЕ выдавай полное решение
+Даже на уровне 3:
+- НЕ выдавай полное решение
+- НЕ решай задачу целиком
 
 Отвечай ТОЛЬКО JSON.
 
 Формат:
 
-{
+{{
   "status": "hint",
   "message": "Какая сила вызывает ускорение?"
-}
+}}
 
 Возможные status:
 - "hint"
@@ -131,7 +143,6 @@ SYSTEM_PROMPT = """
 Ограничения:
 - максимум 2 коротких предложения
 - максимум 200 символов
-- никаких длинных решений
 """
 
 # ==========================================
@@ -141,7 +152,8 @@ SYSTEM_PROMPT = """
 def ask_llm(
     problem_text,
     solution_text,
-    history
+    history,
+    hint_level
 ):
 
     # Если выбран GigaChat
@@ -150,7 +162,8 @@ def ask_llm(
         return ask_gigachat(
             problem_text,
             solution_text,
-            history
+            history,
+            hint_level
         )
 
     # Заглушка для YandexGPT
@@ -173,7 +186,8 @@ def ask_llm(
         return ask_openrouter(
             problem_text,
             solution_text,
-            history
+            history,
+            hint_level
         )
 
     # Если provider неизвестен
@@ -190,7 +204,8 @@ def ask_llm(
 def ask_openrouter(
     problem_text,
     solution_text,
-    history
+    history,
+    hint_level
 ):
 
     # Адрес OpenRouter API
@@ -209,6 +224,8 @@ def ask_openrouter(
 """
 
     # Тело запроса
+    system_prompt = SYSTEM_PROMPT.format(hint_level=hint_level)
+
     payload = {
 
         # Модель
@@ -220,7 +237,7 @@ def ask_openrouter(
 
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT
+                "content": system_prompt
             },
 
             *history,
@@ -230,11 +247,8 @@ def ask_openrouter(
                 "content": user_prompt
             }
         ],
+
         "max_tokens": 200,
-        
-        "reasoning": {
-            "enabled": False
-        }
     }
 
     # Заголовки
@@ -279,6 +293,18 @@ def ask_openrouter(
 
     print(content)
 
+    content = content.replace(
+        "```json",
+        ""
+    )
+
+    content = content.replace(
+        "```",
+        ""
+    )
+
+    content = content.strip()
+
     # Пытаемся распарсить JSON
     try:
 
@@ -298,7 +324,8 @@ def ask_openrouter(
 def ask_gigachat(
     problem_text,
     solution_text,
-    history
+    history,
+    hint_level
 ):
 
     # ==================================
@@ -385,6 +412,10 @@ def ask_gigachat(
 """
 
     # Тело запроса
+    system_prompt = SYSTEM_PROMPT.format(
+        hint_level=hint_level
+    )
+
     chat_payload = {
 
         # Какая модель используется
@@ -396,7 +427,7 @@ def ask_gigachat(
             # SYSTEM PROMPT
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT
+                "content": system_prompt
             },
             
             *history,
@@ -475,7 +506,17 @@ def ask_gigachat(
     # ==================================
     # ===== ПАРСИНГ JSON ОТ МОДЕЛИ =====
     # ==================================
+    content = content.replace(
+        "```json",
+        ""
+    )
 
+    content = content.replace(
+        "```",
+        ""
+    )
+
+    content = content.strip()
     try:
 
         # Пробуем превратить строку в JSON

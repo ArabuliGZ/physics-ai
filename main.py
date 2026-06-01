@@ -130,6 +130,9 @@ class CheckRequest(BaseModel):
     #История общения
     history: list = []
 
+    #Уровень подсказки
+    hint_level: int
+
 
 # ======================
 # ===== API ROUTES =====
@@ -151,7 +154,8 @@ async def check(data: CheckRequest):
     result = ask_llm(
         data.problem,
         data.solution,
-        data.history
+        data.history,
+        data.hint_level
     )
 
     # Возвращаем ответ модели

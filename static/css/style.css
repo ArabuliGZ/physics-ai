@@ -77,6 +77,8 @@
             min-width: 0;
 
             height: 570px;
+
+            scrollbar-gutter: stable;
         }
 
         /* ===== ОБЩИЙ СТИЛЬ СООБЩЕНИЙ ===== */
@@ -117,11 +119,13 @@
 
             align-self: flex-start;
 
-            background: white;
+            background: transparent;
 
-            border: 1px solid #e5e7eb;
+            border: none;
 
             max-width: 75%;
+
+            padding-left: 0;
         }
 
 
@@ -310,7 +314,7 @@
 
     line-height: 0.8;
 
-    min-height: 0;
+    min-height: 14px;
 }
 
 .typing {

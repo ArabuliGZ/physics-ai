@@ -98,6 +98,32 @@ async function checkSolution() {
     const solution =
         solutionInput.value;
 
+    const weakPhrases = [
+
+            "не знаю",
+            "не понимаю",
+            "сдаюсь",
+            "помоги"
+        ];
+
+        if (
+
+            weakPhrases.some(
+                phrase =>
+                    solution
+                        .toLowerCase()
+                        .includes(phrase)
+            )
+        ) {
+
+            HINT_LEVEL =
+
+                Math.min(
+                    HINT_LEVEL + 1,
+                    3
+                );
+        }
+
     solutionInput.value = "";
 
     solutionInput.style.height = "44px";
@@ -141,11 +167,12 @@ async function checkSolution() {
 
     if (shouldAutoScroll) {
 
-        requestAnimationFrame(() => {
+        setTimeout(() => {
 
             chat.scrollTop =
                 chat.scrollHeight;
-        });
+
+        }, 30);
     }
 
     // Отправляем запрос на backend
@@ -164,7 +191,8 @@ async function checkSolution() {
 
                 problem: problem,
                 solution: solution,
-                history: HISTORY
+                history: HISTORY,
+                hint_level: HINT_LEVEL
             })
         }
     );
