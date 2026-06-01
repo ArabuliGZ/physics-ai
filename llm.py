@@ -52,8 +52,8 @@ urllib3.disable_warnings(
 # ==================================
 
 # Какую модель использовать
-MODEL_PROVIDER = "gigachat"
-#MODEL_PROVIDER = "openrouter"
+#MODEL_PROVIDER = "gigachat"
+MODEL_PROVIDER = "openrouter"
 
 # ==========================================
 # ===== КЛЮЧ АВТОРИЗАЦИИ GIGACHAT =====
@@ -212,9 +212,9 @@ def ask_openrouter(
     payload = {
 
         # Модель
-        "model":
-            "qwen/qwen3.7-max",
-
+        #"model": "qwen/qwen3.7-max",
+        "model": "openrouter/auto",
+        
         # История сообщений
         "messages": [
 
