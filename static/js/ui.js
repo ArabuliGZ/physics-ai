@@ -91,6 +91,8 @@ imageInput.addEventListener(
 
 let ATTACHED_FILE = null;
 
+let CURRENT_SOLUTION_IMAGE = null;
+
 function previewImage(event) {
 
     const file =
@@ -100,6 +102,7 @@ function previewImage(event) {
         return;
 
     ATTACHED_FILE = file;
+    CURRENT_SOLUTION_IMAGE = file;
 
     const preview =
         document.getElementById(

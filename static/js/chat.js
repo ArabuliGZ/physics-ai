@@ -102,7 +102,7 @@ async function checkSolution() {
     solutionInput.style.height = "44px";
 
     // Собираем картинку, если прикреплена
-    let imageFile = ATTACHED_FILE || null;
+    let imageFile = CURRENT_SOLUTION_IMAGE || null;
 
     // Получаем текст задачи
     const mode = document.querySelector('input[name="mode"]:checked').value;
