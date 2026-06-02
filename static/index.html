@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<!-- ========================================= -->
+<!-- ===== ГЛАВНАЯ HTML СТРАНИЦА САЙТА ===== -->
+<!-- ========================================= -->
+
+<html lang="ru"> 
+
+<head>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+    <link rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    />
+
+
+    <!-- Кодировка UTF-8 -->
+    <meta charset="UTF-8">
+
+    <!-- Заголовок вкладки браузера -->
+    <title>AI-репетитор по физике</title>
+
+    <!-- ================================= -->
+    <!-- ===== CSS СТИЛИ СТРАНИЦЫ ===== -->
+    <!-- ================================= -->
+
+    <link
+        rel="stylesheet"
+        href="/static/css/style.css"
+    />
+
+
+    <!-- ================================= -->
+    <!-- ===== НАСТРОЙКА MATHJAX ===== -->
+    <!-- ================================= -->
+
+<script>
+
+window.MathJax = {
+
+    tex: {
+
+        /* Формулы вида $ ... $ */
+        inlineMath: [['$', '$']],
+
+        /* Формулы вида $$ ... $$ */
+        displayMath: [['$$', '$$']],
+
+        /* Собственные LaTeX команды */
+        macros: {
+
+            degree: "\, ^{\\circ}"
+        }
+    }
+};
+
+</script>
+
+
+<!-- Подключение библиотеки MathJax -->
+
+<script
+src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+
+</head>
+
+<link
+    rel="icon"
+    href="/static/favicon.png"
+>
+
+<!-- ================================= -->
+<!-- ===== ТЕЛО СТРАНИЦЫ ===== -->
+<!-- ================================= -->
+
+<body>
+
+    <!-- Заголовок сайта -->
+
+    <h1>AI-репетитор по физике</h1>
+
+    <div class="layout">
+
+    <!-- ================================= -->
+    <!-- ===== ОБЛАСТЬ ЧАТА ===== -->
+    <!-- ================================= -->
+
+    <div class="left-column">
+        
+        <!-- ================================= -->
+        <!-- ===== ВЫБОР ЗАДАЧИ ===== -->
+        <!-- ================================= -->
+
+        <div class="block">
+
+            <h3>Способ выбора задачи</h3>
+
+
+            <!-- ===== РЕЖИМ РУЧНОГО ВВОДА ===== -->
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="mode"
+                    value="manual"
+                    checked
+                    onclick="switchMode()"
+                >
+
+                Ввести условие вручную
+
+            </label>
+
+            <br><br>
+
+
+            <!-- ===== РЕЖИМ ВЫБОРА ИЗ БАЗЫ ===== -->
+
+            <label>
+
+                <input
+                    type="radio"
+                    name="mode"
+                    value="select"
+                    onclick="switchMode()"
+                >
+
+                Выбрать задачу
+
+            </label>
+
+            <hr>
+
+
+            <!-- ================================= -->
+            <!-- ===== УСЛОВИЕ ЗАДАЧИ ===== -->
+            <!-- ================================= -->
+
+            <div class="block">
+
+                <h3>Условие задачи</h3>
+
+
+                <!-- ===== РУЧНОЙ ВВОД ===== -->
+
+                <textarea
+                    id="problem"
+                    rows="5"
+                ></textarea>
+
+
+                <!-- ===== ОТОБРАЖЕНИЕ ВЫБРАННОЙ ЗАДАЧИ ===== -->
+
+                <div
+                    id="problem_view"
+                    class="block"
+                    style="display:none;"
+                ></div>
+
+
+                <!-- ===== БЛОК ДЛЯ КАРТИНКИ ===== -->
+
+                <div
+                    id="problem_image"
+
+                    style="
+                        margin-top:20px;
+                        text-align:center;
+                    "
+                ></div>
+
+            </div>
+
+
+            <!-- Блок ручного режима -->
+
+            <div id="manual_block"></div>
+
+
+            <!-- ================================= -->
+            <!-- ===== ВЫБОР ИЗ БАЗЫ ===== -->
+            <!-- ================================= -->
+
+            <div id="select_block" style="display:none;">
+
+                <h3>Выбор задачи</h3>
+
+
+                <!-- ===== ВЫБОР КЛАССА ===== -->
+
+                <select
+                    id="group_select"
+                    onchange="fillChapters()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР ГЛАВЫ ===== -->
+
+                <select
+                    id="chapter_select"
+                    onchange="fillTopics()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР ТЕМЫ ===== -->
+
+                <select
+                    id="topic_select"
+                    onchange="fillTasks()"
+                ></select>
+
+
+                <!-- ===== ВЫБОР НОМЕРА ЗАДАЧИ ===== -->
+
+                <select
+                    id="task_select"
+                    onchange="showSelectedTask()"
+                ></select>
+
+            </div>
+
+        </div>
+    </div>
+    
+<div class="right-column">
+
+    <!-- ================================= -->
+    <!-- ===== ОБЛАСТЬ ЧАТА ===== -->
+    <!-- ================================= -->
+
+    <div class="chat" id="chat"></div>
+
+    <!-- ================================= -->
+    <!-- ===== ОБЛАСТЬ ВВОДА ===== -->
+    <!-- ================================= -->
+
+    <div class="input-area">
+
+        <div id="imagePreview"></div>
+
+            <div class="input-wrapper">
+
+            <label class="upload-button">
+
+                <input
+                    type="file"
+                    id="imageInput"
+                    accept="image/*"
+                    hidden
+                >
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                >
+
+                    <path
+                        d="M21.44 11.05L12.25 20.24C11.1247 21.3653 9.59848 21.9975 8.0075 21.9975C6.41652 21.9975 4.8903 21.3653 3.765 20.24C2.6397 19.1147 2.00757 17.5885 2.00757 15.9975C2.00757 14.4065 2.6397 12.8803 3.765 11.755L12.955 2.565C13.7056 1.81433 14.7237 1.39258 15.785 1.39258C16.8463 1.39258 17.8644 1.81433 18.615 2.565C19.3657 3.31566 19.7874 4.3337 19.7874 5.395C19.7874 6.4563 19.3657 7.47434 18.615 8.225L9.415 17.415C9.03967 17.7903 8.53061 18.0011 8 18.0011C7.4694 18.0011 6.96034 17.7903 6.585 17.415C6.20967 17.0397 5.99884 16.5306 5.99884 16C5.99884 15.4693 6.20967 14.9603 6.585 14.585L15.07 6.1"
+                        stroke="#6b7280"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+
+                </svg>
+
+            </label>
+
+                <textarea
+                    id="solution"
+                    rows="1"
+                    onkeydown="handleEnter(event)"
+                    oninput="autoResize(this)"
+                ></textarea>
+
+                <button
+                    class="send-button"
+                    onclick="checkSolution()"
+                >
+
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                    >
+
+                        <path
+                            d="M5 12H19"
+                            stroke="white"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+
+                        <path
+                            d="M13 6L19 12L13 18"
+                            stroke="white"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+
+                    </svg>
+
+                </button>
+
+            
+        </div>       
+    </div>
+
+</div>
+
+<script src="/static/js/ui.js"></script>
+
+<script src="/static/js/tasks.js"></script>
+
+<script src="/static/js/chat.js"></script>
+
+<script src="/static/js/main.js"></script>
+
+</body>
+
+</html>
