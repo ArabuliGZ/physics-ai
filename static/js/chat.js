@@ -59,10 +59,23 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
         });
     }
 
+    const historyMessage = {
+
+        role: "user",
+
+        content: studentSolution
+    };
+
+    if (imageBase64) {
+
+        historyMessage.image =
+            imageBase64;
+    }
+
     const payload = {
         problem: problemText,
         solution: studentSolution,
-        history: HISTORY,
+        history: HISTORY, historyMessage,
         hint_level: HINT_LEVEL,
         problem_image_base64: imageBase64
     };
@@ -101,31 +114,9 @@ async function checkSolution() {
     }
 
     // Добавляем сообщение пользователя в чат и историю
-    addMessage(solution, "user");
-    
-    if (ATTACHED_FILE) {
-        const chat = document.getElementById("chat");
-
-        const userImageDiv = document.createElement("div");
-        userImageDiv.classList.add("message", "user"); // <- важно, чтобы был класс user
-        userImageDiv.style.padding = "4px 8px"; 
-        
-        userImageDiv.innerHTML = `
-            <img
-                src="${URL.createObjectURL(ATTACHED_FILE)}"
-                class="preview-image"
-            >
-        `;
-
-        chat.appendChild(userImageDiv);
-
-        // Очистить прикреплённый файл
-        ATTACHED_FILE = null;
-        document.getElementById("imagePreview").innerHTML = "";
-        document.getElementById("imageInput").value = "";
-    }
-    
+    addUserMessage(solution, ATTACHED_FILE);
     HISTORY.push({ role: "user", content: solution });
+    ATTACHED_FILE = null; // сброс прикрепленной картинки
 
     // Показываем "AI думает..."
     const loadingDiv = document.createElement("div");
@@ -142,7 +133,11 @@ async function checkSolution() {
     document.getElementById("chat").appendChild(loadingDiv);
 
     // Отправляем решение и картинку на backend через sendSolution
+    
+    removeImage();
     const data = await sendSolution(problemText, solution, imageFile);
+    
+    
 
     // Сохраняем ответ AI в историю
     HISTORY.push({ role: "assistant", content: data.message });
@@ -154,4 +149,33 @@ async function checkSolution() {
     addMessage(data.message, "assistant");
 
     button.disabled = false;
+}
+
+function addUserMessage(text, attachedFile = null) {
+    const chat = document.getElementById("chat");
+
+    // Создаем контейнер для всего сообщения
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message", "user");
+
+    // Если есть текст, добавляем в отдельный блок
+    if (text) {
+        const textDiv = document.createElement("div");
+        textDiv.classList.add("text-content");
+        textDiv.textContent = text;
+        messageDiv.appendChild(textDiv);
+    }
+
+    // Если есть прикреплённая картинка, добавляем в один bubble
+    if (attachedFile) {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(attachedFile);
+        img.classList.add("image-message");
+        messageDiv.appendChild(img);
+    }
+
+    chat.appendChild(messageDiv);
+
+    // Автопрокрутка вниз
+    chat.scrollTop = chat.scrollHeight;
 }
