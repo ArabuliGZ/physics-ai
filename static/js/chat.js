@@ -45,177 +45,113 @@ function addMessage(text, sender) {
 // ==================================
 // ===== ОТПРАВКА РЕШЕНИЯ =====
 // ==================================
+async function sendSolution(problemText, studentSolution, attachedFile = null) {
+    let imageBase64 = null;
 
-async function checkSolution() {
-    
-    const button =
-        document.querySelector(".send-button");
-
-    if (button.disabled)
-        return;
-
-    button.disabled = true;
-
-    const chat =
-        document.getElementById("chat");
-
-    // Был ли пользователь внизу
-    // ДО любых изменений чата
-
-    const shouldAutoScroll =
-
-        chat.scrollHeight
-        - chat.scrollTop
-        - chat.clientHeight
-
-        < 100;
-
-    // Получаем условие
-
-    let problem = "";
-
-    const mode =
-        document.querySelector(
-            'input[name="mode"]:checked'
-        ).value;
-
-    if (mode === "manual") {
-
-        problem =
-            document.getElementById("problem").value;
-
-    } else {
-
-        problem =
-            document.getElementById("problem_view").innerText;
+    if (attachedFile) {
+        const reader = new FileReader();
+        await new Promise((resolve) => {
+            reader.onload = () => {
+                imageBase64 = reader.result; // "data:image/png;base64,...."
+                resolve();
+            };
+            reader.readAsDataURL(attachedFile);
+        });
     }
 
-    // Получаем решение ученика
+    const payload = {
+        problem: problemText,
+        solution: studentSolution,
+        history: HISTORY,
+        hint_level: HINT_LEVEL,
+        problem_image_base64: imageBase64
+    };
 
-    const solutionInput =
-        document.getElementById("solution");
-
-    const solution =
-        solutionInput.value;
-
-    const weakPhrases = [
-
-            "не знаю",
-            "не понимаю",
-            "сдаюсь",
-            "помоги"
-        ];
-
-        if (
-
-            weakPhrases.some(
-                phrase =>
-                    solution
-                        .toLowerCase()
-                        .includes(phrase)
-            )
-        ) {
-
-            HINT_LEVEL =
-
-                Math.min(
-                    HINT_LEVEL + 1,
-                    3
-                );
-        }
-
-    solutionInput.value = "";
-
-    solutionInput.style.height = "44px";
-
-    // Добавляем решение в историю
-
-    HISTORY.push({
-        role: "user",
-        content: solution
+    const response = await fetch("/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
     });
-
-    // Сообщение пользователя
-
-    addMessage(
-        solution,
-        "user"
-    );
-
-    // Loading сообщение
-
-    const loadingDiv = document.createElement("div");
-
-    loadingDiv.classList.add(
-        "message",
-        "assistant",
-        "loading"
-    );
-
-    loadingDiv.innerHTML = `
-        <span class="typing">
-            <span></span>
-            <span></span>
-            <span></span>
-        </span>
-    `;
-
-    chat.appendChild(loadingDiv);
-
-    // Скроллим только если
-    // пользователь был внизу
-
-    if (shouldAutoScroll) {
-
-        setTimeout(() => {
-
-            chat.scrollTop =
-                chat.scrollHeight;
-
-        }, 30);
-    }
-
-    // Отправляем запрос на backend
-
-    const response = await fetch(
-        "/check",
-
-        {
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-
-                problem: problem,
-                solution: solution,
-                history: HISTORY,
-                hint_level: HINT_LEVEL
-            })
-        }
-    );
-
-    // Получаем JSON ответ
 
     const data = await response.json();
+    return data;
+}
 
-    HISTORY.push({
-        role: "assistant",
-        content: data.message
-    });
 
-    // Удаляем loading сообщение
+async function checkSolution() {
+    const button = document.querySelector(".send-button");
+    if (button.disabled) return;
+    button.disabled = true;
 
+    const solutionInput = document.getElementById("solution");
+    const solution = solutionInput.value.trim();
+    solutionInput.value = "";
+    solutionInput.style.height = "44px";
+
+    // Собираем картинку, если прикреплена
+    let imageFile = ATTACHED_FILE || null;
+
+    // Получаем текст задачи
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    let problemText = "";
+    if (mode === "manual") {
+        problemText = document.getElementById("problem").value;
+    } else {
+        problemText = document.getElementById("problem_view").innerText;
+    }
+
+    // Добавляем сообщение пользователя в чат и историю
+    addMessage(solution, "user");
+    
+    if (ATTACHED_FILE) {
+        const chat = document.getElementById("chat");
+
+        const userImageDiv = document.createElement("div");
+        userImageDiv.classList.add("message", "user"); // <- важно, чтобы был класс user
+        userImageDiv.style.padding = "4px 8px"; 
+        
+        userImageDiv.innerHTML = `
+            <img
+                src="${URL.createObjectURL(ATTACHED_FILE)}"
+                class="preview-image"
+            >
+        `;
+
+        chat.appendChild(userImageDiv);
+
+        // Очистить прикреплённый файл
+        ATTACHED_FILE = null;
+        document.getElementById("imagePreview").innerHTML = "";
+        document.getElementById("imageInput").value = "";
+    }
+    
+    HISTORY.push({ role: "user", content: solution });
+
+    // Показываем "AI думает..."
+    const loadingDiv = document.createElement("div");
+    loadingDiv.classList.add("message-wrapper", "assistant-wrapper");
+    loadingDiv.innerHTML = `
+        <div class="message assistant loading">
+            <span class="typing">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+        </div>
+    `;
+    document.getElementById("chat").appendChild(loadingDiv);
+
+    // Отправляем решение и картинку на backend через sendSolution
+    const data = await sendSolution(problemText, solution, imageFile);
+
+    // Сохраняем ответ AI в историю
+    HISTORY.push({ role: "assistant", content: data.message });
+
+    // Убираем loading
     loadingDiv.remove();
 
-    // Ответ AI
-
-    addMessage(
-        data.message,
-        "assistant"
-    );
+    // Показываем ответ AI
+    addMessage(data.message, "assistant");
 
     button.disabled = false;
 }

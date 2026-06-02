@@ -142,23 +142,58 @@ def build_system_prompt(hint_level):
 def build_messages(
     system_prompt,
     history,
-    user_prompt
+    user_prompt,
+    image_base64=None
 ):
 
-    return [
+    messages = [
 
         {
             "role": "system",
             "content": system_prompt
-        },
-
-        *history,
-
-        {
-            "role": "user",
-            "content": user_prompt
         }
     ]
+
+    messages.extend(history)
+
+    # ===== ОБЫЧНЫЙ TEXT MODE =====
+
+    if image_base64 is None:
+
+        messages.append({
+
+            "role": "user",
+
+            "content": user_prompt
+        })
+
+    # ===== MULTIMODAL MODE =====
+
+    else:
+
+        messages.append({
+
+            "role": "user",
+
+            "content": [
+
+                {
+                    "type": "text",
+                    "text": user_prompt
+                },
+
+                {
+                    "type": "image_url",
+
+                    "image_url": {
+
+                        "url": image_base64
+                    }
+                }
+            ]
+        })
+
+    return messages
 
 
 def clean_json_response(content):
@@ -264,7 +299,8 @@ def ask_openrouter(
     problem_text,
     solution_text,
     history,
-    hint_level
+    hint_level,
+    problem_image_base64=None
 ):
 
     url = (
@@ -273,6 +309,7 @@ def ask_openrouter(
     )
 
     user_prompt = f"""
+
 Задача:
 {problem_text}
 
@@ -280,9 +317,24 @@ def ask_openrouter(
 {solution_text}
 """
 
+    # ===== ДОБАВЛЯЕМ КАРТИНКУ =====
+
+    if problem_image_base64:
+
+        user_prompt += (
+            f"\n\n"
+            f"[Картинка задачи приложена: "
+            f"{problem_image_base64[:30]}..."
+            f" (base64)]"
+        )
+
+    # ===== SYSTEM PROMPT =====
+
     system_prompt = build_system_prompt(
         hint_level
     )
+
+    # ===== PAYLOAD =====
 
     payload = {
 
@@ -298,6 +350,8 @@ def ask_openrouter(
         "max_tokens": MAX_TOKENS
     }
 
+    # ===== HEADERS =====
+
     headers = {
 
         "Authorization":
@@ -306,6 +360,8 @@ def ask_openrouter(
         "Content-Type":
             "application/json"
     }
+
+    # ===== REQUEST =====
 
     response = requests.post(
         url,
@@ -318,20 +374,30 @@ def ask_openrouter(
         response.status_code
     )
 
+    # ===== JSON =====
+
     raw = response.json()
+
+    # ===== ERROR =====
 
     if "choices" not in raw:
 
         error_message = (
             raw.get("error", {})
-            .get("message",
-                    "Ошибка OpenRouter")
+            .get(
+                "message",
+                "Ошибка OpenRouter"
+            )
         )
 
         return {
+
             "status": "error",
+
             "message": error_message
         }
+
+    # ===== CONTENT =====
 
     content = (
         raw["choices"][0]
@@ -339,9 +405,11 @@ def ask_openrouter(
            ["content"]
     )
 
+    # ===== PARSE =====
+
     return parse_json_response(
-            content
-        )
+        content
+    )
 
 
 # ==========================================

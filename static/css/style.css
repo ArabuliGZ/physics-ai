@@ -478,3 +478,24 @@
 
     padding: 0;
 }
+
+/* Баббл пользователя */
+.image-message {
+    width: 72px;
+    height: 72px;
+    padding: 0;               /* убираем внутренние отступы */
+    margin: 2px 0;            /* минимальные отступы между сообщениями */
+    overflow: hidden;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;      /* вертикальное центрирование */
+    justify-content: center;  /* горизонтальное центрирование */
+    box-sizing: border-box;   /* чтобы ширина/высота учитывала бордер */
+}
+
+.image-message img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;        /* масштабируем картинку без искажений */
+    display: block;
+}

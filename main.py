@@ -126,12 +126,15 @@ class CheckRequest(BaseModel):
 
     # Решение ученика
     solution: str
-    
-    #История общения
+
+    # История общения
     history: list = []
 
-    #Уровень подсказки
+    # Уровень подсказки
     hint_level: int
+
+    # Картинка
+    problem_image_base64: str | None = None
 
 
 # ======================
@@ -151,6 +154,17 @@ def home():
 async def check(data: CheckRequest):
 
     # Отправляем задачу и решение в LLM
+    print("\n===== IMAGE =====")
+
+    print(
+        data.problem_image_base64[:100]
+        if data.problem_image_base64
+        else "NO IMAGE"
+    )
+
+    print("=================\n")
+
+
     result = ask_llm(
         data.problem,
         data.solution,
