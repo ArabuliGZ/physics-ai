@@ -246,7 +246,8 @@ def ask_llm(
     problem_text,
     solution_text,
     history,
-    hint_level
+    hint_level,
+    problem_image_base64=None
 ):
 
     if MODEL_PROVIDER == "gigachat":
@@ -255,7 +256,8 @@ def ask_llm(
             problem_text,
             solution_text,
             history,
-            hint_level
+            hint_level,
+            problem_image_base64
         )
 
     elif MODEL_PROVIDER == "yandex":
@@ -278,7 +280,8 @@ def ask_llm(
             problem_text,
             solution_text,
             history,
-            hint_level
+            hint_level,
+            problem_image_base64
         )
 
     else:
@@ -319,15 +322,6 @@ def ask_openrouter(
 
     # ===== ДОБАВЛЯЕМ КАРТИНКУ =====
 
-    if problem_image_base64:
-
-        user_prompt += (
-            f"\n\n"
-            f"[Картинка задачи приложена: "
-            f"{problem_image_base64[:30]}..."
-            f" (base64)]"
-        )
-
     # ===== SYSTEM PROMPT =====
 
     system_prompt = build_system_prompt(
@@ -344,7 +338,8 @@ def ask_openrouter(
         "messages": build_messages(
             system_prompt,
             history,
-            user_prompt
+            user_prompt,
+            problem_image_base64
         ),
 
         "max_tokens": MAX_TOKENS
@@ -377,7 +372,8 @@ def ask_openrouter(
     # ===== JSON =====
 
     raw = response.json()
-
+    print(raw)
+    
     # ===== ERROR =====
 
     if "choices" not in raw:
@@ -420,7 +416,8 @@ def ask_gigachat(
     problem_text,
     solution_text,
     history,
-    hint_level
+    hint_level,
+    problem_image_base64=None
 ):
 
     # ==================================
@@ -502,7 +499,8 @@ def ask_gigachat(
         "messages": build_messages(
             system_prompt,
             history,
-            user_prompt
+            user_prompt,
+            problem_image_base64
         ),
 
         "temperature": TEMPERATURE

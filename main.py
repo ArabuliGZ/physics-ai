@@ -169,7 +169,8 @@ async def check(data: CheckRequest):
         data.problem,
         data.solution,
         data.history,
-        data.hint_level
+        data.hint_level,
+        data.problem_image_base64
     )
 
     # Возвращаем ответ модели
