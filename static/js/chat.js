@@ -27,8 +27,7 @@ function addMessage(text, sender) {
 
     chat.appendChild(div);
 
-    // Перерисовываем формулы
-
+    MathJax.typesetClear([div]);
     MathJax.typesetPromise([div]);
 
     // Автоскролл только если
@@ -59,23 +58,10 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
         });
     }
 
-    const historyMessage = {
-
-        role: "user",
-
-        content: studentSolution
-    };
-
-    if (imageBase64) {
-
-        historyMessage.image =
-            imageBase64;
-    }
-
     const payload = {
         problem: problemText,
         solution: studentSolution,
-        history: HISTORY, historyMessage,
+        history: HISTORY,
         hint_level: HINT_LEVEL,
         problem_image_base64: imageBase64
     };
@@ -132,6 +118,10 @@ async function checkSolution() {
     `;
     document.getElementById("chat").appendChild(loadingDiv);
 
+    const chat = document.getElementById("chat");
+
+    chat.scrollTop = chat.scrollHeight;
+    
     // Отправляем решение и картинку на backend через sendSolution
     
     removeImage();
@@ -162,8 +152,9 @@ function addUserMessage(text, attachedFile = null) {
     if (text) {
         const textDiv = document.createElement("div");
         textDiv.classList.add("text-content");
-        textDiv.textContent = text;
+        textDiv.innerHTML = text;
         messageDiv.appendChild(textDiv);
+        MathJax.typesetPromise([textDiv]);
     }
 
     // Если есть прикреплённая картинка, добавляем в один bubble

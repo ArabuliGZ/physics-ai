@@ -40,6 +40,8 @@
     <!-- ===== НАСТРОЙКА MATHJAX ===== -->
     <!-- ================================= -->
 
+
+
 <script>
 
 window.MathJax = {
@@ -47,11 +49,15 @@ window.MathJax = {
     tex: {
 
         /* Формулы вида $ ... $ */
-        inlineMath: [['$', '$']],
-
-        /* Формулы вида $$ ... $$ */
-        displayMath: [['$$', '$$']],
-
+        inlineMath: [
+            ['$', '$'],
+            ['\\(', '\\)']
+        ],
+        displayMath: [
+            ['$$', '$$'],
+            ['\\[', '\\]']
+        ],
+        
         /* Собственные LaTeX команды */
         macros: {
 
@@ -62,12 +68,10 @@ window.MathJax = {
 
 </script>
 
-
-<!-- Подключение библиотеки MathJax -->
-
 <script
 src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 </script>
+
 
 </head>
 

@@ -179,7 +179,7 @@ def build_messages(
 
                 {
                     "type": "text",
-                    "text": user_prompt
+                    "text": user_prompt or "Проанализируй изображение."
                 },
 
                 {
@@ -250,9 +250,9 @@ def ask_llm(
     problem_image_base64=None
 ):
 
-    if MODEL_PROVIDER == "gigachat":
+    if MODEL_PROVIDER == "openrouter":
 
-        return ask_gigachat(
+        return ask_openrouter(
             problem_text,
             solution_text,
             history,
@@ -274,15 +274,7 @@ def ask_llm(
             "message": "Qwen пока не подключен"
         }
 
-    elif MODEL_PROVIDER == "openrouter":
 
-        return ask_openrouter(
-            problem_text,
-            solution_text,
-            history,
-            hint_level,
-            problem_image_base64
-        )
 
     else:
 
@@ -470,87 +462,4 @@ def ask_gigachat(
 
     access_token = auth_data["access_token"]
 
-
-    # ==================================
-    # ===== ЗАПРОС К МОДЕЛИ =====
-    # ==================================
-
-    chat_url = (
-        "https://gigachat.devices.sberbank.ru/"
-        "api/v1/chat/completions"
-    )
-
-    user_prompt = f"""
-Задача:
-{problem_text}
-
-Решение ученика:
-{solution_text}
-"""
-
-    system_prompt = build_system_prompt(
-        hint_level
-    )
-
-    chat_payload = {
-
-        "model": GIGACHAT_MODEL,
-
-        "messages": build_messages(
-            system_prompt,
-            history,
-            user_prompt,
-            problem_image_base64
-        ),
-
-        "temperature": TEMPERATURE
-    }
-
-    chat_headers = {
-
-        "Authorization":
-            f"Bearer {access_token}",
-
-        "Content-Type":
-            "application/json"
-    }
-
-    print("\n===== MESSAGES =====")
-
-    for msg in chat_payload["messages"]:
-
-        print("\nROLE:", msg["role"])
-        print(msg["content"])
-
-    print("\n====================\n")
-
-    chat_response = requests.post(
-
-        chat_url,
-
-        json=chat_payload,
-
-        headers=chat_headers,
-
-        proxies={}
-    )
-
-    print(
-        "CHAT STATUS:",
-        chat_response.status_code
-    )
-
-    print(chat_response.text)
-
-    raw = chat_response.json()
-
-    content = (
-        raw["choices"][0]
-           ["message"]
-           ["content"]
-    )
-
-    return parse_json_response(
-        content
-    )
 
