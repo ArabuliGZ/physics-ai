@@ -44,18 +44,71 @@ function addMessage(text, sender) {
 // ==================================
 // ===== ОТПРАВКА РЕШЕНИЯ =====
 // ==================================
+async function compressImage(file) {
+
+    return new Promise((resolve) => {
+
+        const img = new Image();
+
+        img.onload = () => {
+
+            // ===== RESIZE =====
+
+            const MAX_SIZE = 1080;
+
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+
+                if (width > MAX_SIZE) {
+
+                    height *= MAX_SIZE / width;
+                    width = MAX_SIZE;
+                }
+
+            } else {
+
+                if (height > MAX_SIZE) {
+
+                    width *= MAX_SIZE / height;
+                    height = MAX_SIZE;
+                }
+            }
+
+            // ===== CANVAS =====
+
+            const canvas = document.createElement("canvas");
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // ===== JPEG EXPORT =====
+
+            const compressedBase64 =
+                canvas.toDataURL(
+                    "image/jpeg",
+                    0.75
+                );
+
+            resolve(compressedBase64);
+        };
+
+        img.src = URL.createObjectURL(file);
+    });
+}
+
 async function sendSolution(problemText, studentSolution, attachedFile = null) {
     let imageBase64 = null;
 
     if (attachedFile) {
-        const reader = new FileReader();
-        await new Promise((resolve) => {
-            reader.onload = () => {
-                imageBase64 = reader.result; // "data:image/png;base64,...."
-                resolve();
-            };
-            reader.readAsDataURL(attachedFile);
-        });
+
+        imageBase64 =
+            await compressImage(attachedFile);
     }
 
     const payload = {
