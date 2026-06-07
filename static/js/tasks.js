@@ -17,11 +17,14 @@ function fillGroups() {
 
     for (const group of groups) {
 
+        if (!group)
+            continue;
+
         const option = document.createElement("option");
 
         option.value = group;
 
-        option.textContent = group;
+        option.textContent = GROUP_NAMES[group] || group;;
 
         groupSelect.appendChild(option);
     }
@@ -238,6 +241,8 @@ function showSelectedTask() {
 
     if (task.image) {
 
+        CURRENT_TASK_IMAGE_URL =`/tasks/images/${task.group}/${task.image}.png`;
+
         const img = document.createElement("img");
 
         img.src =
@@ -250,6 +255,11 @@ function showSelectedTask() {
         img.style.marginTop = "10px";
 
         imageBlock.appendChild(img);
+    }
+
+    else {
+
+        CURRENT_TASK_IMAGE_URL = null;
     }
 
     // Перерисовываем LaTeX

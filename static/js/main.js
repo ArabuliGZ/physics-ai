@@ -18,32 +18,39 @@ let CURRENT_TASK_IMAGE_URL = null;
 // ===== ЗАГРУЗКА ЗАДАЧ =====
 // ==================================
 
+let GROUP_NAMES = {};
+
 async function loadTasks() {
 
-    // Запрашиваем задачи у FastAPI
+    // ===== TASKS =====
 
-    const response = await fetch(
-        "/tasks"
-    );
+    const tasksResponse =
+        await fetch("/tasks");
 
-    // Превращаем JSON в JS объект
+    TASKS =
+        await tasksResponse.json();
 
-    TASKS = await response.json();
+    // ===== GROUPS =====
 
-    // Заполняем список классов
+    const groupsResponse =
+        await fetch("/groups");
 
+    const groups =
+        await groupsResponse.json();
+
+    // ===== CREATE MAPPING =====
+
+    GROUP_NAMES = {};
+
+    groups.forEach(group => {
+
+        GROUP_NAMES[group.id] =
+            group.name;
+    });
+
+    // ===== FILL UI =====
+    console.log(GROUP_NAMES);
     fillGroups();
-
-    if (task.image) {
-
-        CURRENT_TASK_IMAGE_URL =
-            `/tasks/images/${task.group}/${task.image}.png`;
-
-    } else {
-
-        CURRENT_TASK_IMAGE_URL = null;
-    }
-
 }
 
 

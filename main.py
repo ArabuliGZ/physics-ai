@@ -39,6 +39,7 @@ app = FastAPI()
 
 # Здесь будут храниться все задачи
 TASKS = []
+GROUPS = []
 
 # Папка с задачами
 tasks_folder = "tasks"
@@ -63,6 +64,14 @@ for filename in os.listdir(tasks_folder):
 
             # Добавляем задачи в общий список TASKS
             TASKS.extend(data)
+
+with open(
+    "tasks/groups.json",
+    "r",
+    encoding="utf-8"
+) as f:
+
+    GROUPS = json.load(f)
 
 
 # ==========================================
@@ -157,18 +166,8 @@ def home():
 async def check(data: CheckRequest):
 
     # Отправляем задачу и решение в LLM
-    print("\n===== IMAGE =====")
-
-    print(
-        data.problem_image_base64[:100]
-        if data.problem_image_base64
-        else "NO IMAGE"
-    )
-
-    print("=================\n")
-
     task_image_base64 = None
-
+    
     if data.task_image_url:
 
         local_path = data.task_image_url.replace(
@@ -199,6 +198,11 @@ def get_tasks():
 
     # Возвращаем список задач
     return TASKS
+
+@app.get("/groups")
+def get_groups():
+
+    return GROUPS
 
 # Вспомогательная функция, импортирующая в base64
 def image_to_base64(path):

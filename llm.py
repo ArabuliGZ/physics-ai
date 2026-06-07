@@ -159,7 +159,7 @@ def build_messages(
 
     # ===== ОБЫЧНЫЙ TEXT MODE =====
 
-    if image_base64 is None:
+    if (image_base64 is None and task_image_base64 is None):
 
         messages.append({
 
@@ -217,7 +217,6 @@ def build_messages(
 
             "content": content
         })
-
     return messages
 
 
