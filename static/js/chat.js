@@ -116,7 +116,8 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
         solution: studentSolution,
         history: HISTORY,
         hint_level: HINT_LEVEL,
-        problem_image_base64: imageBase64
+        problem_image_base64: imageBase64,
+        task_image_url: CURRENT_TASK_IMAGE_URL
     };
 
     const response = await fetch("/check", {

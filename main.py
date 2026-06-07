@@ -26,6 +26,7 @@ import json
 # Библиотека для работы с файлами и папками
 import os
 
+import base64
 
 # ===== СОЗДАНИЕ FASTAPI ПРИЛОЖЕНИЯ =====
 
@@ -136,6 +137,8 @@ class CheckRequest(BaseModel):
     # Картинка
     problem_image_base64: str | None = None
 
+    task_image_url: str | None = None
+
 
 # ======================
 # ===== API ROUTES =====
@@ -164,13 +167,26 @@ async def check(data: CheckRequest):
 
     print("=================\n")
 
+    task_image_base64 = None
+
+    if data.task_image_url:
+
+        local_path = data.task_image_url.replace(
+            "/tasks/",
+            "tasks/"
+        )
+
+        task_image_base64 = image_to_base64(
+            local_path
+        )
 
     result = ask_llm(
         data.problem,
         data.solution,
         data.history,
         data.hint_level,
-        data.problem_image_base64
+        data.problem_image_base64,
+        task_image_base64
     )
 
     # Возвращаем ответ модели
@@ -183,3 +199,17 @@ def get_tasks():
 
     # Возвращаем список задач
     return TASKS
+
+# Вспомогательная функция, импортирующая в base64
+def image_to_base64(path):
+
+    with open(path, "rb") as f:
+
+        encoded = base64.b64encode(
+            f.read()
+        ).decode("utf-8")
+
+    return (
+        "data:image/png;base64,"
+        + encoded
+    )

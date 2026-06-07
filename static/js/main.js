@@ -11,6 +11,8 @@ let HISTORY = [];
 // Счетчик подсказок
 let HINT_LEVEL = 0;
 
+let CURRENT_TASK_IMAGE_URL = null;
+
 
 // ==================================
 // ===== ЗАГРУЗКА ЗАДАЧ =====
@@ -31,6 +33,17 @@ async function loadTasks() {
     // Заполняем список классов
 
     fillGroups();
+
+    if (task.image) {
+
+        CURRENT_TASK_IMAGE_URL =
+            `/tasks/images/${task.group}/${task.image}.png`;
+
+    } else {
+
+        CURRENT_TASK_IMAGE_URL = null;
+    }
+
 }
 
 

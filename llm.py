@@ -143,7 +143,8 @@ def build_messages(
     system_prompt,
     history,
     user_prompt,
-    image_base64=None
+    image_base64=None,
+    task_image_base64=None
 ):
 
     messages = [
@@ -171,26 +172,50 @@ def build_messages(
 
     else:
 
+        content = [
+
+            {
+                "type": "text",
+
+                "text":
+                    user_prompt
+                    or "Проанализируй изображения."
+            }
+        ]
+
+        # ===== КАРТИНКА РЕШЕНИЯ =====
+
+        if image_base64:
+
+            content.append({
+
+                "type": "image_url",
+
+                "image_url": {
+
+                    "url": image_base64
+                }
+            })
+
+        # ===== КАРТИНКА УСЛОВИЯ =====
+
+        if task_image_base64:
+
+            content.append({
+
+                "type": "image_url",
+
+                "image_url": {
+
+                    "url": task_image_base64
+                }
+            })
+
         messages.append({
 
             "role": "user",
 
-            "content": [
-
-                {
-                    "type": "text",
-                    "text": user_prompt or "Проанализируй изображение."
-                },
-
-                {
-                    "type": "image_url",
-
-                    "image_url": {
-
-                        "url": image_base64
-                    }
-                }
-            ]
+            "content": content
         })
 
     return messages
@@ -247,7 +272,8 @@ def ask_llm(
     solution_text,
     history,
     hint_level,
-    problem_image_base64=None
+    problem_image_base64=None,
+    task_image_base64=None
 ):
 
     if MODEL_PROVIDER == "openrouter":
@@ -257,7 +283,8 @@ def ask_llm(
             solution_text,
             history,
             hint_level,
-            problem_image_base64
+            problem_image_base64,
+            task_image_base64
         )
 
     elif MODEL_PROVIDER == "yandex":
@@ -295,7 +322,8 @@ def ask_openrouter(
     solution_text,
     history,
     hint_level,
-    problem_image_base64=None
+    problem_image_base64=None,
+    task_image_base64=None
 ):
 
     url = (
@@ -331,7 +359,8 @@ def ask_openrouter(
             system_prompt,
             history,
             user_prompt,
-            problem_image_base64
+            problem_image_base64,
+            task_image_base64
         ),
 
         "max_tokens": MAX_TOKENS
