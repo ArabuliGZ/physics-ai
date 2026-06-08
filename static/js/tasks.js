@@ -64,6 +64,11 @@ function fillChapters() {
         )
     ];
 
+    chapters.sort((a, b) => {
+
+        return parseInt(a) - parseInt(b);
+    });
+
     for (const chapter of chapters) {
 
         const option = document.createElement("option");
@@ -118,6 +123,11 @@ function fillTopics() {
         )
     ];
 
+    topics.sort((a, b) => {
+
+        return parseInt(a) - parseInt(b);
+    });
+
     for (const topic of topics) {
 
         const option = document.createElement("option");
@@ -169,6 +179,17 @@ function fillTasks() {
             parts[0] === chapter &&
             parts[1] === topic
         );
+    });
+
+    filtered.sort((a, b) => {
+
+        const aNum =
+            parseInt(a.id.split(".")[2]);
+
+        const bNum =
+            parseInt(b.id.split(".")[2]);
+
+        return aNum - bNum;
     });
 
     // Добавляем задачи
