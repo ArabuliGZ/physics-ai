@@ -509,3 +509,16 @@
     display: block;
     align-self: flex-end;
 }
+
+.top-title {
+
+    text-align: center;
+
+    font-size: 34px;
+
+    font-weight: 700;
+
+    margin-bottom: 22px;
+
+    color: #1e293b;
+}
