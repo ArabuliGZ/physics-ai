@@ -145,7 +145,7 @@ function previewImage(event) {
     preview.appendChild(wrapper);
 }
 
-function removeImage() {
+function clearImagePreview() {
 
     ATTACHED_FILE = null;
 
@@ -156,4 +156,9 @@ function removeImage() {
     document.getElementById(
         "imageInput"
     ).value = "";
+}
+
+function removeImage() {
+
+    clearImagePreview();
 }

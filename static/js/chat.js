@@ -178,7 +178,7 @@ async function checkSolution() {
     
     // Отправляем решение и картинку на backend через sendSolution
     
-    removeImage();
+    clearImagePreview();
     const data = await sendSolution(problemText, solution, imageFile);
     
     

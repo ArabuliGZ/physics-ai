@@ -8,14 +8,8 @@ import os
 # Библиотека для HTTP запросов
 import requests
 
-# Нужна для генерации уникального ID
-import uuid
-
 # Работа с JSON
 import json
-
-# Библиотека для управления HTTPS warning
-import urllib3
 
 from dotenv import load_dotenv
 
@@ -34,21 +28,9 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 
-# ==================================================
-# ===== ОТКЛЮЧЕНИЕ WARNING ДЛЯ verify=False =====
-# ==================================================
-
-urllib3.disable_warnings(
-    urllib3.exceptions.InsecureRequestWarning
-)
-
 # ==========================================
 # ===== КЛЮЧИ АВТОРИЗАЦИИ =====
 # ==========================================
-
-GIGACHAT_AUTH_KEY = os.getenv(
-    "GIGACHAT_AUTH_KEY"
-)
 
 OPENROUTER_API_KEY = os.getenv(
     "OPENROUTER_API_KEY"
@@ -426,68 +408,3 @@ def ask_openrouter(
     return parse_json_response(
         content
     )
-
-
-# ==========================================
-# ===== ФУНКЦИЯ ЗАПРОСА К GIGACHAT =====
-# ==========================================
-
-def ask_gigachat(
-    problem_text,
-    solution_text,
-    history,
-    hint_level,
-    problem_image_base64=None
-):
-
-    # ==================================
-    # ===== ПОЛУЧЕНИЕ ACCESS TOKEN =====
-    # ==================================
-
-    auth_url = (
-        "https://ngw.devices.sberbank.ru:9443/"
-        "api/v2/oauth"
-    )
-
-    auth_payload = {
-        "scope": "GIGACHAT_API_PERS"
-    }
-
-    auth_headers = {
-
-        "Content-Type":
-            "application/x-www-form-urlencoded",
-
-        "Accept":
-            "application/json",
-
-        "RqUID":
-            str(uuid.uuid4()),
-
-        "Authorization":
-            f"Basic {GIGACHAT_AUTH_KEY}"
-    }
-
-    response = requests.post(
-
-        auth_url,
-
-        headers=auth_headers,
-
-        data=auth_payload,
-
-        verify=False,
-
-        proxies={}
-    )
-
-    print(
-        "AUTH STATUS:",
-        response.status_code
-    )
-
-    auth_data = response.json()
-
-    access_token = auth_data["access_token"]
-
-
