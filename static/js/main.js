@@ -1,33 +1,15 @@
 // ==================================
-// ===== ГЛОБАЛЬНЫЕ ДАННЫЕ =====
-// ==================================
-
-// Все задачи из базы
-let TASKS = [];
-
-// История переписки с AI
-let HISTORY = [];
-
-// Счетчик подсказок
-let HINT_LEVEL = 0;
-
-let CURRENT_TASK_IMAGE_URL = null;
-
-
-// ==================================
 // ===== ЗАГРУЗКА ЗАДАЧ =====
 // ==================================
 
-let GROUP_NAMES = {};
-
 async function loadTasks() {
 
-    // ===== TASKS =====
+    // ===== ЗАДАЧИ =====
 
     const tasksResponse =
         await fetch("/tasks");
 
-    TASKS =
+    STATE.tasks =
         await tasksResponse.json();
 
     // ===== GROUPS =====
@@ -40,16 +22,15 @@ async function loadTasks() {
 
     // ===== CREATE MAPPING =====
 
-    GROUP_NAMES = {};
+    STATE.groupsById = {};
 
     groups.forEach(group => {
 
-        GROUP_NAMES[group.id] =
+        STATE.groupsById[group.id] =
             group.name;
     });
 
     // ===== FILL UI =====
-    console.log(GROUP_NAMES);
     fillGroups();
 }
 

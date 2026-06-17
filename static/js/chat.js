@@ -114,10 +114,10 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
     const payload = {
         problem: problemText,
         solution: studentSolution,
-        history: HISTORY,
-        hint_level: HINT_LEVEL,
+        history: STATE.chat.history,
+        hint_level: STATE.chat.hintLevel,
         problem_image_base64: imageBase64,
-        task_image_url: CURRENT_TASK_IMAGE_URL
+        task_image_url: STATE.selected.taskMediaUrl
     };
 
     const response = await fetch("/check", {
@@ -142,16 +142,16 @@ async function checkSolution() {
     solutionInput.style.height = "44px";
 
     // Собираем картинку, если прикреплена
-    let imageFile = CURRENT_SOLUTION_IMAGE || null;
+    let imageFile = STATE.upload.solutionImage || null;
 
     // Получаем текст выбранной задачи
     const problemText =
         document.getElementById("problem_view").innerText;
 
     // Добавляем сообщение пользователя в чат и историю
-    addUserMessage(solution, ATTACHED_FILE);
-    HISTORY.push({ role: "user", content: solution });
-    ATTACHED_FILE = null; // сброс прикрепленной картинки
+    addUserMessage(solution, STATE.upload.attachedFile);
+    STATE.chat.history.push({ role: "user", content: solution });
+    STATE.upload.attachedFile = null; // сброс прикрепленной картинки
 
     // Показываем "AI думает..."
     const loadingDiv = document.createElement("div");
@@ -174,20 +174,30 @@ async function checkSolution() {
     // Отправляем решение и картинку на backend через sendSolution
     
     clearImagePreview();
-    const data = await sendSolution(problemText, solution, imageFile);
-    
-    
 
-    // Сохраняем ответ AI в историю
-    HISTORY.push({ role: "assistant", content: data.message });
+    try {
 
-    // Убираем loading
-    loadingDiv.remove();
+        const data = await sendSolution(problemText, solution, imageFile);
 
-    // Показываем ответ AI
-    addMessage(data.message, "assistant");
+        // Сохраняем ответ AI в историю
+        STATE.chat.history.push({ role: "assistant", content: data.message });
 
-    button.disabled = false;
+        // Показываем ответ AI
+        addMessage(data.message, "assistant");
+
+    } catch (error) {
+
+        addMessage(
+            "Не получилось отправить решение. Попробуй еще раз.",
+            "assistant"
+        );
+
+    } finally {
+
+        // Убираем loading и возвращаем кнопку в рабочее состояние.
+        loadingDiv.remove();
+        button.disabled = false;
+    }
 }
 
 function addUserMessage(text, attachedFile = null) {

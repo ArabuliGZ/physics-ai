@@ -53,14 +53,22 @@ def load_groups(path="tasks/groups.json"):
 
 
 def build_task_response(task):
-    """Добавляет к задаче сведения о файле условия.
+    """Готовит публичную версию задачи для frontend.
 
-    Поля class_id/chapter/topic/number остаются как есть. Дополнительные
-    поля image_* помогают frontend понять, какой файл открыть: png, jpg
-    или pdf.
+    Ответы остаются в исходных JSON и в TASKS на backend, но не уходят
+    в браузер через /tasks. Так ученик не сможет увидеть answer в DevTools.
+    Дополнительные поля image_* помогают frontend понять, какой файл открыть:
+    png, jpg или pdf.
     """
 
-    response = dict(task)
+    response = {
+        "class_id": task["class_id"],
+        "chapter": task["chapter"],
+        "topic": task["topic"],
+        "number": task["number"],
+        "image": task.get("image"),
+        "problem": task["problem"]
+    }
 
     if not task.get("image"):
 

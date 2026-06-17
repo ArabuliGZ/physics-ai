@@ -35,10 +35,6 @@ imageInput.addEventListener(
     previewImage
 );
 
-let ATTACHED_FILE = null;
-
-let CURRENT_SOLUTION_IMAGE = null;
-
 function previewImage(event) {
 
     const file =
@@ -47,8 +43,8 @@ function previewImage(event) {
     if (!file)
         return;
 
-    ATTACHED_FILE = file;
-    CURRENT_SOLUTION_IMAGE = file;
+    STATE.upload.attachedFile = file;
+    STATE.upload.solutionImage = file;
 
     const preview =
         document.getElementById(
@@ -93,7 +89,7 @@ function previewImage(event) {
 
 function clearImagePreview() {
 
-    ATTACHED_FILE = null;
+    STATE.upload.attachedFile = null;
 
     document.getElementById(
         "imagePreview"

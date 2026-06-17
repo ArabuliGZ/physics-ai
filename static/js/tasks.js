@@ -10,7 +10,7 @@ function fillGroups() {
     // Получаем уникальные группы
 
     const groups = [
-        ...new Set(TASKS.map(t => t.class_id))
+        ...new Set(STATE.tasks.map(t => t.class_id))
     ];
 
     groupSelect.innerHTML = "";
@@ -24,7 +24,7 @@ function fillGroups() {
 
         option.value = group;
 
-        option.textContent = GROUP_NAMES[group] || group;;
+        option.textContent = STATE.groupsById[group] || group;;
 
         groupSelect.appendChild(option);
     }
@@ -42,6 +42,8 @@ function fillChapters() {
     const group =
         document.getElementById("group_select").value;
 
+    STATE.selected.classId = group;
+
     const chapterSelect =
         document.getElementById("chapter_select");
 
@@ -49,7 +51,7 @@ function fillChapters() {
 
     // Фильтруем задачи по классу
 
-    const filtered = TASKS.filter(
+    const filtered = STATE.tasks.filter(
         t => t.class_id === group
     );
 
@@ -93,6 +95,9 @@ function fillTopics() {
     const chapter =
         document.getElementById("chapter_select").value;
 
+    STATE.selected.classId = group;
+    STATE.selected.chapter = chapter;
+
     const topicSelect =
         document.getElementById("topic_select");
 
@@ -100,7 +105,7 @@ function fillTopics() {
 
     // Фильтруем задачи
 
-    const filtered = TASKS.filter(t => {
+    const filtered = STATE.tasks.filter(t => {
 
         return (
             t.class_id === group &&
@@ -158,6 +163,10 @@ function fillTasks() {
     const topic =
         document.getElementById("topic_select").value;
 
+    STATE.selected.classId = group;
+    STATE.selected.chapter = chapter;
+    STATE.selected.topic = topic;
+
     const taskSelect =
         document.getElementById("task_select");
 
@@ -165,7 +174,7 @@ function fillTasks() {
 
     // Фильтруем задачи
 
-    const filtered = TASKS.filter(t => {
+    const filtered = STATE.tasks.filter(t => {
 
         return (
             t.class_id === group &&
@@ -214,7 +223,7 @@ function fillTasks() {
 
 async function showSelectedTask() {
 
-    HISTORY = [];
+    STATE.chat.history = [];
 
     document.getElementById(
         "chat"
@@ -223,23 +232,36 @@ async function showSelectedTask() {
     const group =
         document.getElementById("group_select").value;
 
+    const chapter =
+        document.getElementById("chapter_select").value;
+
+    const topic =
+        document.getElementById("topic_select").value;
+
     const taskNumber =
         document.getElementById("task_select").value;
 
+    STATE.selected.classId = group;
+    STATE.selected.chapter = chapter;
+    STATE.selected.topic = topic;
+    STATE.selected.number = taskNumber;
+
     // Ищем нужную задачу
 
-    const task = TASKS.find(t => {
+    const task = STATE.tasks.find(t => {
 
         return (
             t.class_id === group &&
-            t.chapter === document.getElementById("chapter_select").value &&
-            t.topic === document.getElementById("topic_select").value &&
+            t.chapter === chapter &&
+            t.topic === topic &&
             t.number === taskNumber
         );
     });
 
     if (!task)
         return;
+
+    STATE.selected.task = task;
 
     const view =
         document.getElementById("problem_view");
@@ -262,7 +284,7 @@ async function showSelectedTask() {
 
         if (mediaInfo) {
 
-            CURRENT_TASK_IMAGE_URL = mediaInfo.url;
+            STATE.selected.taskMediaUrl = mediaInfo.url;
 
             renderTaskMedia(
                 imageBlock,
@@ -279,12 +301,12 @@ async function showSelectedTask() {
 
             if (!fallbackMediaInfo) {
 
-                CURRENT_TASK_IMAGE_URL = null;
+                STATE.selected.taskMediaUrl = null;
 
                 return;
             }
 
-            CURRENT_TASK_IMAGE_URL = fallbackMediaInfo.url;
+            STATE.selected.taskMediaUrl = fallbackMediaInfo.url;
 
             renderTaskMedia(
                 imageBlock,
@@ -295,7 +317,7 @@ async function showSelectedTask() {
 
     else {
 
-        CURRENT_TASK_IMAGE_URL = null;
+        STATE.selected.taskMediaUrl = null;
     }
 
     // Перерисовываем LaTeX
