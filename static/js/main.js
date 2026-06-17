@@ -63,4 +63,3 @@ autoResize(
 );
 
 loadTasks();
-switchMode();

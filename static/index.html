@@ -102,46 +102,6 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
         <div class="block">
 
-            <h3>Способ выбора задачи</h3>
-
-
-            <!-- ===== РЕЖИМ РУЧНОГО ВВОДА ===== -->
-
-            <label>
-
-                <input
-                    type="radio"
-                    name="mode"
-                    value="manual"
-                    onclick="switchMode()"
-                >
-
-                Ввести условие вручную
-
-            </label>
-
-            <br><br>
-
-
-            <!-- ===== РЕЖИМ ВЫБОРА ИЗ БАЗЫ ===== -->
-
-            <label>
-
-                <input
-                    type="radio"
-                    name="mode"
-                    value="select"
-                    onclick="switchMode()"
-                    checked
-                >
-
-                Выбрать задачу
-
-            </label>
-
-            <hr>
-
-
             <!-- ================================= -->
             <!-- ===== УСЛОВИЕ ЗАДАЧИ ===== -->
             <!-- ================================= -->
@@ -151,20 +111,11 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
                 <h3>Условие задачи</h3>
 
 
-                <!-- ===== РУЧНОЙ ВВОД ===== -->
-
-                <textarea
-                    id="problem"
-                    rows="5"
-                ></textarea>
-
-
                 <!-- ===== ОТОБРАЖЕНИЕ ВЫБРАННОЙ ЗАДАЧИ ===== -->
 
                 <div
                     id="problem_view"
                     class="block"
-                    style="display:none;"
                 ></div>
 
 
@@ -182,16 +133,11 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
             </div>
 
 
-            <!-- Блок ручного режима -->
-
-            <div id="manual_block"></div>
-
-
             <!-- ================================= -->
             <!-- ===== ВЫБОР ИЗ БАЗЫ ===== -->
             <!-- ================================= -->
 
-            <div id="select_block" style="display:none;">
+            <div id="select_block">
 
                 <h3>Выбор задачи</h3>
 

@@ -510,3 +510,117 @@
     align-self: flex-end;
 }
 
+/* Left task panel */
+.left-column > .block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.left-column > .block > h3,
+.left-column > .block > .block,
+.left-column > .block > #select_block {
+    width: 100%;
+}
+
+.left-column > .block > h3 {
+    order: 0;
+}
+
+.left-column h3 {
+    margin: 0 0 12px;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.left-column .block .block {
+    order: 2;
+    padding: 18px;
+    margin: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, 0.05);
+}
+
+.left-column #problem_view {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #111827;
+}
+
+.left-column #problem_view {
+    max-height: 240px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+.left-column #problem_image {
+    margin-top: 12px !important;
+}
+
+.left-column #problem_image img {
+    max-height: 220px;
+    object-fit: contain;
+    border: 1px solid #e5e7eb;
+}
+
+#select_block {
+    order: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0;
+    padding: 18px;
+    box-sizing: border-box;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, 0.05);
+}
+
+#select_block h3 {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#select_block select {
+    flex: 0 0 auto;
+    width: 54px;
+    min-height: 40px;
+    margin: 0;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: white;
+    color: #111827;
+    font: inherit;
+}
+
+#select_block #group_select {
+    width: 104px;
+}
+
+@media (max-width: 900px) {
+    .layout {
+        flex-direction: column;
+    }
+
+    .left-column,
+    .right-column {
+        width: 100%;
+    }
+
+    #select_block select {
+        flex-basis: 100%;
+        width: 100%;
+    }
+}

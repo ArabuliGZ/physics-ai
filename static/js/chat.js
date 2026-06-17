@@ -144,14 +144,9 @@ async function checkSolution() {
     // Собираем картинку, если прикреплена
     let imageFile = CURRENT_SOLUTION_IMAGE || null;
 
-    // Получаем текст задачи
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    let problemText = "";
-    if (mode === "manual") {
-        problemText = document.getElementById("problem").value;
-    } else {
-        problemText = document.getElementById("problem_view").innerText;
-    }
+    // Получаем текст выбранной задачи
+    const problemText =
+        document.getElementById("problem_view").innerText;
 
     // Добавляем сообщение пользователя в чат и историю
     addUserMessage(solution, ATTACHED_FILE);
