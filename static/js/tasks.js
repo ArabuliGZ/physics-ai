@@ -10,7 +10,7 @@ function fillGroups() {
     // Получаем уникальные группы
 
     const groups = [
-        ...new Set(TASKS.map(t => t.group))
+        ...new Set(TASKS.map(t => t.class_id))
     ];
 
     groupSelect.innerHTML = "";
@@ -50,16 +50,13 @@ function fillChapters() {
     // Фильтруем задачи по классу
 
     const filtered = TASKS.filter(
-        t => t.group === group
+        t => t.class_id === group
     );
-
-    // Берем первую часть ID:
-    // 3.5.2 -> 3
 
     const chapters = [
         ...new Set(
             filtered.map(
-                t => t.id.split(".")[0]
+                t => t.chapter
             )
         )
     ];
@@ -105,11 +102,9 @@ function fillTopics() {
 
     const filtered = TASKS.filter(t => {
 
-        const parts = t.id.split(".");
-
         return (
-            t.group === group &&
-            parts[0] === chapter
+            t.class_id === group &&
+            t.chapter === chapter
         );
     });
 
@@ -118,7 +113,7 @@ function fillTopics() {
     const topics = [
         ...new Set(
             filtered.map(
-                t => t.id.split(".")[1]
+                t => t.topic
             )
         )
     ];
@@ -172,22 +167,20 @@ function fillTasks() {
 
     const filtered = TASKS.filter(t => {
 
-        const parts = t.id.split(".");
-
         return (
-            t.group === group &&
-            parts[0] === chapter &&
-            parts[1] === topic
+            t.class_id === group &&
+            t.chapter === chapter &&
+            t.topic === topic
         );
     });
 
     filtered.sort((a, b) => {
 
         const aNum =
-            parseInt(a.id.split(".")[2]);
+            parseInt(a.number);
 
         const bNum =
-            parseInt(b.id.split(".")[2]);
+            parseInt(b.number);
 
         return aNum - bNum;
     });
@@ -198,17 +191,17 @@ function fillTasks() {
 
         const option = document.createElement("option");
 
-        option.value = task.id;
+        option.value = task.number;
 
         option.textContent =
-            task.id.split(".")[2];
+            task.number;
 
         taskSelect.appendChild(option);
     }
 
     if (filtered.length > 0) {
 
-        taskSelect.value = filtered[0].id;
+        taskSelect.value = filtered[0].number;
     }
 
     showSelectedTask();
@@ -230,7 +223,7 @@ async function showSelectedTask() {
     const group =
         document.getElementById("group_select").value;
 
-    const taskId =
+    const taskNumber =
         document.getElementById("task_select").value;
 
     // Ищем нужную задачу
@@ -238,8 +231,10 @@ async function showSelectedTask() {
     const task = TASKS.find(t => {
 
         return (
-            t.group === group &&
-            t.id === taskId
+            t.class_id === group &&
+            t.chapter === document.getElementById("chapter_select").value &&
+            t.topic === document.getElementById("topic_select").value &&
+            t.number === taskNumber
         );
     });
 
@@ -278,7 +273,7 @@ async function showSelectedTask() {
         else {
 
             const fallbackMediaInfo = await findExistingTaskMedia(
-                task.group,
+                task.class_id,
                 task.image
             );
 
