@@ -2,6 +2,7 @@
 
 # Основной класс FastAPI для создания сервера
 from fastapi import FastAPI
+from fastapi import HTTPException
 
 # BaseModel нужен для описания структуры данных,
 # которые приходят от frontend
@@ -27,6 +28,7 @@ import json
 import os
 
 import base64
+import mimetypes
 
 # ===== СОЗДАНИЕ FASTAPI ПРИЛОЖЕНИЯ =====
 
@@ -40,6 +42,13 @@ app = FastAPI()
 # Здесь будут храниться все задачи
 TASKS = []
 GROUPS = []
+
+TASK_MEDIA_EXTENSIONS = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".pdf",
+)
 
 # Папка с задачами
 tasks_folder = "tasks"
@@ -170,14 +179,15 @@ async def check(data: CheckRequest):
     
     if data.task_image_url:
 
-        local_path = data.task_image_url.replace(
-            "/tasks/",
-            "tasks/"
+        local_path = resolve_task_media_url(
+            data.task_image_url
         )
 
-        task_image_base64 = image_to_base64(
-            local_path
-        )
+        if is_image_file(local_path):
+
+            task_image_base64 = image_to_base64(
+                local_path
+            )
 
     result = ask_llm(
         data.problem,
@@ -197,12 +207,186 @@ async def check(data: CheckRequest):
 def get_tasks():
 
     # Возвращаем список задач
-    return TASKS
+    return [
+        build_task_response(task)
+        for task in TASKS
+    ]
 
 @app.get("/groups")
 def get_groups():
 
     return GROUPS
+
+@app.get("/task-media/{group}/{media_name}")
+def get_task_media(group: str, media_name: str):
+
+    path = resolve_task_media(
+        group,
+        media_name
+    )
+
+    return FileResponse(path)
+
+
+@app.get("/task-media-info/{group}/{media_name}")
+def get_task_media_info(group: str, media_name: str):
+
+    path = resolve_task_media(
+        group,
+        media_name
+    )
+
+    mime_type = get_mime_type(path)
+
+    return {
+        "url": f"/task-media/{group}/{media_name}",
+        "mime_type": mime_type,
+        "is_pdf": mime_type == "application/pdf",
+        "is_image": mime_type.startswith("image/")
+    }
+
+
+def resolve_task_media(group, media_name):
+
+    safe_group = os.path.basename(group)
+    safe_name = os.path.basename(media_name)
+
+    base_path = os.path.join(
+        "tasks",
+        "images",
+        safe_group
+    )
+
+    _, name_ext = os.path.splitext(
+        safe_name
+    )
+
+    if name_ext:
+
+        candidates = [safe_name]
+
+    else:
+
+        candidates = [
+            safe_name + extension
+            for extension in TASK_MEDIA_EXTENSIONS
+        ]
+
+    for candidate in candidates:
+
+        path = os.path.join(
+            base_path,
+            candidate
+        )
+
+        if os.path.isfile(path):
+
+            return path
+
+    if os.path.isdir(base_path):
+
+        lower_candidates = {
+            candidate.lower()
+            for candidate in candidates
+        }
+
+        for filename in os.listdir(base_path):
+
+            if filename.lower() in lower_candidates:
+
+                return os.path.join(
+                    base_path,
+                    filename
+                )
+
+    raise HTTPException(
+        status_code=404,
+        detail="Task media not found"
+    )
+
+
+def build_task_response(task):
+
+    response = dict(task)
+
+    if not task.get("image"):
+
+        response["image_url"] = None
+        response["image_mime_type"] = None
+        response["image_is_pdf"] = False
+        response["image_is_image"] = False
+
+        return response
+
+    try:
+
+        path = resolve_task_media(
+            task.get("group", ""),
+            task["image"]
+        )
+
+    except HTTPException:
+
+        response["image_url"] = None
+        response["image_mime_type"] = None
+        response["image_is_pdf"] = False
+        response["image_is_image"] = False
+
+        return response
+
+    filename = os.path.basename(path)
+    mime_type = get_mime_type(path)
+
+    response["image_url"] = (
+        "/tasks/images/"
+        + task["group"]
+        + "/"
+        + filename
+    )
+    response["image_mime_type"] = mime_type
+    response["image_is_pdf"] = mime_type == "application/pdf"
+    response["image_is_image"] = mime_type.startswith("image/")
+
+    return response
+
+
+def resolve_task_media_url(url):
+
+    parts = url.strip("/").split("/")
+
+    if len(parts) >= 3 and parts[0] == "task-media":
+
+        return resolve_task_media(
+            parts[1],
+            parts[2]
+        )
+
+    if len(parts) >= 4 and parts[0] == "tasks" and parts[1] == "images":
+
+        return resolve_task_media(
+            parts[2],
+            parts[3]
+        )
+
+    raise HTTPException(
+        status_code=400,
+        detail="Unsupported task media url"
+    )
+
+
+def get_mime_type(path):
+
+    mime_type, _ = mimetypes.guess_type(path)
+
+    return mime_type or "application/octet-stream"
+
+
+def is_image_file(path):
+
+    return get_mime_type(path).startswith(
+        "image/"
+    )
+
 
 # Вспомогательная функция, импортирующая в base64
 def image_to_base64(path):
@@ -214,6 +398,8 @@ def image_to_base64(path):
         ).decode("utf-8")
 
     return (
-        "data:image/png;base64,"
+        "data:"
+        + get_mime_type(path)
+        + ";base64,"
         + encoded
     )

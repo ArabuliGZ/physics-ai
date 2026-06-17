@@ -219,7 +219,7 @@ function fillTasks() {
 // ===== ПОКАЗ ВЫБРАННОЙ ЗАДАЧИ =====
 // ==================================
 
-function showSelectedTask() {
+async function showSelectedTask() {
 
     HISTORY = [];
 
@@ -262,20 +262,40 @@ function showSelectedTask() {
 
     if (task.image) {
 
-        CURRENT_TASK_IMAGE_URL =`/tasks/images/${task.group}/${task.image}.png`;
+        const mediaInfo =
+            getTaskMediaInfoFromTask(task);
 
-        const img = document.createElement("img");
+        if (mediaInfo) {
 
-        img.src =
-            `/tasks/images/${task.group}/${task.image}.png`;
+            CURRENT_TASK_IMAGE_URL = mediaInfo.url;
 
-        img.style.maxWidth = "100%";
+            renderTaskMedia(
+                imageBlock,
+                mediaInfo
+            );
+        }
 
-        img.style.borderRadius = "10px";
+        else {
 
-        img.style.marginTop = "10px";
+            const fallbackMediaInfo = await findExistingTaskMedia(
+                task.group,
+                task.image
+            );
 
-        imageBlock.appendChild(img);
+            if (!fallbackMediaInfo) {
+
+                CURRENT_TASK_IMAGE_URL = null;
+
+                return;
+            }
+
+            CURRENT_TASK_IMAGE_URL = fallbackMediaInfo.url;
+
+            renderTaskMedia(
+                imageBlock,
+                fallbackMediaInfo
+            );
+        }
     }
 
     else {
@@ -288,4 +308,176 @@ function showSelectedTask() {
     MathJax.typesetClear([view]);
 
     MathJax.typesetPromise([view]);
+}
+
+
+async function loadTaskMediaInfo(group, mediaName) {
+
+    const url =
+        `/task-media-info/${encodeURIComponent(group)}/${encodeURIComponent(mediaName)}`;
+
+    try {
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+
+            return null;
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        return null;
+    }
+}
+
+
+function getTaskMediaInfoFromTask(task) {
+
+    if (!task.image_url) {
+
+        return null;
+    }
+
+    return {
+        url: task.image_url,
+        mime_type: task.image_mime_type,
+        is_pdf: task.image_is_pdf,
+        is_image: task.image_is_image
+    };
+}
+
+
+async function findExistingTaskMedia(group, mediaName) {
+
+    const extensions = [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".JPG",
+        ".pdf"
+    ];
+
+    const hasExtension =
+        /\.(png|jpe?g|pdf)$/i.test(mediaName);
+
+    const candidates = hasExtension
+        ? [mediaName]
+        : extensions.map(extension => mediaName + extension);
+
+    for (const candidate of candidates) {
+
+        const url =
+            `/tasks/images/${encodeURIComponent(group)}/${encodeURIComponent(candidate)}`;
+
+        try {
+
+            const response = await fetch(
+                url,
+                {
+                    method: "HEAD"
+                }
+            );
+
+            if (!response.ok) {
+
+                continue;
+            }
+
+            const mimeType =
+                response.headers.get("content-type")
+                || getMimeTypeFromUrl(url);
+
+            return {
+                url: url,
+                mime_type: mimeType,
+                is_pdf: mimeType.includes("application/pdf"),
+                is_image: mimeType.startsWith("image/")
+            };
+
+        } catch (error) {
+
+            continue;
+        }
+    }
+
+    return null;
+}
+
+
+function getMimeTypeFromUrl(url) {
+
+    const lowerUrl = url.toLowerCase();
+
+    if (lowerUrl.endsWith(".pdf")) {
+
+        return "application/pdf";
+    }
+
+    if (
+        lowerUrl.endsWith(".jpg") ||
+        lowerUrl.endsWith(".jpeg")
+    ) {
+
+        return "image/jpeg";
+    }
+
+    return "image/png";
+}
+
+
+function renderTaskMedia(imageBlock, mediaInfo) {
+
+    if (mediaInfo.is_pdf) {
+
+        renderTaskPdf(
+            imageBlock,
+            mediaInfo.url
+        );
+
+        return;
+    }
+
+    renderTaskImage(
+        imageBlock,
+        mediaInfo.url
+    );
+}
+
+
+function renderTaskImage(imageBlock, url) {
+
+    const img = document.createElement("img");
+
+    img.src = url;
+
+    img.style.maxWidth = "100%";
+
+    img.style.borderRadius = "10px";
+
+    img.style.marginTop = "10px";
+
+    imageBlock.appendChild(img);
+}
+
+
+function renderTaskPdf(imageBlock, url) {
+
+    const frame = document.createElement("iframe");
+
+    frame.src = url;
+
+    frame.style.width = "100%";
+
+    frame.style.height = "360px";
+
+    frame.style.border = "1px solid #e5e7eb";
+
+    frame.style.borderRadius = "10px";
+
+    frame.style.marginTop = "10px";
+
+    imageBlock.appendChild(frame);
 }
