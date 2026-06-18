@@ -394,19 +394,24 @@ async function updateProgressTable() {
 
 
 function renderProgressGroups(rows) {
-    const groups = new Map();
+    const sections = [
+        ...new Set(rows.map(row => `${row.chapter}.${row.topic}`))
+    ].sort(compareDottedKeys);
+
+    const sectionColumns = sections.map((section, index) => ({
+        section,
+        isMajorStart: index > 0 && section.split(".")[0] !== sections[index - 1].split(".")[0],
+    }));
+
     const taskNumbers = [
         ...new Set(rows.map(row => row.number))
     ].sort((left, right) => parseInt(left) - parseInt(right));
 
+    const rowByPosition = new Map();
+
     for (const row of rows) {
         const key = `${row.chapter}.${row.topic}`;
-
-        if (!groups.has(key)) {
-            groups.set(key, []);
-        }
-
-        groups.get(key).push(row);
+        rowByPosition.set(`${row.number}|${key}`, row);
     }
 
     return `
@@ -414,21 +419,25 @@ function renderProgressGroups(rows) {
             <div class="progress-matrix-head">
                 <div class="progress-section-title"></div>
                 <div class="progress-cells">
-                    ${taskNumbers.map(number => `
-                        <div class="progress-number">${number}</div>
+                    ${sectionColumns.map(column => `
+                        <div class="progress-number ${column.isMajorStart ? "progress-major-start" : ""}">
+                            ${column.section}
+                        </div>
                     `).join("")}
                 </div>
             </div>
 
-            ${[...groups.entries()].map(([key, groupRows]) => `
+            ${taskNumbers.map(number => `
                 <div class="progress-section">
-                    <div class="progress-section-title">${key}</div>
+                    <div class="progress-section-title">${number}</div>
                     <div class="progress-cells">
-                        ${taskNumbers.map(number => {
-                            const row = groupRows.find(item => item.number === number);
+                        ${sectionColumns.map(column => {
+                            const row = rowByPosition.get(`${number}|${column.section}`);
+                            const boundaryClass = column.isMajorStart ? "progress-major-start" : "";
+
                             return row
-                                ? renderProgressCell(row)
-                                : "<div class=\"progress-cell-placeholder\"></div>";
+                                ? renderProgressCell(row, boundaryClass)
+                                : `<div class="progress-cell-placeholder ${boundaryClass}"></div>`;
                         }).join("")}
                     </div>
                 </div>
@@ -438,7 +447,25 @@ function renderProgressGroups(rows) {
 }
 
 
-function renderProgressCell(row) {
+function compareDottedKeys(left, right) {
+    const leftParts = left.split(".").map(part => parseInt(part, 10));
+    const rightParts = right.split(".").map(part => parseInt(part, 10));
+    const maxLength = Math.max(leftParts.length, rightParts.length);
+
+    for (let index = 0; index < maxLength; index += 1) {
+        const leftPart = leftParts[index] || 0;
+        const rightPart = rightParts[index] || 0;
+
+        if (leftPart !== rightPart) {
+            return leftPart - rightPart;
+        }
+    }
+
+    return 0;
+}
+
+
+function renderProgressCell(row, boundaryClass = "") {
     const isCurrent =
         row.chapter === STATE.selected.chapter &&
         row.topic === STATE.selected.topic &&
@@ -455,7 +482,7 @@ function renderProgressCell(row) {
     return `
         <button
             type="button"
-            class="progress-cell ${statusClass} ${isCurrent ? "current" : ""}"
+            class="progress-cell ${statusClass} ${boundaryClass} ${isCurrent ? "current" : ""}"
             title="${row.chapter}.${row.topic}.${row.number}: ${row.attempts_count} попыток"
             onclick="openTaskFromProgress('${row.chapter}', '${row.topic}', '${row.number}')"
         >

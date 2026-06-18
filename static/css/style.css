@@ -695,8 +695,7 @@
 
 .left-column > .block > h3,
 .left-column > .block > .block,
-.left-column > .block > #select_block,
-.left-column > .block > #progress_block {
+.left-column > .block > #select_block {
     width: 100%;
 }
 
@@ -822,7 +821,8 @@
 }
 
 .progress-block {
-    order: 3;
+    width: 100%;
+    margin-top: 18px;
     padding: 18px;
     box-sizing: border-box;
     border: 1px solid #e5e7eb;
@@ -861,8 +861,10 @@
 }
 
 .progress-matrix {
-    display: flex;
+    display: inline-flex;
     flex-direction: column;
+    min-width: max-content;
+    width: max-content;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
@@ -870,15 +872,15 @@
 
 .progress-matrix-head {
     display: grid;
-    grid-template-columns: 54px 1fr;
+    grid-template-columns: 54px max-content;
     align-items: center;
     background: #f9fafb;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #eef2f7;
 }
 
 .progress-section {
     display: grid;
-    grid-template-columns: 54px 1fr;
+    grid-template-columns: 54px max-content;
     align-items: center;
     border-bottom: 1px solid #eef2f7;
 }
@@ -897,21 +899,24 @@
     color: #4b5563;
     font-size: 13px;
     font-weight: 600;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid #d1d5db;
+    background: #ffffff;
 }
 
 .progress-cells {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 34px;
+    grid-auto-columns: 38px;
     align-items: center;
     gap: 0;
+    width: max-content;
 }
 
 .progress-number,
 .progress-cell-placeholder {
-    width: 34px;
+    width: 38px;
     height: 32px;
+    box-sizing: border-box;
 }
 
 .progress-number {
@@ -921,6 +926,7 @@
     color: #6b7280;
     font-size: 12px;
     font-weight: 600;
+    background: #f9fafb;
     border-right: 1px solid #eef2f7;
 }
 
@@ -929,7 +935,7 @@
 }
 
 .progress-cell {
-    width: 34px;
+    width: 38px;
     height: 32px;
     display: inline-flex;
     align-items: center;
@@ -968,6 +974,15 @@
     box-sizing: border-box;
     border-right: 1px solid #eef2f7;
     background: #ffffff;
+}
+
+.progress-major-start {
+    border-left: 1px solid #cbd5e1;
+}
+
+.progress-matrix-head .progress-major-start {
+    border-left-color: #cbd5e1;
+    background: #f9fafb;
 }
 
 .progress-cell strong {
