@@ -1,0 +1,42 @@
+{"kind":"deck","id":"pr/8ocug2","name":"Deck"}
+{"kind":"layout","layoutId":"3a6e0a5a-a585-4a1e-8398-b9271c1a40f6","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"815d7fa0-0527-4a97-8395-e02e7ddf9f2a","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/dq1m7u","slide":1,"title":"Current project structure: physics-ai","textShapes":22}
+{"kind":"textbox","id":"sh/1kre1w7m","slide":1,"text":"Current project structure: physics-ai","textPreview":"Current project structure: physics-ai","textChars":37,"textLines":1,"bbox":[56,34,760,50]}
+{"kind":"textbox","id":"sh/uxc3ylc7","slide":1,"text":"FastAPI backend + vanilla JS frontend + JSON task base + OpenRouter LLM","textPreview":"FastAPI backend + vanilla JS frontend + JSON task base + OpenRouter LLM","textChars":71,"textLines":1,"bbox":[58,78,850,28]}
+{"kind":"shape","id":"sh/ji5snelo","slide":1,"bbox":[54,145,270,330]}
+{"kind":"textbox","id":"sh/crmhk3q5","slide":1,"text":"Frontend / static","textPreview":"Frontend / static","textChars":17,"textLines":1,"bbox":[72,160,234,28]}
+{"kind":"textbox","id":"sh/1cfa9w3m","slide":1,"text":"index.html\nstate.js - single app state\nmain.js - data loading\ntasks.js - task picker\nchat.js - /check requests\nui.js - input and uploads","textPreview":"index.html | state.js - single app state | main.js - data loading | tasks.js - task picker | chat.js - /check requests | ui.js - input an...","textChars":136,"textLines":6,"bbox":[72,195,234,268]}
+{"kind":"shape","id":"sh/ulwval87","slide":1,"bbox":[382,145,270,330]}
+{"kind":"textbox","id":"sh/j6tovaho","slide":1,"text":"Backend API / app/api","textPreview":"Backend API / app/api","textChars":21,"textLines":1,"bbox":[400,160,234,28]}
+{"kind":"textbox","id":"sh/8nqxs72x","slide":1,"text":"/ - serves the page\n/tasks - public task DTO, no answer\n/groups - class labels\n/check - send solution to LLM\n/task-media - task images and PDFs","textPreview":"/ - serves the page | /tasks - public task DTO, no answer | /groups - class labels | /check - send solution to LLM | /task-media - task i...","textChars":143,"textLines":5,"bbox":[400,195,234,268]}
+{"kind":"shape","id":"sh/18jqh0fe","slide":1,"bbox":[710,145,270,330]}
+{"kind":"textbox","id":"sh/psfil0rq","slide":1,"text":"Services / app/services","textPreview":"Services / app/services","textChars":23,"textLines":1,"bbox":[728,160,234,28]}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":1,"text":"task_store.py\nloads JSON and builds public task DTO\n\nmedia.py\nfinds png/jpg/pdf and encodes images for LLM","textPreview":"task_store.py | loads JSON and builds public task DTO |  | media.py | finds png/jpg/pdf and encodes images for LLM","textChars":106,"textLines":5,"bbox":[728,195,234,268]}
+{"kind":"shape","id":"sh/7mp0bi9s","slide":1,"bbox":[1038,145,188,330]}
+{"kind":"textbox","id":"sh/e1w7mp0b","slide":1,"text":"Data & LLM","textPreview":"Data & LLM","textChars":10,"textLines":1,"bbox":[1056,160,152,28]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":1,"text":"tasks/*.json\nclass_id / chapter / topic / number\nproblem is public\nanswer stays backend-only\n\nllm.py -> OpenRouter\nconfig.py + .env","textPreview":"tasks/*.json | class_id / chapter / topic / number | problem is public | answer stays backend-only |  | llm.py -> OpenRouter | config.py ...","textChars":131,"textLines":7,"bbox":[1056,195,152,268]}
+{"kind":"shape","id":"sh/wval87ed","slide":1,"bbox":[324,310,58,0]}
+{"kind":"shape","id":"sh/7adsji5s","slide":1,"bbox":[298,292,110,30]}
+{"kind":"textbox","id":"sh/epkzupwb","slide":1,"text":"fetch","textPreview":"fetch","textChars":5,"textLines":1,"bbox":[304,299,98,18]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":1,"bbox":[652,310,58,0]}
+{"kind":"shape","id":"sh/wra5gbq1","slide":1,"bbox":[626,292,110,30]}
+{"kind":"textbox","id":"sh/s36hcrmh","slide":1,"text":"uses","textPreview":"uses","textChars":4,"textLines":1,"bbox":[632,299,98,18]}
+{"kind":"shape","id":"sh/hoza1gvy","slide":1,"bbox":[980,310,58,0]}
+{"kind":"shape","id":"sh/a1gvy90j","slide":1,"bbox":[954,292,110,30]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":1,"text":"reads","textPreview":"reads","textChars":5,"textLines":1,"bbox":[960,299,98,18]}
+{"kind":"shape","id":"sh/svu9knih","slide":1,"bbox":[54,524,270,92]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":1,"text":"Entry point","textPreview":"Entry point","textChars":11,"textLines":1,"bbox":[68,534,242,24]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":1,"text":"main.py keeps compatibility: uvicorn main:app","textPreview":"main.py keeps compatibility: uvicorn main:app","textChars":45,"textLines":1,"bbox":[68,562,242,48]}
+{"kind":"shape","id":"sh/za1gvy90","slide":1,"bbox":[382,524,270,92]}
+{"kind":"textbox","id":"sh/sji5snel","slide":1,"text":"Validation","textPreview":"Validation","textChars":10,"textLines":1,"bbox":[396,534,242,24]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":1,"text":"scripts/validate_tasks.py checks schema, duplicates, media","textPreview":"scripts/validate_tasks.py checks schema, duplicates, media","textChars":58,"textLines":1,"bbox":[396,562,242,48]}
+{"kind":"shape","id":"sh/byhgn29g","slide":1,"bbox":[710,524,270,92]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":1,"text":"Parsers","textPreview":"Parsers","textChars":7,"textLines":1,"bbox":[724,534,242,24]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":1,"text":"tasks/source/7|8|9/parser.py generates tasks.json in the new format","textPreview":"tasks/source/7|8|9/parser.py generates tasks.json in the new format","textChars":67,"textLines":1,"bbox":[724,562,242,48]}
+{"kind":"shape","id":"sh/0je9cvix","slide":1,"bbox":[1038,524,188,92]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":1,"text":"Next step","textPreview":"Next step","textChars":9,"textLines":1,"bbox":[1052,534,160,24]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":1,"text":"Ready for auth/progress: users and task_attempts can be added next","textPreview":"Ready for auth/progress: users and task_attempts can be added next","textChars":66,"textLines":1,"bbox":[1052,562,160,48]}
+{"kind":"shape","id":"sh/tcj6tova","slide":1,"bbox":[54,642,1172,38]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":1,"text":"Flow: student selects a task -> frontend posts to /check -> backend adds task/media context -> LLM returns a hint","textPreview":"Flow: student selects a task -> frontend posts to /check -> backend adds task/media context -> LLM returns a hint","textChars":113,"textLines":1,"bbox":[78,651,1124,20]}
+{"kind":"notes","id":"nt/dq1m7u","slide":1,"text":""}

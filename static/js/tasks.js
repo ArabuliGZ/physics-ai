@@ -11,7 +11,16 @@ function fillGroups() {
 
     const groups = [
         ...new Set(STATE.tasks.map(t => t.class_id))
-    ];
+    ].sort((left, right) => {
+        const leftNumber = parseInt(left, 10);
+        const rightNumber = parseInt(right, 10);
+
+        if (!Number.isNaN(leftNumber) && !Number.isNaN(rightNumber)) {
+            return leftNumber - rightNumber;
+        }
+
+        return String(left).localeCompare(String(right), "ru");
+    });
 
     groupSelect.innerHTML = "";
 
