@@ -10,6 +10,10 @@ const STATE = {
 
     groupsById: {},
 
+    student: {
+        current: null
+    },
+
     selected: {
         classId: null,
         chapter: null,
@@ -29,4 +33,3 @@ const STATE = {
         solutionImage: null
     }
 };
-

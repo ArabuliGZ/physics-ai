@@ -96,6 +96,7 @@ SYSTEM_PROMPT = """
 
 {{
   "status": "hint",
+  "is_passed": false,
   "message": "Какая сила вызывает ускорение?"
 }}
 
@@ -103,6 +104,12 @@ SYSTEM_PROMPT = """
 - "hint"
 - "correct"
 - "error"
+
+Field is_passed:
+- true only when the student's solution is complete and correct enough to accept the task
+- false when the student needs a hint, has an error, or has not completed the solution
+- if status is "correct", is_passed must be true
+- if status is "hint" or "error", is_passed must be false
 
 Ограничения:
 - максимум 2 коротких предложения
@@ -230,19 +237,57 @@ def parse_json_response(content):
 
         return {
             "status": "error",
+            "is_passed": False,
             "message": "Модель не вернула текст"
         }
 
     try:
 
-        return json.loads(content)
+        parsed = json.loads(content)
+
+        return normalize_llm_result(parsed)
 
     except Exception:
 
         return {
             "status": "error",
+            "is_passed": False,
             "message": content
         }
+
+
+def normalize_llm_result(result):
+    """Normalize model JSON so progress tracking has a stable boolean."""
+
+    if not isinstance(result, dict):
+
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": str(result)
+        }
+
+    status = result.get("status", "hint")
+    is_passed = result.get("is_passed")
+
+    if isinstance(is_passed, str):
+
+        is_passed = is_passed.strip().lower() in (
+            "true",
+            "1",
+            "yes",
+            "да"
+        )
+
+    if is_passed is None:
+
+        is_passed = status == "correct"
+
+    result["status"] = status
+    result["is_passed"] = bool(is_passed)
+    result["message"] = str(result.get("message", ""))
+
+    return result
 
 # ==========================================
 # ===== ОСНОВНАЯ ФУНКЦИЯ ОБРАЩЕНИЯ К LLM =====
@@ -272,6 +317,7 @@ def ask_llm(
 
         return {
             "status": "error",
+            "is_passed": False,
             "message": "YandexGPT пока не подключен"
         }
 
@@ -279,6 +325,7 @@ def ask_llm(
 
         return {
             "status": "error",
+            "is_passed": False,
             "message": "Qwen пока не подключен"
         }
 
@@ -288,6 +335,7 @@ def ask_llm(
 
         return {
             "status": "error",
+            "is_passed": False,
             "message": "Неизвестный provider"
         }
 
@@ -391,6 +439,7 @@ def ask_openrouter(
         return {
 
             "status": "error",
+            "is_passed": False,
 
             "message": error_message
         }

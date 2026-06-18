@@ -153,7 +153,7 @@ function fillTopics() {
         topicSelect.value = topics[0];
     }
 
-    fillTasks();
+    return fillTasks();
 }
 
 
@@ -161,7 +161,7 @@ function fillTopics() {
 // ===== ЗАПОЛНЕНИЕ ЗАДАЧ =====
 // ==================================
 
-function fillTasks() {
+async function fillTasks() {
 
     const group =
         document.getElementById("group_select").value;
@@ -222,7 +222,8 @@ function fillTasks() {
         taskSelect.value = filtered[0].number;
     }
 
-    showSelectedTask();
+    await showSelectedTask();
+    updateProgressTable();
 }
 
 
@@ -334,6 +335,150 @@ async function showSelectedTask() {
     MathJax.typesetClear([view]);
 
     MathJax.typesetPromise([view]);
+}
+
+
+async function updateProgressTable() {
+    const table = document.getElementById("progress_table");
+    const summary = document.getElementById("progress_summary");
+
+    if (!table || !summary) {
+        return;
+    }
+
+    if (!STATE.student.current) {
+        table.innerHTML = "<div class=\"progress-empty\">Войди, чтобы видеть прогресс.</div>";
+        summary.textContent = "";
+        return;
+    }
+
+    const group = document.getElementById("group_select").value;
+    if (!group) {
+        table.innerHTML = "";
+        summary.textContent = "";
+        return;
+    }
+
+    table.innerHTML = "<div class=\"progress-empty\">Загружаю...</div>";
+    summary.textContent = "";
+
+    const params = new URLSearchParams({
+        class_id: group
+    });
+
+    try {
+        const response = await fetch(
+            `/students/${STATE.student.current.id}/class-task-map?${params.toString()}`
+        );
+
+        if (!response.ok) {
+            throw new Error("task map failed");
+        }
+
+        const rows = await response.json();
+        const solvedCount = rows.filter(row => row.is_passed === 1).length;
+        const triedCount = rows.filter(row => row.attempts_count > 0).length;
+
+        summary.textContent =
+            `${triedCount}/${rows.length} с попытками, ${solvedCount} сдано`;
+
+        table.innerHTML = `
+            <div class="progress-grid">
+                ${renderProgressGroups(rows)}
+            </div>
+        `;
+    } catch {
+        table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить прогресс.</div>";
+    }
+}
+
+
+function renderProgressGroups(rows) {
+    const groups = new Map();
+    const taskNumbers = [
+        ...new Set(rows.map(row => row.number))
+    ].sort((left, right) => parseInt(left) - parseInt(right));
+
+    for (const row of rows) {
+        const key = `${row.chapter}.${row.topic}`;
+
+        if (!groups.has(key)) {
+            groups.set(key, []);
+        }
+
+        groups.get(key).push(row);
+    }
+
+    return `
+        <div class="progress-matrix">
+            <div class="progress-matrix-head">
+                <div class="progress-section-title"></div>
+                <div class="progress-cells">
+                    ${taskNumbers.map(number => `
+                        <div class="progress-number">${number}</div>
+                    `).join("")}
+                </div>
+            </div>
+
+            ${[...groups.entries()].map(([key, groupRows]) => `
+                <div class="progress-section">
+                    <div class="progress-section-title">${key}</div>
+                    <div class="progress-cells">
+                        ${taskNumbers.map(number => {
+                            const row = groupRows.find(item => item.number === number);
+                            return row
+                                ? renderProgressCell(row)
+                                : "<div class=\"progress-cell-placeholder\"></div>";
+                        }).join("")}
+                    </div>
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
+
+function renderProgressCell(row) {
+    const isCurrent =
+        row.chapter === STATE.selected.chapter &&
+        row.topic === STATE.selected.topic &&
+        row.number === STATE.selected.number;
+
+    let statusClass = "empty";
+
+    if (row.is_passed === 1) {
+        statusClass = "passed";
+    } else if (row.attempts_count > 0) {
+        statusClass = "tried";
+    }
+
+    return `
+        <button
+            type="button"
+            class="progress-cell ${statusClass} ${isCurrent ? "current" : ""}"
+            title="${row.chapter}.${row.topic}.${row.number}: ${row.attempts_count} попыток"
+            onclick="openTaskFromProgress('${row.chapter}', '${row.topic}', '${row.number}')"
+        >
+            <strong>${row.attempts_count}</strong>
+        </button>
+    `;
+}
+
+
+async function openTaskFromProgress(chapter, topic, taskNumber) {
+    const chapterSelect = document.getElementById("chapter_select");
+    const topicSelect = document.getElementById("topic_select");
+    const taskSelect = document.getElementById("task_select");
+
+    chapterSelect.value = chapter;
+    await fillTopics();
+
+    topicSelect.value = topic;
+    await fillTasks();
+
+    taskSelect.value = taskNumber;
+    await showSelectedTask();
+    updateProgressTable();
 }
 
 

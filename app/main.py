@@ -10,7 +10,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.check import router as check_router
 from app.api.pages import router as pages_router
+from app.api.students import router as students_router
 from app.api.tasks import router as tasks_router
+from app.database import init_database
 
 
 def create_app():
@@ -21,6 +23,12 @@ def create_app():
     """
 
     app = FastAPI()
+
+    @app.on_event("startup")
+    def startup():
+        """Prepare local SQLite tables before the first request."""
+
+        init_database()
 
     # Раздаем frontend-файлы: HTML, CSS, JS и favicon.
     app.mount(
@@ -50,6 +58,7 @@ def create_app():
     # Подключаем группы маршрутов. Пути внутри роутеров совпадают со старыми.
     app.include_router(pages_router)
     app.include_router(tasks_router)
+    app.include_router(students_router)
     app.include_router(check_router)
 
     return app
@@ -57,4 +66,3 @@ def create_app():
 
 # Переменная app нужна для запуска командой uvicorn app.main:app.
 app = create_app()
-

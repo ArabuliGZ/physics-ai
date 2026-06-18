@@ -6,6 +6,9 @@ from app.schemas import CheckRequest
 from app.services.media import image_to_base64
 from app.services.media import is_image_file
 from app.services.media import resolve_task_media_url
+from app.services.progress import get_task_progress
+from app.services.progress import record_task_attempt
+from app.services.students import get_student
 from llm import ask_llm
 
 
@@ -37,7 +40,7 @@ async def check(data: CheckRequest):
                 local_path
             )
 
-    return ask_llm(
+    result = ask_llm(
         data.problem,
         data.solution,
         data.history,
@@ -46,3 +49,42 @@ async def check(data: CheckRequest):
         task_image_base64
     )
 
+    result["attempt_saved"] = False
+    result["attempt_id"] = None
+    result["progress"] = None
+
+    has_tracking_data = (
+        data.student_id is not None
+        and data.class_id is not None
+        and data.chapter is not None
+        and data.topic is not None
+        and data.number is not None
+    )
+
+    if (
+        has_tracking_data
+        and get_student(data.student_id) is not None
+    ):
+
+        attempt = record_task_attempt(
+            student_id=data.student_id,
+            class_id=data.class_id,
+            chapter=data.chapter,
+            topic=data.topic,
+            number=data.number,
+            solution_text=data.solution,
+            ai_response=result.get("message"),
+            is_passed=bool(result.get("is_passed"))
+        )
+
+        result["attempt_saved"] = True
+        result["attempt_id"] = attempt["id"]
+        result["progress"] = get_task_progress(
+            data.student_id,
+            data.class_id,
+            data.chapter,
+            data.topic,
+            data.number
+        )
+
+    return result

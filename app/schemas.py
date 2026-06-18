@@ -24,3 +24,17 @@ class CheckRequest(BaseModel):
     # URL картинки/файла условия выбранной задачи.
     task_image_url: str | None = None
 
+    # Student and task identifiers are optional for backward compatibility.
+    student_id: int | None = None
+    class_id: str | None = None
+    chapter: str | None = None
+    topic: str | None = None
+    number: str | None = None
+
+
+class StudentCreateRequest(BaseModel):
+    """Request body for creating a student profile."""
+
+    school: str
+    class_name: str
+    full_name: str

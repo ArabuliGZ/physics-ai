@@ -88,6 +88,68 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
     <h1>AI-проверка физики</h1>
 
+    <div
+        id="student_bar"
+        class="student-bar"
+        hidden
+    >
+        <span id="student_name"></span>
+
+        <button
+            type="button"
+            class="student-logout"
+            onclick="logoutStudent()"
+        >
+            Сменить ученика
+        </button>
+    </div>
+
+    <div
+        id="student_modal"
+        class="student-modal"
+        hidden
+    >
+        <form
+            class="student-card"
+            onsubmit="handleStudentLogin(event)"
+        >
+            <h2>Вход ученика</h2>
+
+            <input
+                id="student_school"
+                type="text"
+                placeholder="Школа"
+                autocomplete="organization"
+            >
+
+            <input
+                id="student_class"
+                type="text"
+                placeholder="Класс, например 7А"
+                autocomplete="off"
+            >
+
+            <input
+                id="student_full_name"
+                type="text"
+                placeholder="ФИО"
+                autocomplete="name"
+            >
+
+            <button
+                id="student_login_button"
+                type="submit"
+            >
+                Войти
+            </button>
+
+            <div
+                id="student_login_error"
+                class="student-error"
+            ></div>
+        </form>
+    </div>
+
     <div class="layout">
 
     <!-- ================================= -->
@@ -170,6 +232,21 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
                     onchange="showSelectedTask()"
                 ></select>
 
+            </div>
+
+            <div
+                id="progress_block"
+                class="progress-block"
+            >
+                <div class="progress-header">
+                    <h3>Мои задачи</h3>
+                    <span id="progress_summary"></span>
+                </div>
+
+                <div
+                    id="progress_table"
+                    class="progress-table"
+                ></div>
             </div>
 
         </div>
@@ -275,6 +352,8 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 <script src="/static/js/tasks.js"></script>
 
 <script src="/static/js/chat.js"></script>
+
+<script src="/static/js/students.js"></script>
 
 <script src="/static/js/main.js"></script>
 

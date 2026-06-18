@@ -117,7 +117,12 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
         history: STATE.chat.history,
         hint_level: STATE.chat.hintLevel,
         problem_image_base64: imageBase64,
-        task_image_url: STATE.selected.taskMediaUrl
+        task_image_url: STATE.selected.taskMediaUrl,
+        student_id: STATE.student.current?.id || null,
+        class_id: STATE.selected.classId,
+        chapter: STATE.selected.chapter,
+        topic: STATE.selected.topic,
+        number: STATE.selected.number
     };
 
     const response = await fetch("/check", {
@@ -134,6 +139,15 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
 async function checkSolution() {
     const button = document.querySelector(".send-button");
     if (button.disabled) return;
+
+    if (!STATE.student.current) {
+        addMessage(
+            "Сначала войди как ученик.",
+            "assistant"
+        );
+        return;
+    }
+
     button.disabled = true;
 
     const solutionInput = document.getElementById("solution");
@@ -184,6 +198,14 @@ async function checkSolution() {
 
         // Показываем ответ AI
         addMessage(data.message, "assistant");
+
+        if (data.attempt_saved === false) {
+            console.warn("Attempt was not saved:", data);
+        }
+
+        if (typeof updateProgressTable === "function") {
+            await updateProgressTable();
+        }
 
     } catch (error) {
 

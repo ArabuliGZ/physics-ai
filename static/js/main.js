@@ -43,4 +43,6 @@ autoResize(
     document.getElementById("solution")
 );
 
+initStudentSession();
+
 loadTasks();
