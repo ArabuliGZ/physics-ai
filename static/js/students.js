@@ -1,4 +1,4 @@
-function saveStudent(student) {
+﻿function saveStudent(student) {
     STATE.student.current = student;
 }
 
@@ -81,12 +81,13 @@ async function handleStudentLogin(event) {
 
     const payload = {
         school: document.getElementById("student_school").value.trim(),
-        class_name: document.getElementById("student_class").value.trim(),
+        grade: parseInt(document.getElementById("student_grade").value, 10),
+        class_group: document.getElementById("student_class_group").value.trim(),
         full_name: document.getElementById("student_full_name").value.trim()
     };
 
-    if (!payload.school || !payload.class_name || !payload.full_name) {
-        errorBox.textContent = "Заполни школу, класс и ФИО.";
+    if (!payload.school || !payload.grade || !payload.class_group || !payload.full_name) {
+        errorBox.textContent = "Заполни школу, параллель, класс и ФИО.";
         return;
     }
 

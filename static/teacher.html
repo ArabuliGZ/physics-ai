@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Журнал учителя</title>
+
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="/static/favicon.png">
+</head>
+<body class="teacher-page">
+    <h1>Журнал учителя</h1>
+
+    <div class="teacher-topbar">
+        <a class="teacher-link" href="/">Кабинет ученика</a>
+
+        <button
+            type="button"
+            class="teacher-secondary-button"
+            onclick="loadTeacherDashboard()"
+        >
+            Обновить
+        </button>
+    </div>
+
+    <section class="teacher-panel">
+        <div class="teacher-panel-header">
+            <div>
+                <h2>Выбор журнала</h2>
+                <p>Выбери школу, класс учеников и базу заданий.</p>
+            </div>
+
+            <span id="teacher_journal_summary"></span>
+        </div>
+
+        <div class="teacher-filters">
+            <label>
+                <span>Школа</span>
+                <select
+                    id="teacher_school_select"
+                    onchange="handleTeacherSchoolChange()"
+                ></select>
+            </label>
+
+            <label>
+                <span>Класс</span>
+                <select
+                    id="teacher_student_class_select"
+                    onchange="handleTeacherClassChange()"
+                ></select>
+            </label>
+
+            <label>
+                <span>База заданий</span>
+                <select
+                    id="teacher_task_base_select"
+                    onchange="renderTeacherJournal()"
+                ></select>
+            </label>
+        </div>
+    </section>
+
+    <section class="teacher-panel">
+        <div class="teacher-panel-header">
+            <div>
+                <h2>Журнал</h2>
+                <p>Одна строка — один ученик. В ячейке показано число попыток.</p>
+            </div>
+        </div>
+
+        <div
+            id="teacher_journal_table"
+            class="teacher-journal-table"
+        ></div>
+    </section>
+
+    <script src="/static/js/teacher.js"></script>
+</body>
+</html>

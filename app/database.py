@@ -3,6 +3,7 @@
 from pathlib import Path
 from contextlib import contextmanager
 import sqlite3
+import re
 
 
 DATABASE_PATH = Path("data") / "physics_ai.db"
@@ -43,6 +44,8 @@ def init_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 school TEXT NOT NULL,
                 class_name TEXT NOT NULL,
+                grade INTEGER,
+                class_group TEXT,
                 full_name TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -76,3 +79,64 @@ def init_database():
             );
             """
         )
+
+        ensure_student_class_columns(connection)
+        backfill_student_class_parts(connection)
+
+
+def ensure_student_class_columns(connection):
+    """Add structured class columns to older local databases."""
+
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(students)").fetchall()
+    }
+
+    if "grade" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
+
+    if "class_group" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN class_group TEXT")
+
+
+def backfill_student_class_parts(connection):
+    """Fill grade and class_group for students created before the migration."""
+
+    rows = connection.execute(
+        """
+        SELECT id, class_name
+        FROM students
+        WHERE grade IS NULL
+           OR class_group IS NULL
+        """
+    ).fetchall()
+
+    for row in rows:
+        grade, class_group = parse_class_name(row["class_name"])
+
+        if grade is None:
+            continue
+
+        connection.execute(
+            """
+            UPDATE students
+            SET grade = ?,
+                class_group = ?
+            WHERE id = ?
+            """,
+            (grade, class_group, row["id"]),
+        )
+
+
+def parse_class_name(class_name):
+    """Split display class names like 7-1 or 7A into grade and class group."""
+
+    match = re.match(r"^\s*(\d+)\s*[-\s]?\s*(.*)\s*$", class_name or "")
+
+    if match is None:
+        return None, None
+
+    grade = int(match.group(1))
+    class_group = match.group(2).strip() or None
+
+    return grade, class_group

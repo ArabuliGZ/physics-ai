@@ -1,6 +1,7 @@
 """Маршрут проверки решения через LLM."""
 
 from fastapi import APIRouter
+from fastapi import HTTPException
 
 from app.schemas import CheckRequest
 from app.services.media import image_to_base64
@@ -8,6 +9,7 @@ from app.services.media import is_image_file
 from app.services.media import resolve_task_media_url
 from app.services.progress import get_task_progress
 from app.services.progress import record_task_attempt
+from app.services.students import allowed_task_class_id
 from app.services.students import get_student
 from llm import ask_llm
 
@@ -24,6 +26,24 @@ async def check(data: CheckRequest):
     """
 
     task_image_base64 = None
+    has_tracking_data = (
+        data.student_id is not None
+        and data.class_id is not None
+        and data.chapter is not None
+        and data.topic is not None
+        and data.number is not None
+    )
+    student = get_student(data.student_id) if has_tracking_data else None
+
+    if (
+        has_tracking_data
+        and student is not None
+        and data.class_id != allowed_task_class_id(student)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="This task base is not available for the selected student"
+        )
 
     # Если у задачи есть файл условия, прикладываем его к LLM только
     # когда это изображение. PDF показывается ученику, но не отправляется
@@ -53,19 +73,7 @@ async def check(data: CheckRequest):
     result["attempt_id"] = None
     result["progress"] = None
 
-    has_tracking_data = (
-        data.student_id is not None
-        and data.class_id is not None
-        and data.chapter is not None
-        and data.topic is not None
-        and data.number is not None
-    )
-
-    if (
-        has_tracking_data
-        and get_student(data.student_id) is not None
-    ):
-
+    if has_tracking_data and student is not None:
         attempt = record_task_attempt(
             student_id=data.student_id,
             class_id=data.class_id,

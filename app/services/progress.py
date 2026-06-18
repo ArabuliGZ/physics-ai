@@ -182,6 +182,29 @@ def get_class_progress_map(student_id, class_id):
         }
 
 
+def list_teacher_journal_progress(student_ids, class_id):
+    """Return progress rows for many students in one task base."""
+
+    if not student_ids:
+        return []
+
+    placeholders = ", ".join("?" for _ in student_ids)
+
+    with database_connection() as connection:
+        rows = connection.execute(
+            f"""
+            SELECT student_id, class_id, chapter, topic, number,
+                   attempts_count, is_passed, updated_at
+            FROM task_progress
+            WHERE class_id = ?
+              AND student_id IN ({placeholders})
+            """,
+            (class_id, *student_ids),
+        ).fetchall()
+
+        return [row_to_dict(row) for row in rows]
+
+
 def list_task_attempts(student_id, class_id, chapter, topic, number):
     """Return attempt history for one student and task."""
 

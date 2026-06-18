@@ -9,7 +9,7 @@ function fillGroups() {
 
     // Получаем уникальные группы
 
-    const groups = [
+    let groups = [
         ...new Set(STATE.tasks.map(t => t.class_id))
     ].sort((left, right) => {
         const leftNumber = parseInt(left, 10);
@@ -21,6 +21,12 @@ function fillGroups() {
 
         return String(left).localeCompare(String(right), "ru");
     });
+
+    if (STATE.student.current?.grade) {
+        groups = groups.filter(
+            group => group === `${STATE.student.current.grade}class`
+        );
+    }
 
     groupSelect.innerHTML = "";
 

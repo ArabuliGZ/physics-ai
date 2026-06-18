@@ -36,5 +36,7 @@ class StudentCreateRequest(BaseModel):
     """Request body for creating a student profile."""
 
     school: str
-    class_name: str
+    class_name: str | None = None
+    grade: int | None = None
+    class_group: str | None = None
     full_name: str

@@ -57,6 +57,57 @@
             text-align: center;
         }
 
+        .teacher-entry {
+
+            max-width: 1600px;
+
+            margin: -4px auto 14px;
+
+            display: flex;
+
+            justify-content: flex-end;
+        }
+
+        .teacher-entry a,
+        .teacher-link,
+        .teacher-secondary-button {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            min-height: 34px;
+
+            padding: 7px 12px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 10px;
+
+            background: white;
+
+            color: #111827;
+
+            font: inherit;
+
+            font-size: 14px;
+
+            text-decoration: none;
+
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .teacher-entry a:hover,
+        .teacher-link:hover,
+        .teacher-secondary-button:hover {
+
+            background: #f9fafb;
+        }
+
         .student-bar {
 
             max-width: 1600px;
@@ -180,7 +231,8 @@
             font-size: 20px;
         }
 
-        .student-card input {
+        .student-card input,
+        .student-card select {
 
             width: 100%;
 
@@ -197,7 +249,17 @@
             font: inherit;
         }
 
-        .student-card input:focus {
+        .student-class-fields {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 10px;
+        }
+
+        .student-card input:focus,
+        .student-card select:focus {
 
             border-color: #2563eb;
 
@@ -211,6 +273,34 @@
             min-height: 42px;
 
             border-radius: 10px;
+        }
+
+        .student-teacher-link {
+
+            min-height: 38px;
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            color: #374151;
+
+            font-size: 14px;
+
+            text-decoration: none;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 10px;
+
+            background: #f9fafb;
+        }
+
+        .student-teacher-link:hover {
+
+            background: #f3f4f6;
         }
 
         .student-error {
@@ -993,6 +1083,228 @@
 .progress-empty {
     padding: 12px;
     color: #6b7280;
+    font-size: 14px;
+}
+
+.teacher-page {
+    max-width: 1600px;
+}
+
+.teacher-topbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.teacher-panel {
+    padding: 18px;
+    box-sizing: border-box;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(17, 24, 39, 0.05);
+}
+
+.teacher-panel + .teacher-panel {
+    margin-top: 18px;
+}
+
+.teacher-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.teacher-panel-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.teacher-panel-header p,
+#teacher_students_summary,
+#teacher_progress_summary {
+    margin: 4px 0 0;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.teacher-students-table {
+    overflow-x: auto;
+}
+
+.teacher-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.teacher-filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.teacher-filters select {
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: white;
+    font: inherit;
+    font-size: 14px;
+}
+
+.teacher-journal-table {
+    overflow: auto;
+    max-height: 620px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.teacher-journal {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.teacher-journal th,
+.teacher-journal td {
+    height: 34px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    border-right: 1px solid #eef2f7;
+    border-bottom: 1px solid #eef2f7;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.teacher-journal th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.teacher-journal thead tr:nth-child(2) th {
+    top: 34px;
+}
+
+.teacher-block-heading {
+    border-bottom-color: #d1d5db;
+}
+
+.teacher-task-heading {
+    min-width: 44px;
+}
+
+.teacher-journal .teacher-student-column {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    width: 240px;
+    max-width: 240px;
+    text-align: left;
+    background: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.teacher-journal th.teacher-student-column {
+    z-index: 3;
+    background: #f9fafb;
+}
+
+.teacher-journal .teacher-total-column {
+    min-width: 64px;
+    font-weight: 700;
+    background: #ffffff;
+}
+
+.teacher-journal th.teacher-total-column {
+    background: #f9fafb;
+}
+
+.teacher-journal-cell {
+    min-width: 44px;
+    color: #6b7280;
+    background: #f9fafb;
+    font-weight: 700;
+}
+
+.teacher-journal-cell.tried {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.teacher-journal-cell.passed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.teacher-journal .teacher-major-start {
+    border-left: 1px solid #cbd5e1;
+}
+
+.teacher-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.teacher-table th,
+.teacher-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef2f7;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.teacher-table th {
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+    background: #f9fafb;
+}
+
+.teacher-table tbody tr {
+    cursor: pointer;
+}
+
+.teacher-table tbody tr:hover,
+.teacher-row-selected {
+    background: #f8fafc;
+}
+
+.teacher-detail[hidden] {
+    display: none;
+}
+
+.teacher-class-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.teacher-class-filter select {
+    min-width: 110px;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: white;
+    font: inherit;
     font-size: 14px;
 }
 

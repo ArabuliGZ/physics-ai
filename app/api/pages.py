@@ -13,3 +13,9 @@ def home():
 
     return FileResponse("static/index.html")
 
+
+@router.get("/teacher")
+def teacher():
+    """Return the teacher overview page."""
+
+    return FileResponse("static/teacher.html")
