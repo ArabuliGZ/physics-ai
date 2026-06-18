@@ -80,14 +80,11 @@ async function handleStudentLogin(event) {
     const errorBox = document.getElementById("student_login_error");
 
     const payload = {
-        school: document.getElementById("student_school").value.trim(),
-        grade: parseInt(document.getElementById("student_grade").value, 10),
-        class_group: document.getElementById("student_class_group").value.trim(),
-        full_name: document.getElementById("student_full_name").value.trim()
+        email: document.getElementById("student_email").value.trim()
     };
 
-    if (!payload.school || !payload.grade || !payload.class_group || !payload.full_name) {
-        errorBox.textContent = "Заполни школу, параллель, класс и ФИО.";
+    if (!payload.email) {
+        errorBox.textContent = "Введи email.";
         return;
     }
 
@@ -117,7 +114,7 @@ async function handleStudentLogin(event) {
         renderStudentSession();
     } catch (error) {
         console.error("Student login failed:", error);
-        errorBox.textContent = "Не получилось войти. Попробуй ещё раз.";
+        errorBox.textContent = "Ученик с таким email не найден.";
     } finally {
         button.disabled = false;
     }

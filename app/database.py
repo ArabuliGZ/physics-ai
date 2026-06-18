@@ -42,10 +42,13 @@ def init_database():
             """
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT,
                 school TEXT NOT NULL,
                 class_name TEXT NOT NULL,
                 grade INTEGER,
                 class_group TEXT,
+                task_class_id TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
                 full_name TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
@@ -82,6 +85,7 @@ def init_database():
 
         ensure_student_class_columns(connection)
         backfill_student_class_parts(connection)
+        backfill_student_task_class(connection)
 
 
 def ensure_student_class_columns(connection):
@@ -97,6 +101,17 @@ def ensure_student_class_columns(connection):
 
     if "class_group" not in columns:
         connection.execute("ALTER TABLE students ADD COLUMN class_group TEXT")
+
+    if "task_class_id" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN task_class_id TEXT")
+
+    if "email" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN email TEXT")
+
+    if "is_active" not in columns:
+        connection.execute(
+            "ALTER TABLE students ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
+        )
 
 
 def backfill_student_class_parts(connection):
@@ -125,6 +140,32 @@ def backfill_student_class_parts(connection):
             WHERE id = ?
             """,
             (grade, class_group, row["id"]),
+        )
+
+
+def backfill_student_task_class(connection):
+    """Fill default task base ids for students created before this field."""
+
+    rows = connection.execute(
+        """
+        SELECT id, grade
+        FROM students
+        WHERE task_class_id IS NULL
+           OR task_class_id = ''
+        """
+    ).fetchall()
+
+    for row in rows:
+        if row["grade"] is None:
+            continue
+
+        connection.execute(
+            """
+            UPDATE students
+            SET task_class_id = ?
+            WHERE id = ?
+            """,
+            (f"{row['grade']}class", row["id"]),
         )
 
 

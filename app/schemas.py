@@ -35,8 +35,27 @@ class CheckRequest(BaseModel):
 class StudentCreateRequest(BaseModel):
     """Request body for creating a student profile."""
 
+    email: str | None = None
     school: str
     class_name: str | None = None
     grade: int | None = None
     class_group: str | None = None
+    task_class_id: str | None = None
     full_name: str
+
+
+class StudentLoginRequest(BaseModel):
+    """Request body for student email login."""
+
+    email: str
+
+
+class TeacherProgressOverrideRequest(BaseModel):
+    """Request body for manually changing task progress from teacher journal."""
+
+    student_id: int
+    class_id: str
+    chapter: str
+    topic: str
+    number: str
+    is_passed: bool

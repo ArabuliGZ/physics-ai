@@ -22,9 +22,9 @@ function fillGroups() {
         return String(left).localeCompare(String(right), "ru");
     });
 
-    if (STATE.student.current?.grade) {
+    if (STATE.student.current?.task_class_id) {
         groups = groups.filter(
-            group => group === `${STATE.student.current.grade}class`
+            group => group === STATE.student.current.task_class_id
         );
     }
 

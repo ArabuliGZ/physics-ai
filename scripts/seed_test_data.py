@@ -54,18 +54,27 @@ def main():
                 for class_group, class_name in make_class_names(school, grade):
                     student_names = make_student_names()
 
-                    for full_name in student_names:
+                    for student_index, full_name in enumerate(student_names):
+                        email = make_student_email(
+                            school,
+                            grade,
+                            class_group,
+                            student_count,
+                            student_index,
+                        )
                         student_id = insert_student(
                             connection,
+                            email,
                             school,
                             class_name,
                             grade,
                             class_group,
+                            choose_task_class_id(grade),
                             full_name,
                         )
                         student_count += 1
 
-                        class_id = f"{grade}class"
+                        class_id = get_student_task_class_id(connection, student_id)
                         progress_added, attempts_added = seed_student_progress(
                             connection,
                             student_id,
@@ -150,18 +159,65 @@ def make_student_names():
     ]
 
 
-def insert_student(connection, school, class_name, grade, class_group, full_name):
+def choose_task_class_id(grade):
+    """Pick a task base for generated students."""
+
+    return f"{grade}class"
+
+
+def make_student_email(school, grade, class_group, student_count, student_index):
+    """Return a stable email for generated students and grade test accounts."""
+
+    if school == LETOVO and class_group == "1" and student_index == 0:
+        return f"{grade}@test.ru"
+
+    return f"student{student_count + 1:03d}@test.local"
+
+
+def insert_student(
+    connection,
+    email,
+    school,
+    class_name,
+    grade,
+    class_group,
+    task_class_id,
+    full_name,
+):
     """Insert one student and return its id."""
 
     cursor = connection.execute(
         """
-        INSERT INTO students (school, class_name, grade, class_group, full_name)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO students (
+            email,
+            school,
+            class_name,
+            grade,
+            class_group,
+            task_class_id,
+            full_name
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
-        (school, class_name, grade, class_group, full_name),
+        (email, school, class_name, grade, class_group, task_class_id, full_name),
     )
 
     return cursor.lastrowid
+
+
+def get_student_task_class_id(connection, student_id):
+    """Return the task base assigned to a generated student."""
+
+    row = connection.execute(
+        """
+        SELECT task_class_id
+        FROM students
+        WHERE id = ?
+        """,
+        (student_id,),
+    ).fetchone()
+
+    return row["task_class_id"]
 
 
 def seed_student_progress(connection, student_id, class_id, tasks):

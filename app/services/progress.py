@@ -118,6 +118,57 @@ def get_task_progress(student_id, class_id, chapter, topic, number):
         return row_to_dict(row)
 
 
+def set_task_progress_passed(student_id, class_id, chapter, topic, number, is_passed):
+    """Set current pass status without changing the student's attempt count."""
+
+    passed_value = 1 if is_passed else 0
+
+    with database_connection() as connection:
+        connection.execute(
+            """
+            INSERT INTO task_progress (
+                student_id,
+                class_id,
+                chapter,
+                topic,
+                number,
+                attempts_count,
+                is_passed,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, 0, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT (student_id, class_id, chapter, topic, number)
+            DO UPDATE SET
+                is_passed = excluded.is_passed,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                student_id,
+                class_id,
+                chapter,
+                topic,
+                number,
+                passed_value,
+            ),
+        )
+
+        row = connection.execute(
+            """
+            SELECT id, student_id, class_id, chapter, topic, number,
+                   attempts_count, is_passed, updated_at
+            FROM task_progress
+            WHERE student_id = ?
+              AND class_id = ?
+              AND chapter = ?
+              AND topic = ?
+              AND number = ?
+            """,
+            (student_id, class_id, chapter, topic, number),
+        ).fetchone()
+
+        return row_to_dict(row)
+
+
 def list_student_progress(student_id):
     """Return all progress rows for one student."""
 

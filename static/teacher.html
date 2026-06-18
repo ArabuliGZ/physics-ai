@@ -48,14 +48,6 @@
                     onchange="handleTeacherClassChange()"
                 ></select>
             </label>
-
-            <label>
-                <span>База заданий</span>
-                <select
-                    id="teacher_task_base_select"
-                    onchange="renderTeacherJournal()"
-                ></select>
-            </label>
         </div>
     </section>
 
@@ -65,6 +57,157 @@
             class="teacher-journal-table"
         ></div>
     </section>
+
+    <section class="teacher-panel">
+        <div class="teacher-panel-header">
+            <div>
+                <h2>Добавить в текущий класс</h2>
+            </div>
+
+            <span id="teacher_single_result"></span>
+        </div>
+
+        <form
+            class="teacher-single-form"
+            onsubmit="addSingleTeacherStudent(event)"
+        >
+            <input
+                id="teacher_single_full_name"
+                type="text"
+                placeholder="ФИО"
+                required
+            >
+
+            <input
+                id="teacher_single_email"
+                type="email"
+                placeholder="email"
+                required
+            >
+
+            <button
+                id="teacher_single_button"
+                type="submit"
+                class="teacher-secondary-button"
+            >
+                Добавить
+            </button>
+        </form>
+    </section>
+
+    <section class="teacher-panel">
+        <div class="teacher-panel-header">
+            <div>
+                <h2>Создать класс</h2>
+            </div>
+
+            <span id="teacher_import_result"></span>
+        </div>
+
+        <form
+            class="teacher-import-form"
+            onsubmit="importTeacherStudents(event)"
+        >
+            <label>
+                <span>Школа</span>
+                <input
+                    id="teacher_import_school"
+                    type="text"
+                    placeholder="Название школы"
+                    required
+                >
+            </label>
+
+            <label>
+                <span>Параллель</span>
+                <select id="teacher_import_grade">
+                    <option value="7">7 класс</option>
+                    <option value="8">8 класс</option>
+                    <option value="9">9 класс</option>
+                    <option value="10">10 класс</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Класс</span>
+                <input
+                    id="teacher_import_class_group"
+                    type="text"
+                    placeholder="А или 1"
+                    required
+                >
+            </label>
+
+            <label>
+                <span>База задач</span>
+                <select id="teacher_import_task_class"></select>
+            </label>
+
+            <label>
+                <span>CSV</span>
+                <input
+                    id="teacher_import_file"
+                    type="file"
+                    accept=".csv,text/csv"
+                >
+            </label>
+
+            <button
+                id="teacher_import_button"
+                type="submit"
+                class="teacher-secondary-button"
+            >
+                Загрузить CSV
+            </button>
+        </form>
+    </section>
+
+    <div
+        id="teacher_progress_dialog"
+        class="teacher-dialog"
+        hidden
+    >
+        <div
+            class="teacher-dialog-backdrop"
+            onclick="closeTeacherProgressDialog()"
+        ></div>
+
+        <section class="teacher-dialog-panel">
+            <div class="teacher-dialog-header">
+                <h2 id="teacher_progress_dialog_title">Задача</h2>
+
+                <button
+                    type="button"
+                    class="teacher-dialog-close"
+                    onclick="closeTeacherProgressDialog()"
+                    aria-label="Закрыть"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <p id="teacher_progress_dialog_meta"></p>
+            <p id="teacher_progress_dialog_status"></p>
+
+            <div class="teacher-dialog-actions">
+                <button
+                    type="button"
+                    class="teacher-secondary-button teacher-pass-button"
+                    onclick="setTeacherProgressOverride(true)"
+                >
+                    Зачесть
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-secondary-button teacher-fail-button"
+                    onclick="setTeacherProgressOverride(false)"
+                >
+                    Снять зачёт
+                </button>
+            </div>
+        </section>
+    </div>
 
     <script src="/static/js/teacher.js"></script>
 </body>
