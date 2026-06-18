@@ -1161,7 +1161,7 @@
 
 .teacher-journal-table {
     overflow: auto;
-    max-height: 620px;
+    max-height: min(520px, 56vh);
     border: 1px solid #e5e7eb;
     border-radius: 10px;
 }
