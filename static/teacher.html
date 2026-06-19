@@ -86,6 +86,38 @@
 
             </div>
 
+            <nav
+                class="teacher-tabs"
+                aria-label="Разделы кабинета учителя"
+            >
+                <button
+                    type="button"
+                    class="teacher-tab is-active"
+                    data-teacher-tab="classes"
+                    onclick="switchTeacherView('classes')"
+                >
+                    Мои классы
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
+                    data-teacher-tab="journal"
+                    onclick="switchTeacherView('journal')"
+                >
+                    Журнал
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
+                    data-teacher-tab="create"
+                    onclick="switchTeacherView('create')"
+                >
+                    Создать класс
+                </button>
+            </nav>
+
             <div class="teacher-topbar-actions">
                 <a class="teacher-link" href="/">Войти как ученик</a>
 
@@ -108,96 +140,32 @@
                     class="teacher-logout-button"
                     onclick="logoutTeacher()"
                 >
-                    Выйти
-                </button>
-            </div>
-        </header>
+                Выйти
+            </button>
+        </div>
+    </header>
 
-        <section class="teacher-panel">
+        <section
+            class="teacher-panel"
+            data-teacher-view="classes"
+        >
             <div class="teacher-panel-header">
                 <div>
-                    <h2>Журнал</h2>
-                </div>
-
-                <div class="teacher-panel-header-actions">
-                    <span id="teacher_journal_summary"></span>
-
-                    <button
-                        id="teacher_export_button"
-                        type="button"
-                        class="teacher-secondary-button"
-                        onclick="downloadTeacherJournalCsv()"
-                        disabled
-                    >
-                        Скачать CSV
-                    </button>
+                    <h2>Мои классы</h2>
                 </div>
             </div>
 
-            <div class="teacher-filters">
-                <label>
-                    <span>Школа</span>
-                    <select
-                        id="teacher_school_select"
-                        onchange="handleTeacherSchoolChange()"
-                    ></select>
-                </label>
-
-                <label>
-                    <span>Класс</span>
-                    <select
-                        id="teacher_student_class_select"
-                        onchange="handleTeacherClassChange()"
-                    ></select>
-                </label>
-            </div>
-        </section>
-
-        <section class="teacher-panel">
             <div
-                id="teacher_journal_table"
-                class="teacher-journal-table"
+                id="teacher_classes_list"
+                class="teacher-classes-list"
             ></div>
         </section>
 
-        <section class="teacher-panel">
-            <div class="teacher-panel-header">
-                <div>
-                    <h2>Добавить в текущий класс</h2>
-                </div>
-
-                <span id="teacher_single_result"></span>
-            </div>
-
-            <form
-                class="teacher-single-form"
-                onsubmit="addSingleTeacherStudent(event)"
-            >
-                <input
-                    id="teacher_single_full_name"
-                    type="text"
-                    placeholder="ФИО"
-                    required
-                >
-
-                <input
-                    id="teacher_single_email"
-                    type="email"
-                    placeholder="email"
-                    required
-                >
-
-                <button
-                    id="teacher_single_button"
-                    type="submit"
-                    class="teacher-secondary-button"
-                >
-                    Добавить
-                </button>
-            </form>
-        </section>
-
-        <section class="teacher-panel">
+        <section
+            class="teacher-panel"
+            data-teacher-view="create"
+            hidden
+        >
             <div class="teacher-panel-header">
                 <div>
                     <h2>Создать класс</h2>
@@ -263,6 +231,96 @@
                 </button>
             </form>
         </section>
+
+        <section
+            class="teacher-panel teacher-journal-panel"
+            data-teacher-view="journal"
+            hidden
+        >
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Журнал</h2>
+                </div>
+
+                <div class="teacher-panel-header-actions">
+                    <span id="teacher_journal_summary"></span>
+
+                    <button
+                        id="teacher_export_button"
+                        type="button"
+                        class="teacher-secondary-button"
+                        onclick="downloadTeacherJournalCsv()"
+                        disabled
+                    >
+                        Скачать CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="teacher-filters">
+                <label>
+                    <span>Школа</span>
+                    <select
+                        id="teacher_school_select"
+                        onchange="handleTeacherSchoolChange()"
+                    ></select>
+                </label>
+
+                <label>
+                    <span>Класс</span>
+                    <select
+                        id="teacher_student_class_select"
+                        onchange="handleTeacherClassChange()"
+                    ></select>
+                </label>
+            </div>
+
+            <div
+                id="teacher_journal_table"
+                class="teacher-journal-table"
+            ></div>
+        </section>
+
+        <section
+            class="teacher-panel"
+            data-teacher-view="journal"
+            hidden
+        >
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Ученики текущего класса</h2>
+                </div>
+
+                <span id="teacher_single_result"></span>
+            </div>
+
+            <form
+                class="teacher-single-form"
+                onsubmit="addSingleTeacherStudent(event)"
+            >
+                <input
+                    id="teacher_single_full_name"
+                    type="text"
+                    placeholder="ФИО"
+                    required
+                >
+
+                <input
+                    id="teacher_single_email"
+                    type="email"
+                    placeholder="email"
+                    required
+                >
+
+                <button
+                    id="teacher_single_button"
+                    type="submit"
+                    class="teacher-secondary-button"
+                >
+                    Добавить
+                </button>
+            </form>
+        </section>
     </div>
 
     <div
@@ -312,6 +370,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=classes-1"></script>
+    <script src="/static/js/teacher.js?v=teacher-tabs-1"></script>
 </body>
 </html>

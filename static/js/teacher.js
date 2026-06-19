@@ -7,6 +7,7 @@
     selectedFilters: null,
     manualProgressTarget: null,
     currentJournal: null,
+    activeView: "classes",
 };
 
 
@@ -65,6 +66,26 @@ function renderTeacherSession() {
     loginModal.hidden = false;
     app.hidden = true;
     userName.textContent = "";
+}
+
+
+function switchTeacherView(viewName) {
+    TEACHER_STATE.activeView = viewName;
+
+    document
+        .querySelectorAll("[data-teacher-tab]")
+        .forEach(button => {
+            button.classList.toggle(
+                "is-active",
+                button.dataset.teacherTab === viewName
+            );
+        });
+
+    document
+        .querySelectorAll("[data-teacher-view]")
+        .forEach(section => {
+            section.hidden = section.dataset.teacherView !== viewName;
+        });
 }
 
 
@@ -187,11 +208,73 @@ async function loadTeacherDashboard() {
 
         fillTeacherImportTaskBases();
         fillTeacherFilters(currentFilters || TEACHER_STATE.selectedFilters);
+        renderTeacherClassesList();
         await renderTeacherJournal();
     } catch (error) {
         console.error("Teacher dashboard failed:", error);
         table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить журнал.</div>";
     }
+}
+
+
+function renderTeacherClassesList() {
+    const list = document.getElementById("teacher_classes_list");
+
+    if (!list) {
+        return;
+    }
+
+    if (!hasTeacherClassRecords()) {
+        list.innerHTML = "<div class=\"progress-empty\">Пока нет созданных классов.</div>";
+        return;
+    }
+
+    const classes = [...TEACHER_STATE.classes].sort((left, right) => (
+        String(left.school).localeCompare(String(right.school), "ru") ||
+        compareClassNames(left.grade, right.grade) ||
+        String(left.class_group || "").localeCompare(String(right.class_group || ""), "ru") ||
+        compareClassNames(left.task_class_id, right.task_class_id)
+    ));
+
+    list.innerHTML = classes.map(classItem => `
+        <article class="teacher-class-row">
+            <div class="teacher-class-main">
+                <strong>${escapeHtml(classItem.school)} · ${escapeHtml(classItem.class_name)}</strong>
+                <span>${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span>
+            </div>
+
+            <div class="teacher-class-meta">
+                ${formatStudentsCount(classItem.students_count || 0)}
+            </div>
+
+            <button
+                type="button"
+                class="teacher-secondary-button"
+                onclick="openTeacherClassJournal(${classItem.id})"
+            >
+                Открыть журнал
+            </button>
+        </article>
+    `).join("");
+}
+
+
+function openTeacherClassJournal(classId) {
+    const classItem = TEACHER_STATE.classes.find(item => String(item.id) === String(classId));
+
+    if (!classItem) {
+        return;
+    }
+
+    const schoolSelect = document.getElementById("teacher_school_select");
+    const classSelect = document.getElementById("teacher_student_class_select");
+
+    schoolSelect.value = classItem.school;
+    fillTeacherStudentClasses();
+    classSelect.value = String(classItem.id);
+    rememberTeacherFilters();
+    switchTeacherView("journal");
+    renderTeacherJournal();
 }
 
 
@@ -1154,6 +1237,26 @@ function compareClassNames(left, right) {
     }
 
     return String(left).localeCompare(String(right), "ru");
+}
+
+
+function formatStudentsCount(count) {
+    const lastTwo = count % 100;
+    const lastOne = count % 10;
+
+    if (lastTwo >= 11 && lastTwo <= 14) {
+        return `${count} учеников`;
+    }
+
+    if (lastOne === 1) {
+        return `${count} ученик`;
+    }
+
+    if (lastOne >= 2 && lastOne <= 4) {
+        return `${count} ученика`;
+    }
+
+    return `${count} учеников`;
 }
 
 
