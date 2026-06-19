@@ -21,6 +21,9 @@ def seed_demo_data():
     random.seed(42)
 
     tasks_by_class = group_tasks_by_class()
+    students_created = 0
+    students_updated = 0
+    progress_created = 0
 
     with database_connection() as connection:
         teacher_id = ensure_demo_user(
@@ -42,7 +45,7 @@ def seed_demo_data():
 
             for index in range(1, STUDENTS_PER_GRADE + 1):
                 email = demo_email(grade, index)
-                student_id = upsert_demo_student(
+                student_id, action = upsert_demo_student(
                     connection,
                     email,
                     teacher_id,
@@ -50,7 +53,25 @@ def seed_demo_data():
                     class_id,
                     index,
                 )
-                seed_demo_progress(connection, student_id, class_id, tasks, index)
+
+                if action == "created":
+                    students_created += 1
+                else:
+                    students_updated += 1
+
+                progress_created += seed_demo_progress(
+                    connection,
+                    student_id,
+                    class_id,
+                    tasks,
+                    index,
+                )
+
+    return {
+        "students_created": students_created,
+        "students_updated": students_updated,
+        "progress_created": progress_created,
+    }
 
 
 def group_tasks_by_class():
@@ -159,7 +180,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
             ),
         )
 
-        return cursor.lastrowid
+        return cursor.lastrowid, "created"
 
     connection.execute(
         """
@@ -186,23 +207,24 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
         ),
     )
 
-    return existing["id"]
+    return existing["id"], "updated"
 
 
 def seed_demo_progress(connection, student_id, class_id, tasks, student_index):
     """Create stable 0/1 progress for a subset of demo tasks."""
 
     if not tasks:
-        return
+        return 0
 
     sample_size = min(36, len(tasks))
     selected_tasks = tasks[:sample_size]
+    progress_created = 0
 
     for task_index, task in enumerate(selected_tasks, start=1):
         attempts = (student_index + task_index) % 4 + 1
         is_passed = 1 if (student_index * 3 + task_index) % 5 in (0, 1, 2) else 0
 
-        connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO task_progress (
                 student_id,
@@ -228,3 +250,7 @@ def seed_demo_progress(connection, student_id, class_id, tasks, student_index):
                 is_passed,
             ),
         )
+
+        progress_created += cursor.rowcount
+
+    return progress_created

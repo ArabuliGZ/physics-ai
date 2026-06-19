@@ -45,7 +45,10 @@ def create_app():
         init_database()
 
         if is_demo_seed_enabled():
-            seed_demo_data()
+            result = seed_demo_data()
+            print(f"Demo seed enabled: {result}")
+        else:
+            print("Demo seed disabled. Set SEED_DEMO_DATA=1 to create demo students.")
 
     # Раздаем frontend-файлы: HTML, CSS, JS и favicon.
     app.mount(

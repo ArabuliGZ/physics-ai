@@ -329,11 +329,11 @@
 
             max-width: calc(100vw - 40px);
 
-            height: 268px;
+            height: 300px;
 
             display: grid;
 
-            grid-template-rows: 28px 42px 42px 38px 34px;
+            grid-template-rows: 28px 42px 42px 38px 34px 34px;
 
             gap: 14px;
 
@@ -432,12 +432,27 @@
 
             margin-top: 2px;
 
-            margin-bottom: 6px;
+            margin-bottom: 0;
         }
 
         .student-teacher-link:hover {
 
             background: #f3f4f6;
+        }
+
+        .login-demo-hint {
+
+            margin: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            color: #6b7280;
+
+            font-size: 13px;
+
+            line-height: 17px;
         }
 
         .student-error {
