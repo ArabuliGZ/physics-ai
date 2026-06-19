@@ -28,9 +28,10 @@ def main():
 
     with sqlite3.connect(DATABASE_PATH) as connection:
         connection.row_factory = sqlite3.Row
+        teacher_id = get_test_teacher_id(connection)
 
         for class_id in class_ids:
-            student = upsert_test_student(connection, class_id)
+            student = upsert_test_student(connection, class_id, teacher_id)
             print(
                 f"{student['email']} -> "
                 f"{student['full_name']}, "
@@ -54,7 +55,24 @@ def load_task_class_ids():
     return sorted(class_ids, key=class_sort_key)
 
 
-def upsert_test_student(connection, class_id):
+def get_test_teacher_id(connection):
+    """Return the local test teacher id created by database initialization."""
+
+    row = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE email = 'teacher@test.ru'
+        """
+    ).fetchone()
+
+    if row is None:
+        raise RuntimeError("teacher@test.ru user is missing")
+
+    return row["id"]
+
+
+def upsert_test_student(connection, class_id, teacher_id):
     """Create one active test student for a task base."""
 
     grade = grade_from_class_id(class_id)
@@ -78,6 +96,7 @@ def upsert_test_student(connection, class_id):
             """
             INSERT INTO students (
                 email,
+                teacher_id,
                 school,
                 class_name,
                 grade,
@@ -86,10 +105,11 @@ def upsert_test_student(connection, class_id):
                 is_active,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
             """,
             (
                 email,
+                teacher_id,
                 TEST_SCHOOL,
                 class_name,
                 grade,
@@ -105,6 +125,7 @@ def upsert_test_student(connection, class_id):
             """
             UPDATE students
             SET school = ?,
+                teacher_id = ?,
                 class_name = ?,
                 grade = ?,
                 class_group = ?,
@@ -115,6 +136,7 @@ def upsert_test_student(connection, class_id):
             """,
             (
                 TEST_SCHOOL,
+                teacher_id,
                 class_name,
                 grade,
                 TEST_CLASS_GROUP,

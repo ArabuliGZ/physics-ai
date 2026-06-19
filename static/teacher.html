@@ -5,162 +5,249 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Журнал учителя</title>
 
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="/static/css/style.css?v=app-nav-2">
     <link rel="icon" href="/static/favicon.png">
+    <style>
+        [hidden],
+        .teacher-topbar-actions .teacher-link {
+            display: none !important;
+        }
+    </style>
 </head>
 <body class="teacher-page">
-    <h1>Журнал учителя</h1>
-
-    <div class="teacher-topbar">
-        <a class="teacher-link" href="/">Кабинет ученика</a>
-
-        <button
-            type="button"
-            class="teacher-secondary-button"
-            onclick="loadTeacherDashboard()"
+    <div
+        id="teacher_login_modal"
+        class="student-modal"
+        hidden
+    >
+        <form
+            class="student-card"
+            onsubmit="handleTeacherLogin(event)"
         >
-            Обновить
-        </button>
+            <h2>Вход учителя</h2>
+
+            <input
+                id="teacher_email"
+                type="email"
+                placeholder="teacher@test.ru"
+                autocomplete="email"
+            >
+
+            <button
+                id="teacher_login_button"
+                type="submit"
+            >
+                Войти
+            </button>
+
+            <a
+                class="student-teacher-link"
+                href="/"
+            >
+                Войти как ученик
+            </a>
+
+            <div
+                id="teacher_login_error"
+                class="student-error"
+            ></div>
+        </form>
     </div>
 
-    <section class="teacher-panel">
-        <div class="teacher-panel-header">
-            <div>
-                <h2>Журнал</h2>
+    <div
+        id="teacher_app"
+        hidden
+    >
+        <header class="app-topbar teacher-topbar">
+            <div class="teacher-topbar-main">
+                <div class="app-brand">
+                    <span class="app-brand-mark">P</span>
+
+                    <div class="app-brand-text">
+                        <strong>Physics AI</strong>
+                        <span>Журнал учителя</span>
+                    </div>
+                </div>
+
             </div>
 
-            <span id="teacher_journal_summary"></span>
-        </div>
+            <div class="teacher-topbar-actions">
+                <a class="teacher-link" href="/">Войти как ученик</a>
 
-        <div class="teacher-filters">
-            <label>
-                <span>Школа</span>
-                <select
-                    id="teacher_school_select"
-                    onchange="handleTeacherSchoolChange()"
-                ></select>
-            </label>
+                <div
+                    id="teacher_user_name"
+                    class="app-user-pill teacher-user-pill"
+                ></div>
 
-            <label>
-                <span>Класс</span>
-                <select
-                    id="teacher_student_class_select"
-                    onchange="handleTeacherClassChange()"
-                ></select>
-            </label>
-        </div>
-    </section>
+                <button
+                    type="button"
+                    class="teacher-secondary-button"
+                    onclick="loadTeacherDashboard()"
+                    hidden
+                >
+                    Обновить
+                </button>
 
-    <section class="teacher-panel">
-        <div
-            id="teacher_journal_table"
-            class="teacher-journal-table"
-        ></div>
-    </section>
+                <button
+                    type="button"
+                    class="teacher-logout-button"
+                    onclick="logoutTeacher()"
+                >
+                    Выйти
+                </button>
+            </div>
+        </header>
 
-    <section class="teacher-panel">
-        <div class="teacher-panel-header">
-            <div>
-                <h2>Добавить в текущий класс</h2>
+        <section class="teacher-panel">
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Журнал</h2>
+                </div>
+
+                <span id="teacher_journal_summary"></span>
             </div>
 
-            <span id="teacher_single_result"></span>
-        </div>
+            <div class="teacher-filters">
+                <label>
+                    <span>Школа</span>
+                    <select
+                        id="teacher_school_select"
+                        onchange="handleTeacherSchoolChange()"
+                    ></select>
+                </label>
 
-        <form
-            class="teacher-single-form"
-            onsubmit="addSingleTeacherStudent(event)"
-        >
-            <input
-                id="teacher_single_full_name"
-                type="text"
-                placeholder="ФИО"
-                required
-            >
+                <label>
+                    <span>Класс</span>
+                    <select
+                        id="teacher_student_class_select"
+                        onchange="handleTeacherClassChange()"
+                    ></select>
+                </label>
+            </div>
+        </section>
 
-            <input
-                id="teacher_single_email"
-                type="email"
-                placeholder="email"
-                required
-            >
+        <section class="teacher-panel">
+            <div
+                id="teacher_journal_table"
+                class="teacher-journal-table"
+            ></div>
+        </section>
 
-            <button
-                id="teacher_single_button"
-                type="submit"
-                class="teacher-secondary-button"
-            >
-                Добавить
-            </button>
-        </form>
-    </section>
+        <section class="teacher-panel">
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Добавить в текущий класс</h2>
+                </div>
 
-    <section class="teacher-panel">
-        <div class="teacher-panel-header">
-            <div>
-                <h2>Создать класс</h2>
+                <span id="teacher_single_result"></span>
             </div>
 
-            <span id="teacher_import_result"></span>
-        </div>
-
-        <form
-            class="teacher-import-form"
-            onsubmit="importTeacherStudents(event)"
-        >
-            <label>
-                <span>Школа</span>
+            <form
+                class="teacher-single-form"
+                onsubmit="addSingleTeacherStudent(event)"
+            >
                 <input
-                    id="teacher_import_school"
+                    id="teacher_single_full_name"
                     type="text"
-                    placeholder="Название школы"
+                    placeholder="ФИО"
                     required
                 >
-            </label>
 
-            <label>
-                <span>Параллель</span>
-                <select id="teacher_import_grade">
-                    <option value="7">7 класс</option>
-                    <option value="8">8 класс</option>
-                    <option value="9">9 класс</option>
-                    <option value="10">10 класс</option>
-                </select>
-            </label>
-
-            <label>
-                <span>Класс</span>
                 <input
-                    id="teacher_import_class_group"
-                    type="text"
-                    placeholder="А или 1"
+                    id="teacher_single_email"
+                    type="email"
+                    placeholder="email"
                     required
                 >
-            </label>
 
-            <label>
-                <span>База задач</span>
-                <select id="teacher_import_task_class"></select>
-            </label>
-
-            <label>
-                <span>CSV</span>
-                <input
-                    id="teacher_import_file"
-                    type="file"
-                    accept=".csv,text/csv"
+                <button
+                    id="teacher_single_button"
+                    type="submit"
+                    class="teacher-secondary-button"
                 >
-            </label>
+                    Добавить
+                </button>
+            </form>
+        </section>
 
-            <button
-                id="teacher_import_button"
-                type="submit"
-                class="teacher-secondary-button"
+        <section class="teacher-panel">
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Создать класс</h2>
+                </div>
+
+                <span id="teacher_import_result"></span>
+            </div>
+
+            <form
+                class="teacher-import-form"
+                onsubmit="importTeacherStudents(event)"
             >
-                Загрузить CSV
-            </button>
-        </form>
-    </section>
+                <label>
+                    <span>Школа</span>
+                    <input
+                        id="teacher_import_school"
+                        type="text"
+                        placeholder="Название школы"
+                        required
+                    >
+                </label>
+
+                <label>
+                    <span>Параллель</span>
+                    <select id="teacher_import_grade">
+                        <option value="7">7 класс</option>
+                        <option value="8">8 класс</option>
+                        <option value="9">9 класс</option>
+                        <option value="10">10 класс</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Класс</span>
+                    <input
+                        id="teacher_import_class_group"
+                        type="text"
+                        placeholder="А или 1"
+                        required
+                    >
+                </label>
+
+                <label>
+                    <span>База задач</span>
+                    <select id="teacher_import_task_class"></select>
+                </label>
+
+                <label>
+                    <span>CSV</span>
+                    <input
+                        id="teacher_import_file"
+                        type="file"
+                        accept=".csv,text/csv"
+                    >
+                </label>
+
+                <button
+                    id="teacher_import_button"
+                    type="submit"
+                    class="teacher-secondary-button"
+                >
+                    Загрузить CSV
+                </button>
+            </form>
+        </section>
+    </div>
 
     <div
         id="teacher_progress_dialog"
@@ -209,6 +296,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js"></script>
+    <script src="/static/js/teacher.js?v=auth-exit-1"></script>
 </body>
 </html>

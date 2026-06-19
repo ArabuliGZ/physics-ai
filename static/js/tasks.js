@@ -493,8 +493,25 @@ function renderProgressCell(row, boundaryClass = "") {
             onclick="openTaskFromProgress('${row.chapter}', '${row.topic}', '${row.number}')"
         >
             <strong>${row.attempts_count}</strong>
+            ${renderProgressTeacherOverrideMarker(row)}
         </button>
     `;
+}
+
+
+function renderProgressTeacherOverrideMarker(row) {
+    if (row.teacher_override === null || row.teacher_override === undefined) {
+        return "";
+    }
+
+    const markerClass = row.teacher_override === 1
+        ? "progress-override-pass"
+        : "progress-override-fail";
+    const title = row.teacher_override === 1
+        ? "Учитель зачёл"
+        : "Учитель снял зачёт";
+
+    return `<span class="progress-override-marker ${markerClass}" title="${title}"></span>`;
 }
 
 

@@ -43,6 +43,7 @@ def main():
     tasks_by_class = group_tasks_by_class()
 
     with get_connection() as connection:
+        teacher_id = get_test_teacher_id(connection)
         clear_database(connection)
 
         student_count = 0
@@ -71,6 +72,7 @@ def main():
                             class_group,
                             choose_task_class_id(grade),
                             full_name,
+                            teacher_id,
                         )
                         student_count += 1
 
@@ -133,6 +135,23 @@ def clear_database(connection):
     )
 
 
+def get_test_teacher_id(connection):
+    """Return the local test teacher id created by database initialization."""
+
+    row = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE email = 'teacher@test.ru'
+        """
+    ).fetchone()
+
+    if row is None:
+        raise RuntimeError("teacher@test.ru user is missing")
+
+    return row["id"]
+
+
 def make_class_names(school, grade):
     """Return test class names in the naming style of the selected school."""
 
@@ -183,6 +202,7 @@ def insert_student(
     class_group,
     task_class_id,
     full_name,
+    teacher_id,
 ):
     """Insert one student and return its id."""
 
@@ -190,6 +210,7 @@ def insert_student(
         """
         INSERT INTO students (
             email,
+            teacher_id,
             school,
             class_name,
             grade,
@@ -197,9 +218,18 @@ def insert_student(
             task_class_id,
             full_name
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (email, school, class_name, grade, class_group, task_class_id, full_name),
+        (
+            email,
+            teacher_id,
+            school,
+            class_name,
+            grade,
+            class_group,
+            task_class_id,
+            full_name,
+        ),
     )
 
     return cursor.lastrowid

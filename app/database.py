@@ -42,6 +42,7 @@ def init_database():
             """
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher_id INTEGER,
                 email TEXT,
                 school TEXT NOT NULL,
                 class_name TEXT NOT NULL,
@@ -50,6 +51,16 @@ def init_database():
                 task_class_id TEXT,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 full_name TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (teacher_id) REFERENCES users (id)
+            );
+
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL UNIQUE,
+                role TEXT NOT NULL CHECK (role IN ('admin', 'teacher')),
+                full_name TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -76,6 +87,7 @@ def init_database():
                 number TEXT NOT NULL,
                 attempts_count INTEGER NOT NULL DEFAULT 0,
                 is_passed INTEGER NOT NULL DEFAULT 0 CHECK (is_passed IN (0, 1)),
+                teacher_override INTEGER CHECK (teacher_override IN (0, 1)),
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
                 UNIQUE (student_id, class_id, chapter, topic, number)
@@ -83,9 +95,34 @@ def init_database():
             """
         )
 
+        ensure_user_rows(connection)
         ensure_student_class_columns(connection)
+        ensure_task_progress_columns(connection)
+        backfill_student_teacher(connection)
         backfill_student_class_parts(connection)
         backfill_student_task_class(connection)
+
+
+def ensure_user_rows(connection):
+    """Create stable local test users for role-based login."""
+
+    users = (
+        ("teacher@test.ru", "teacher", "Тестовый учитель"),
+        ("admin@test.ru", "admin", "Администратор"),
+    )
+
+    for email, role, full_name in users:
+        connection.execute(
+            """
+            INSERT INTO users (email, role, full_name, is_active)
+            VALUES (?, ?, ?, 1)
+            ON CONFLICT(email) DO UPDATE SET
+                role = excluded.role,
+                full_name = excluded.full_name,
+                is_active = 1
+            """,
+            (email, role, full_name),
+        )
 
 
 def ensure_student_class_columns(connection):
@@ -98,6 +135,9 @@ def ensure_student_class_columns(connection):
 
     if "grade" not in columns:
         connection.execute("ALTER TABLE students ADD COLUMN grade INTEGER")
+
+    if "teacher_id" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN teacher_id INTEGER")
 
     if "class_group" not in columns:
         connection.execute("ALTER TABLE students ADD COLUMN class_group TEXT")
@@ -112,6 +152,44 @@ def ensure_student_class_columns(connection):
         connection.execute(
             "ALTER TABLE students ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
         )
+
+
+def ensure_task_progress_columns(connection):
+    """Add progress metadata columns to older local databases."""
+
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(task_progress)").fetchall()
+    }
+
+    if "teacher_override" not in columns:
+        connection.execute(
+            "ALTER TABLE task_progress ADD COLUMN teacher_override INTEGER CHECK (teacher_override IN (0, 1))"
+        )
+
+
+def backfill_student_teacher(connection):
+    """Attach older students to the local test teacher."""
+
+    teacher = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE email = 'teacher@test.ru'
+        """
+    ).fetchone()
+
+    if teacher is None:
+        return
+
+    connection.execute(
+        """
+        UPDATE students
+        SET teacher_id = ?
+        WHERE teacher_id IS NULL
+        """,
+        (teacher["id"],),
+    )
 
 
 def backfill_student_class_parts(connection):

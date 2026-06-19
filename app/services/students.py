@@ -65,6 +65,7 @@ def create_student(
     class_group=None,
     task_class_id=None,
     email=None,
+    teacher_id=None,
 ):
     """Create a student and return the saved row."""
 
@@ -80,6 +81,7 @@ def create_student(
             """
             INSERT INTO students (
                 school,
+                teacher_id,
                 email,
                 class_name,
                 grade,
@@ -87,16 +89,25 @@ def create_student(
                 task_class_id,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (school, email, class_name, grade, class_group, task_class_id, full_name),
+            (
+                school,
+                teacher_id,
+                email,
+                class_name,
+                grade,
+                class_group,
+                task_class_id,
+                full_name,
+            ),
         )
 
         student_id = cursor.lastrowid
 
         row = connection.execute(
             """
-            SELECT id, email, school, class_name, grade, class_group,
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -119,7 +130,7 @@ def find_student(school, class_name, full_name, grade=None, class_group=None):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, email, school, class_name, grade, class_group,
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE school = ?
@@ -144,6 +155,7 @@ def find_or_create_student(
     class_group=None,
     task_class_id=None,
     email=None,
+    teacher_id=None,
 ):
     """Return an existing student or create a new one."""
 
@@ -166,6 +178,7 @@ def find_or_create_student(
         class_group=class_group,
         task_class_id=task_class_id,
         email=email,
+        teacher_id=teacher_id,
     )
 
 
@@ -178,7 +191,7 @@ def find_student_by_email(email, include_inactive=False):
     with database_connection() as connection:
         row = connection.execute(
             f"""
-            SELECT id, email, school, class_name, grade, class_group,
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE lower(email) = ?
@@ -199,6 +212,7 @@ def upsert_student_by_email(
     grade,
     class_group,
     task_class_id,
+    teacher_id=None,
 ):
     """Create or update a student by email and return the saved row."""
 
@@ -219,6 +233,7 @@ def upsert_student_by_email(
                 """
                 INSERT INTO students (
                     email,
+                    teacher_id,
                     school,
                     class_name,
                     grade,
@@ -226,10 +241,11 @@ def upsert_student_by_email(
                     task_class_id,
                     full_name
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized_email,
+                    teacher_id,
                     school,
                     class_name,
                     grade,
@@ -246,6 +262,7 @@ def upsert_student_by_email(
                 """
                 UPDATE students
                 SET email = ?,
+                    teacher_id = ?,
                     school = ?,
                     class_name = ?,
                     grade = ?,
@@ -257,6 +274,7 @@ def upsert_student_by_email(
                 """,
                 (
                     normalized_email,
+                    teacher_id if teacher_id is not None else existing["teacher_id"],
                     school,
                     class_name,
                     grade,
@@ -270,7 +288,7 @@ def upsert_student_by_email(
 
         row = connection.execute(
             """
-            SELECT id, email, school, class_name, grade, class_group,
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -290,7 +308,7 @@ def get_student(student_id):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, email, school, class_name, grade, class_group,
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -301,31 +319,48 @@ def get_student(student_id):
         return row_to_dict(row)
 
 
-def list_students():
+def list_students(teacher_id=None):
     """Return all students ordered for a teacher-friendly overview."""
+
+    teacher_clause = ""
+    params = ()
+
+    if teacher_id is not None:
+        teacher_clause = "AND teacher_id = ?"
+        params = (teacher_id,)
 
     with database_connection() as connection:
         rows = connection.execute(
-            """
-            SELECT id, email, school, class_name, grade, class_group,
+            f"""
+            SELECT id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE is_active = 1
+              {teacher_clause}
             ORDER BY school, grade, class_group, full_name, id
-            """
+            """,
+            params,
         ).fetchall()
 
         return [row_to_dict(row) for row in rows]
 
 
-def list_students_with_summary():
+def list_students_with_summary(teacher_id=None):
     """Return students with progress totals for the teacher overview."""
+
+    teacher_clause = ""
+    params = ()
+
+    if teacher_id is not None:
+        teacher_clause = "AND students.teacher_id = ?"
+        params = (teacher_id,)
 
     with database_connection() as connection:
         rows = connection.execute(
-            """
+            f"""
             SELECT
                 students.id,
+                students.teacher_id,
                 students.email,
                 students.school,
                 students.class_name,
@@ -352,8 +387,10 @@ def list_students_with_summary():
             ) AS summary
                 ON summary.student_id = students.id
             WHERE students.is_active = 1
+              {teacher_clause}
             ORDER BY students.school, students.grade, students.class_group, students.full_name, students.id
-            """
+            """,
+            params,
         ).fetchall()
 
         return [row_to_dict(row) for row in rows]
@@ -365,18 +402,26 @@ def normalize_email(email):
     return (email or "").strip().lower()
 
 
-def deactivate_student(student_id):
+def deactivate_student(student_id, teacher_id=None):
     """Hide a student from teacher journals while keeping history."""
+
+    teacher_clause = ""
+    params = [student_id]
+
+    if teacher_id is not None:
+        teacher_clause = "AND teacher_id = ?"
+        params.append(teacher_id)
 
     with database_connection() as connection:
         row = connection.execute(
-            """
+            f"""
             SELECT id
             FROM students
             WHERE id = ?
               AND is_active = 1
+              {teacher_clause}
             """,
-            (student_id,),
+            params,
         ).fetchone()
 
         if row is None:

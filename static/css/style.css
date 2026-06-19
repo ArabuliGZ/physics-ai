@@ -32,6 +32,11 @@
         
         /* ===== ОБЩИЕ СТИЛИ BODY ===== */
         
+        html {
+
+            scrollbar-gutter: stable;
+        }
+
         body {
 
             /* Шрифт страницы */
@@ -55,6 +60,134 @@
         h1 {
 
             text-align: center;
+        }
+
+        .app-topbar {
+
+            max-width: 1600px;
+
+            margin: 0 auto 16px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 18px;
+
+            padding: 12px 16px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 14px;
+
+            background: rgba(255, 255, 255, 0.94);
+
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .app-brand {
+
+            min-width: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+        }
+
+        .app-brand-mark {
+
+            width: 34px;
+
+            height: 34px;
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 10px;
+
+            background: #111827;
+
+            color: white;
+
+            font-weight: 700;
+
+            line-height: 1;
+        }
+
+        .app-brand-text {
+
+            min-width: 0;
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 1px;
+        }
+
+        .app-brand-text strong {
+
+            color: #111827;
+
+            font-size: 15px;
+
+            line-height: 18px;
+        }
+
+        .app-brand-text span {
+
+            color: #6b7280;
+
+            font-size: 13px;
+
+            line-height: 16px;
+        }
+
+        .app-topbar-actions {
+
+            min-width: 0;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: flex-end;
+
+            gap: 10px;
+        }
+
+        .app-user-pill {
+
+            max-width: min(520px, 48vw);
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
+
+            padding: 7px 10px;
+
+            border: 1px solid #dbeafe;
+
+            border-radius: 999px;
+
+            background: #eff6ff;
+
+            color: #1e40af;
+
+            font-size: 13px;
+
+            font-weight: 600;
         }
 
         .teacher-entry {
@@ -108,33 +241,6 @@
             background: #f9fafb;
         }
 
-        .student-bar {
-
-            max-width: 1600px;
-
-            margin: 0 auto 14px;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            gap: 12px;
-
-            padding: 12px 16px;
-
-            box-sizing: border-box;
-
-            border: 1px solid #e5e7eb;
-
-            border-radius: 14px;
-
-            background: white;
-
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
         .student-bar[hidden],
         .student-modal[hidden] {
 
@@ -151,29 +257,45 @@
 
             white-space: nowrap;
 
-            color: #111827;
-
-            font-weight: 600;
+            display: inline-flex;
         }
 
-        .student-logout {
+        .student-logout,
+        .teacher-logout-button {
 
             flex: 0 0 auto;
 
-            padding: 8px 12px;
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            min-height: 34px;
+
+            padding: 7px 12px;
+
+            box-sizing: border-box;
+
+            border: 1px solid #fecaca;
 
             border-radius: 10px;
 
-            background: #f3f4f6;
+            background: #fff7f7;
 
-            color: #111827;
+            color: #991b1b;
+
+            font: inherit;
 
             font-size: 14px;
+
+            cursor: pointer;
         }
 
-        .student-logout:hover {
+        .student-logout:hover,
+        .teacher-logout-button:hover {
 
-            background: #e5e7eb;
+            background: #fee2e2;
         }
 
         .student-modal {
@@ -186,13 +308,15 @@
 
             display: flex;
 
-            align-items: center;
+            align-items: flex-start;
 
             justify-content: center;
 
-            padding: 20px;
+            padding: 56px 20px 20px;
 
             box-sizing: border-box;
+
+            overflow-y: auto;
 
             background: rgba(245,245,245,0.88);
 
@@ -201,15 +325,19 @@
 
         .student-card {
 
-            width: min(420px, 100%);
+            width: 420px;
 
-            display: flex;
+            max-width: calc(100vw - 40px);
 
-            flex-direction: column;
+            height: 268px;
 
-            gap: 12px;
+            display: grid;
 
-            padding: 24px;
+            grid-template-rows: 28px 42px 42px 38px 34px;
+
+            gap: 14px;
+
+            padding: 26px 24px;
 
             box-sizing: border-box;
 
@@ -229,6 +357,8 @@
             color: #111827;
 
             font-size: 20px;
+
+            line-height: 28px;
         }
 
         .student-card input,
@@ -236,7 +366,7 @@
 
             width: 100%;
 
-            min-height: 42px;
+            height: 42px;
 
             padding: 10px 12px;
 
@@ -270,14 +400,14 @@
 
         .student-card button {
 
-            min-height: 42px;
+            height: 42px;
 
             border-radius: 10px;
         }
 
         .student-teacher-link {
 
-            min-height: 38px;
+            height: 38px;
 
             display: inline-flex;
 
@@ -298,6 +428,13 @@
             background: #f9fafb;
         }
 
+        .student-card .student-teacher-link {
+
+            margin-top: 2px;
+
+            margin-bottom: 6px;
+        }
+
         .student-teacher-link:hover {
 
             background: #f3f4f6;
@@ -305,11 +442,13 @@
 
         .student-error {
 
-            min-height: 20px;
+            min-height: 34px;
 
             color: #dc2626;
 
             font-size: 14px;
+
+            line-height: 17px;
         }
 
         /* ===== ОКНО ЧАТА ===== */
@@ -818,6 +957,14 @@
     box-shadow: 0 2px 10px rgba(17, 24, 39, 0.05);
 }
 
+[hidden] {
+    display: none !important;
+}
+
+.teacher-page .teacher-topbar-actions .teacher-link {
+    display: none !important;
+}
+
 .left-column > .block > .block {
     display: flex;
     flex-direction: column;
@@ -1025,6 +1172,7 @@
 }
 
 .progress-cell {
+    position: relative;
     width: 38px;
     height: 32px;
     display: inline-flex;
@@ -1080,6 +1228,24 @@
     font-weight: 700;
 }
 
+.progress-override-marker {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.progress-override-pass {
+    background: #16a34a;
+}
+
+.progress-override-fail {
+    background: #dc2626;
+}
+
 .progress-empty {
     padding: 12px;
     color: #6b7280;
@@ -1090,11 +1256,39 @@
     max-width: 1600px;
 }
 
+.teacher-page-title {
+    margin-bottom: 18px;
+}
+
 .teacher-topbar {
+    margin-bottom: 16px;
+}
+
+.teacher-topbar-main {
+    min-width: 0;
     display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
+    align-items: center;
+    gap: 14px;
+}
+
+.teacher-topbar-title {
+    color: #111827;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.teacher-topbar-subtitle {
+    margin-top: 2px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.teacher-topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .teacher-panel {
@@ -1316,6 +1510,7 @@
 }
 
 .teacher-journal-cell {
+    position: relative;
     min-width: 44px;
     color: #6b7280;
     background: #f9fafb;
@@ -1338,6 +1533,24 @@
 
 .teacher-clickable-cell:hover {
     box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+.teacher-override-marker {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.teacher-override-pass {
+    background: #16a34a;
+}
+
+.teacher-override-fail {
+    background: #dc2626;
 }
 
 .teacher-chapter-summary {

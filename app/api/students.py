@@ -4,14 +4,17 @@ import csv
 from io import StringIO
 
 from fastapi import APIRouter
+from fastapi import Depends
 from fastapi import File
 from fastapi import Form
+from fastapi import Header
 from fastapi import HTTPException
 from fastapi import UploadFile
 
 from app.schemas import StudentCreateRequest
 from app.schemas import StudentLoginRequest
 from app.schemas import TeacherProgressOverrideRequest
+from app.schemas import UserLoginRequest
 from app.services.progress import get_class_progress_map
 from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
@@ -26,9 +29,62 @@ from app.services.students import list_students
 from app.services.students import list_students_with_summary
 from app.services.students import upsert_student_by_email
 from app.services.task_store import TASKS
+from app.services.users import find_user_by_email
 
 
 router = APIRouter()
+
+
+def require_teacher_user(x_user_email: str | None = Header(default=None, alias="X-User-Email")):
+    """Return the current teacher/admin user from a temporary email header."""
+
+    if not x_user_email:
+        raise HTTPException(
+            status_code=401,
+            detail="Teacher login is required"
+        )
+
+    user = find_user_by_email(x_user_email)
+
+    if user is None or user["role"] not in ("teacher", "admin"):
+        raise HTTPException(
+            status_code=403,
+            detail="Teacher access is required"
+        )
+
+    return user
+
+
+def teacher_scope_id(user):
+    """Return teacher id for filtering, or None when admin can see all."""
+
+    if user["role"] == "admin":
+        return None
+
+    return user["id"]
+
+
+@router.post("/auth/login")
+def login_user(data: UserLoginRequest):
+    """Login a role-based user by email."""
+
+    email = data.email.strip().lower()
+
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="email is required"
+        )
+
+    user = find_user_by_email(email)
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User with this email was not found"
+        )
+
+    return user
 
 
 @router.post("/students")
@@ -90,10 +146,10 @@ def get_students():
 
 
 @router.get("/teacher/students")
-def get_teacher_students():
+def get_teacher_students(current_user=Depends(require_teacher_user)):
     """Return students with progress totals for the teacher page."""
 
-    return list_students_with_summary()
+    return list_students_with_summary(teacher_scope_id(current_user))
 
 
 @router.post("/teacher/import-students")
@@ -103,6 +159,7 @@ async def import_teacher_students(
     class_group: str = Form(...),
     task_class_id: str = Form(...),
     file: UploadFile = File(...),
+    current_user=Depends(require_teacher_user),
 ):
     """Import students from a CSV file with full_name and email columns."""
 
@@ -159,6 +216,7 @@ async def import_teacher_students(
             grade=grade,
             class_group=class_group.strip(),
             task_class_id=task_class_id.strip(),
+            teacher_id=teacher_scope_id(current_user),
         )
 
         if student["action"] == "created":
@@ -174,7 +232,10 @@ async def import_teacher_students(
 
 
 @router.post("/teacher/students")
-def upsert_teacher_student(data: StudentCreateRequest):
+def upsert_teacher_student(
+    data: StudentCreateRequest,
+    current_user=Depends(require_teacher_user),
+):
     """Create or update one student by email from the teacher page."""
 
     if not data.email:
@@ -200,16 +261,20 @@ def upsert_teacher_student(data: StudentCreateRequest):
             if data.task_class_id
             else f"{data.grade}class"
         ),
+        teacher_id=teacher_scope_id(current_user),
     )
 
     return student
 
 
 @router.post("/teacher/students/{student_id}/deactivate")
-def deactivate_teacher_student(student_id: int):
+def deactivate_teacher_student(
+    student_id: int,
+    current_user=Depends(require_teacher_user),
+):
     """Hide one student from teacher journals without deleting history."""
 
-    result = deactivate_student(student_id)
+    result = deactivate_student(student_id, teacher_scope_id(current_user))
 
     if result is None:
         raise HTTPException(
@@ -221,7 +286,10 @@ def deactivate_teacher_student(student_id: int):
 
 
 @router.post("/teacher/progress")
-def override_teacher_progress(data: TeacherProgressOverrideRequest):
+def override_teacher_progress(
+    data: TeacherProgressOverrideRequest,
+    current_user=Depends(require_teacher_user),
+):
     """Manually set whether a student's task is passed from the teacher journal."""
 
     student = get_student(data.student_id)
@@ -230,6 +298,14 @@ def override_teacher_progress(data: TeacherProgressOverrideRequest):
         raise HTTPException(
             status_code=404,
             detail="Active student not found"
+        )
+
+    scope_id = teacher_scope_id(current_user)
+
+    if scope_id is not None and student["teacher_id"] != scope_id:
+        raise HTTPException(
+            status_code=403,
+            detail="This student is not assigned to the selected teacher"
         )
 
     if data.class_id != allowed_task_class_id(student):
@@ -285,7 +361,8 @@ def get_teacher_journal(
     school: str,
     grade: int,
     class_group: str,
-    class_id: str
+    class_id: str,
+    current_user=Depends(require_teacher_user),
 ):
     """Return a teacher journal: one row per student and one column per task."""
 
@@ -293,7 +370,7 @@ def get_teacher_journal(
 
     students = [
         student
-        for student in list_students_with_summary()
+        for student in list_students_with_summary(teacher_scope_id(current_user))
         if student["school"] == school
         and student["grade"] == grade
         and (student["class_group"] or "") == normalized_group
@@ -441,6 +518,11 @@ def get_student_task_map(
                 if progress
                 else 0
             ),
+            "teacher_override": (
+                progress["teacher_override"]
+                if progress
+                else None
+            ),
             "updated_at": (
                 progress["updated_at"]
                 if progress
@@ -520,6 +602,11 @@ def get_student_class_task_map(
                 progress["is_passed"]
                 if progress
                 else 0
+            ),
+            "teacher_override": (
+                progress["teacher_override"]
+                if progress
+                else None
             ),
             "updated_at": (
                 progress["updated_at"]

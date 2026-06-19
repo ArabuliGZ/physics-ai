@@ -1,4 +1,5 @@
 ﻿const TEACHER_STATE = {
+    user: null,
     students: [],
     tasks: [],
     groupsById: {},
@@ -9,8 +10,144 @@
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    loadTeacherDashboard();
+    initTeacherSession();
 });
+
+
+function initTeacherSession() {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("logout") === "1") {
+        localStorage.removeItem("physics_ai_teacher");
+        window.history.replaceState(null, "", window.location.pathname);
+    }
+
+    const savedUser = localStorage.getItem("physics_ai_teacher");
+
+    if (savedUser) {
+        try {
+            TEACHER_STATE.user = JSON.parse(savedUser);
+
+            if (!TEACHER_STATE.user?.email || !TEACHER_STATE.user?.role) {
+                throw new Error("invalid saved teacher");
+            }
+        } catch {
+            TEACHER_STATE.user = null;
+            localStorage.removeItem("physics_ai_teacher");
+        }
+    }
+
+    renderTeacherSession();
+
+    if (TEACHER_STATE.user) {
+        loadTeacherDashboard();
+    }
+}
+
+
+function renderTeacherSession() {
+    const loginModal = document.getElementById("teacher_login_modal");
+    const app = document.getElementById("teacher_app");
+    const userName = document.getElementById("teacher_user_name");
+
+    if (TEACHER_STATE.user) {
+        loginModal.hidden = true;
+        app.hidden = false;
+        userName.textContent = [
+            TEACHER_STATE.user.full_name,
+            formatTeacherRole(TEACHER_STATE.user.role),
+        ].join(" · ");
+
+        return;
+    }
+
+    loginModal.hidden = false;
+    app.hidden = true;
+    userName.textContent = "";
+}
+
+
+function formatTeacherRole(role) {
+    if (role === "admin") {
+        return "администратор";
+    }
+
+    return "учитель";
+}
+
+
+async function handleTeacherLogin(event) {
+    event.preventDefault();
+
+    const button = document.getElementById("teacher_login_button");
+    const errorBox = document.getElementById("teacher_login_error");
+    const email = document.getElementById("teacher_email").value.trim().toLowerCase();
+
+    if (!email) {
+        errorBox.textContent = "Введи email.";
+        return;
+    }
+
+    button.disabled = true;
+    errorBox.textContent = "";
+
+    try {
+        const response = await fetch(
+            "/auth/login",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email }),
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "teacher login failed");
+        }
+
+        if (data.role !== "teacher" && data.role !== "admin") {
+            throw new Error("not a teacher");
+        }
+
+        TEACHER_STATE.user = data;
+        localStorage.setItem("physics_ai_teacher", JSON.stringify(data));
+        renderTeacherSession();
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Teacher login failed:", error);
+        errorBox.textContent = `Не получилось войти: ${error.message}`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
+function logoutTeacher() {
+    TEACHER_STATE.user = null;
+    TEACHER_STATE.students = [];
+    TEACHER_STATE.selectedFilters = null;
+    TEACHER_STATE.currentJournal = null;
+    localStorage.removeItem("physics_ai_teacher");
+    renderTeacherSession();
+}
+
+
+function teacherFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+
+    if (TEACHER_STATE.user?.email) {
+        headers.set("X-User-Email", TEACHER_STATE.user.email);
+    }
+
+    return fetch(url, {
+        ...options,
+        headers,
+    });
+}
 
 
 async function loadTeacherDashboard() {
@@ -18,12 +155,16 @@ async function loadTeacherDashboard() {
     const summary = document.getElementById("teacher_journal_summary");
     const currentFilters = readTeacherFilters();
 
+    if (!TEACHER_STATE.user) {
+        return;
+    }
+
     table.innerHTML = "<div class=\"progress-empty\">Загружаю...</div>";
     summary.textContent = "";
 
     try {
         const [studentsResponse, tasksResponse, groupsResponse] = await Promise.all([
-            fetch("/teacher/students"),
+            teacherFetch("/teacher/students"),
             fetch("/tasks"),
             fetch("/groups"),
         ]);
@@ -109,7 +250,7 @@ async function importTeacherStudents(event) {
     result.textContent = "Загружаю...";
 
     try {
-        const response = await fetch(
+        const response = await teacherFetch(
             "/teacher/import-students",
             {
                 method: "POST",
@@ -175,7 +316,7 @@ async function addSingleTeacherStudent(event) {
     result.textContent = "Добавляю...";
 
     try {
-        const response = await fetch(
+        const response = await teacherFetch(
             "/teacher/students",
             {
                 method: "POST",
@@ -341,7 +482,7 @@ async function renderTeacherJournal() {
             class_id: classId,
         });
 
-        const response = await fetch(`/teacher/journal?${params.toString()}`);
+        const response = await teacherFetch(`/teacher/journal?${params.toString()}`);
 
         if (!response.ok) {
             throw new Error("teacher journal request failed");
@@ -466,7 +607,7 @@ async function deactivateTeacherStudent(studentId) {
     rememberTeacherFilters();
 
     try {
-        const response = await fetch(
+        const response = await teacherFetch(
             `/teacher/students/${studentId}/deactivate`,
             {
                 method: "POST",
@@ -608,8 +749,25 @@ function renderJournalCell(progress, task, student) {
             title="${task.chapter}.${task.topic}.${task.number}: ${attempts} попыток"
         >
             ${attempts}
+            ${renderTeacherOverrideMarker(progress)}
         </td>
     `;
+}
+
+
+function renderTeacherOverrideMarker(progress) {
+    if (!progress || progress.teacher_override === null || progress.teacher_override === undefined) {
+        return "";
+    }
+
+    const markerClass = progress.teacher_override === 1
+        ? "teacher-override-pass"
+        : "teacher-override-fail";
+    const title = progress.teacher_override === 1
+        ? "Учитель зачёл"
+        : "Учитель снял зачёт";
+
+    return `<span class="teacher-override-marker ${markerClass}" title="${title}"></span>`;
 }
 
 
@@ -658,7 +816,7 @@ async function setTeacherProgressOverride(isPassed) {
     rememberTeacherFilters();
 
     try {
-        const response = await fetch(
+        const response = await teacherFetch(
             "/teacher/progress",
             {
                 method: "POST",
@@ -729,7 +887,7 @@ function updateTeacherTaskCell(progress) {
         statusClass,
         task.isMajorStart ? "teacher-major-start" : "",
     ].filter(Boolean).join(" ");
-    cell.textContent = attempts;
+    cell.innerHTML = `${attempts}${renderTeacherOverrideMarker(progress)}`;
     cell.title = `${task.chapter}.${task.topic}.${task.number}: ${attempts} попыток`;
     cell.setAttribute(
         "onclick",

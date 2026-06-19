@@ -50,6 +50,12 @@ class StudentLoginRequest(BaseModel):
     email: str
 
 
+class UserLoginRequest(BaseModel):
+    """Request body for role-based user login."""
+
+    email: str
+
+
 class TeacherProgressOverrideRequest(BaseModel):
     """Request body for manually changing task progress from teacher journal."""
 

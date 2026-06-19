@@ -69,7 +69,11 @@ def record_task_attempt(
             ON CONFLICT (student_id, class_id, chapter, topic, number)
             DO UPDATE SET
                 attempts_count = attempts_count + 1,
-                is_passed = MAX(is_passed, excluded.is_passed),
+                is_passed = CASE
+                    WHEN teacher_override IS NULL
+                    THEN MAX(is_passed, excluded.is_passed)
+                    ELSE is_passed
+                END,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
@@ -104,7 +108,7 @@ def get_task_progress(student_id, class_id, chapter, topic, number):
         row = connection.execute(
             """
             SELECT id, student_id, class_id, chapter, topic, number,
-                   attempts_count, is_passed, updated_at
+                   attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE student_id = ?
               AND class_id = ?
@@ -134,12 +138,14 @@ def set_task_progress_passed(student_id, class_id, chapter, topic, number, is_pa
                 number,
                 attempts_count,
                 is_passed,
+                teacher_override,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, 0, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT (student_id, class_id, chapter, topic, number)
             DO UPDATE SET
                 is_passed = excluded.is_passed,
+                teacher_override = excluded.teacher_override,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
@@ -149,13 +155,14 @@ def set_task_progress_passed(student_id, class_id, chapter, topic, number, is_pa
                 topic,
                 number,
                 passed_value,
+                passed_value,
             ),
         )
 
         row = connection.execute(
             """
             SELECT id, student_id, class_id, chapter, topic, number,
-                   attempts_count, is_passed, updated_at
+                   attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE student_id = ?
               AND class_id = ?
@@ -176,7 +183,7 @@ def list_student_progress(student_id):
         rows = connection.execute(
             """
             SELECT id, student_id, class_id, chapter, topic, number,
-                   attempts_count, is_passed, updated_at
+                   attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE student_id = ?
             ORDER BY class_id, chapter, topic, number
@@ -193,7 +200,7 @@ def get_progress_map(student_id, class_id, chapter, topic):
     with database_connection() as connection:
         rows = connection.execute(
             """
-            SELECT number, attempts_count, is_passed, updated_at
+            SELECT number, attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE student_id = ?
               AND class_id = ?
@@ -215,7 +222,7 @@ def get_class_progress_map(student_id, class_id):
     with database_connection() as connection:
         rows = connection.execute(
             """
-            SELECT chapter, topic, number, attempts_count, is_passed, updated_at
+            SELECT chapter, topic, number, attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE student_id = ?
               AND class_id = ?
@@ -245,7 +252,7 @@ def list_teacher_journal_progress(student_ids, class_id):
         rows = connection.execute(
             f"""
             SELECT student_id, class_id, chapter, topic, number,
-                   attempts_count, is_passed, updated_at
+                   attempts_count, is_passed, teacher_override, updated_at
             FROM task_progress
             WHERE class_id = ?
               AND student_id IN ({placeholders})

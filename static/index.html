@@ -32,7 +32,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/style.css"
+        href="/static/css/style.css?v=app-nav-2"
     />
 
 
@@ -86,27 +86,32 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
 <body>
 
-    <h1>AI-проверка физики</h1>
-
-    <div class="teacher-entry">
-        <a href="/teacher">Кабинет учителя</a>
-    </div>
-
-    <div
+    <header
         id="student_bar"
-        class="student-bar"
+        class="app-topbar student-bar"
         hidden
     >
-        <span id="student_name"></span>
+        <div class="app-brand">
+            <span class="app-brand-mark">P</span>
 
-        <button
-            type="button"
-            class="student-logout"
-            onclick="logoutStudent()"
-        >
-            Сменить ученика
-        </button>
-    </div>
+            <div class="app-brand-text">
+                <strong>Physics AI</strong>
+                <span>Кабинет ученика</span>
+            </div>
+        </div>
+
+        <div class="app-topbar-actions">
+            <span id="student_name" class="app-user-pill"></span>
+
+            <button
+                type="button"
+                class="student-logout"
+                onclick="logoutStudent()"
+            >
+                Выйти
+            </button>
+        </div>
+    </header>
 
     <div
         id="student_modal"
@@ -135,9 +140,9 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
             <a
                 class="student-teacher-link"
-                href="/teacher"
+                href="/teacher?logout=1"
             >
-                Кабинет учителя
+                Войти как учитель
             </a>
 
             <div
@@ -352,7 +357,7 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
 <script src="/static/js/chat.js"></script>
 
-<script src="/static/js/students.js"></script>
+<script src="/static/js/students.js?v=auth-exit-2"></script>
 
 <script src="/static/js/main.js"></script>
 
