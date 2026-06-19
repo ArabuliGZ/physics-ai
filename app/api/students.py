@@ -2,6 +2,7 @@
 
 import csv
 from io import StringIO
+from urllib.parse import quote
 
 from fastapi import APIRouter
 from fastapi import Depends
@@ -9,6 +10,7 @@ from fastapi import File
 from fastapi import Form
 from fastapi import Header
 from fastapi import HTTPException
+from fastapi import Response
 from fastapi import UploadFile
 
 from app.schemas import StudentCreateRequest
@@ -356,15 +358,8 @@ def get_csv_value(row, *names):
     return ""
 
 
-@router.get("/teacher/journal")
-def get_teacher_journal(
-    school: str,
-    grade: int,
-    class_group: str,
-    class_id: str,
-    current_user=Depends(require_teacher_user),
-):
-    """Return a teacher journal: one row per student and one column per task."""
+def build_teacher_journal(school, grade, class_group, class_id, current_user):
+    """Build the teacher journal data shared by JSON and CSV responses."""
 
     normalized_group = class_group.strip()
 
@@ -416,6 +411,103 @@ def get_teacher_journal(
         "tasks": task_refs,
         "progress": progress,
     }
+
+
+@router.get("/teacher/journal")
+def get_teacher_journal(
+    school: str,
+    grade: int,
+    class_group: str,
+    class_id: str,
+    current_user=Depends(require_teacher_user),
+):
+    """Return a teacher journal: one row per student and one column per task."""
+
+    return build_teacher_journal(
+        school,
+        grade,
+        class_group,
+        class_id,
+        current_user
+    )
+
+
+@router.get("/teacher/journal/export")
+def export_teacher_journal(
+    school: str,
+    grade: int,
+    class_group: str,
+    class_id: str,
+    current_user=Depends(require_teacher_user),
+):
+    """Download the current teacher journal as CSV with pass statuses only."""
+
+    journal = build_teacher_journal(
+        school,
+        grade,
+        class_group,
+        class_id,
+        current_user
+    )
+
+    progress_by_cell = {
+        (
+            progress["student_id"],
+            progress["chapter"],
+            progress["topic"],
+            progress["number"]
+        ): progress
+        for progress in journal["progress"]
+    }
+
+    output = StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    task_headers = [
+        f"{task['chapter']}.{task['topic']}.{task['number']}"
+        for task in journal["tasks"]
+    ]
+
+    writer.writerow([
+        "ФИО",
+        "email",
+        "школа",
+        "класс",
+        *task_headers,
+    ])
+
+    for student in journal["students"]:
+        row = [
+            student["full_name"],
+            student["email"] or "",
+            student["school"],
+            student["class_name"],
+        ]
+
+        for task in journal["tasks"]:
+            progress = progress_by_cell.get((
+                student["id"],
+                task["chapter"],
+                task["topic"],
+                task["number"]
+            ))
+            row.append("1" if progress and progress["is_passed"] == 1 else "0")
+
+        writer.writerow(row)
+
+    safe_group = class_group.strip() or "class"
+    filename = f"journal-{school}-{grade}-{safe_group}-{class_id}.csv"
+    quoted_filename = quote(filename.replace('"', ""))
+
+    return Response(
+        "\ufeff" + output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                "attachment; filename=\"journal.csv\"; "
+                f"filename*=UTF-8''{quoted_filename}"
+            )
+        },
+    )
 
 
 @router.get("/students/{student_id}")

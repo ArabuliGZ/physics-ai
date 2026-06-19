@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=app-nav-2">
+    <link rel="stylesheet" href="/static/css/style.css?v=journal-export-1">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -115,7 +115,19 @@
                     <h2>Журнал</h2>
                 </div>
 
-                <span id="teacher_journal_summary"></span>
+                <div class="teacher-panel-header-actions">
+                    <span id="teacher_journal_summary"></span>
+
+                    <button
+                        id="teacher_export_button"
+                        type="button"
+                        class="teacher-secondary-button"
+                        onclick="downloadTeacherJournalCsv()"
+                        disabled
+                    >
+                        Скачать CSV
+                    </button>
+                </div>
             </div>
 
             <div class="teacher-filters">
@@ -296,6 +308,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=auth-exit-1"></script>
+    <script src="/static/js/teacher.js?v=journal-export-1"></script>
 </body>
 </html>

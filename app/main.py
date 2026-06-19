@@ -4,6 +4,8 @@
 подключение CORS, статических файлов и API-роутеров.
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -13,6 +15,18 @@ from app.api.pages import router as pages_router
 from app.api.students import router as students_router
 from app.api.tasks import router as tasks_router
 from app.database import init_database
+from app.demo_seed import seed_demo_data
+
+
+def is_demo_seed_enabled():
+    """Return whether startup should create public demo data."""
+
+    return os.getenv("SEED_DEMO_DATA", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def create_app():
@@ -29,6 +43,9 @@ def create_app():
         """Prepare local SQLite tables before the first request."""
 
         init_database()
+
+        if is_demo_seed_enabled():
+            seed_demo_data()
 
     # Раздаем frontend-файлы: HTML, CSS, JS и favicon.
     app.mount(

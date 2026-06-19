@@ -456,16 +456,19 @@ async function renderTeacherJournal() {
     const classId = getSelectedTeacherTaskClassId();
     const table = document.getElementById("teacher_journal_table");
     const summary = document.getElementById("teacher_journal_summary");
+    const exportButton = document.getElementById("teacher_export_button");
 
     if (classKey && !classId) {
         table.innerHTML = "<div class=\"progress-empty\">Для этого класса пока не выбрана база заданий.</div>";
         summary.textContent = "";
+        exportButton.disabled = true;
         return;
     }
 
     if (!school || !classKey || !classId) {
         table.innerHTML = "<div class=\"progress-empty\">Выбери школу и класс.</div>";
         summary.textContent = "";
+        exportButton.disabled = true;
         return;
     }
 
@@ -494,12 +497,73 @@ async function renderTeacherJournal() {
             `${journal.students.length} учеников`,
             `${journal.tasks.length} задач`
         ].join(" · ");
+        exportButton.disabled = journal.students.length === 0;
 
         table.innerHTML = renderJournalTable(journal);
     } catch (error) {
         console.error("Teacher journal failed:", error);
         table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить журнал.</div>";
+        summary.textContent = "";
+        exportButton.disabled = true;
     }
+}
+
+
+async function downloadTeacherJournalCsv() {
+    const school = document.getElementById("teacher_school_select").value;
+    const classKey = document.getElementById("teacher_student_class_select").value;
+    const classId = getSelectedTeacherTaskClassId();
+    const button = document.getElementById("teacher_export_button");
+
+    if (!school || !classKey || !classId) {
+        return;
+    }
+
+    const [grade, classGroup] = classKey.split("|");
+    const params = new URLSearchParams({
+        school,
+        grade,
+        class_group: classGroup,
+        class_id: classId,
+    });
+
+    button.disabled = true;
+
+    try {
+        const response = await teacherFetch(`/teacher/journal/export?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error("teacher journal export failed");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = buildTeacherJournalFileName(school, grade, classGroup, classId);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Teacher journal export failed:", error);
+        alert("Не получилось скачать CSV.");
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
+function buildTeacherJournalFileName(school, grade, classGroup, classId) {
+    const rawName = [
+        "journal",
+        school,
+        `${grade}${classGroup ? `-${classGroup}` : ""}`,
+        classId,
+    ].join("-");
+
+    return `${rawName.replace(/[\\/:*?"<>|]+/g, "_")}.csv`;
 }
 
 

@@ -1317,10 +1317,23 @@
     font-size: 20px;
 }
 
+.teacher-panel-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 .teacher-panel-header p,
 #teacher_students_summary,
 #teacher_progress_summary {
     margin: 4px 0 0;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+#teacher_journal_summary {
     color: #6b7280;
     font-size: 13px;
 }
