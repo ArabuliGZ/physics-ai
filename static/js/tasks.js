@@ -102,7 +102,7 @@ function fillChapters() {
 // ===== ЗАПОЛНЕНИЕ ТЕМ =====
 // ==================================
 
-function fillTopics() {
+function fillTopics(options = {}) {
 
     const group =
         document.getElementById("group_select").value;
@@ -154,12 +154,17 @@ function fillTopics() {
         topicSelect.appendChild(option);
     }
 
-    if (topics.length > 0) {
+    if (options.topic && topics.includes(options.topic)) {
+
+        topicSelect.value = options.topic;
+    }
+
+    else if (topics.length > 0) {
 
         topicSelect.value = topics[0];
     }
 
-    return fillTasks();
+    return fillTasks(options);
 }
 
 
@@ -167,7 +172,7 @@ function fillTopics() {
 // ===== ЗАПОЛНЕНИЕ ЗАДАЧ =====
 // ==================================
 
-async function fillTasks() {
+async function fillTasks(options = {}) {
 
     const group =
         document.getElementById("group_select").value;
@@ -223,13 +228,27 @@ async function fillTasks() {
         taskSelect.appendChild(option);
     }
 
-    if (filtered.length > 0) {
+    const selectedTaskNumber =
+        options.taskNumber && filtered.some(task => task.number === options.taskNumber)
+            ? options.taskNumber
+            : null;
+
+    if (selectedTaskNumber) {
+
+        taskSelect.value = selectedTaskNumber;
+    }
+
+    else if (filtered.length > 0) {
 
         taskSelect.value = filtered[0].number;
     }
 
     await showSelectedTask();
-    updateProgressTable();
+
+    if (options.updateProgress !== false) {
+
+        updateProgressTable();
+    }
 }
 
 
@@ -341,6 +360,8 @@ async function showSelectedTask() {
     MathJax.typesetClear([view]);
 
     MathJax.typesetPromise([view]);
+
+    updateCurrentProgressCell();
 }
 
 
@@ -489,6 +510,9 @@ function renderProgressCell(row, boundaryClass = "") {
         <button
             type="button"
             class="progress-cell ${statusClass} ${boundaryClass} ${isCurrent ? "current" : ""}"
+            data-chapter="${escapeHtml(row.chapter)}"
+            data-topic="${escapeHtml(row.topic)}"
+            data-number="${escapeHtml(row.number)}"
             title="${row.chapter}.${row.topic}.${row.number}: ${row.attempts_count} попыток"
             onclick="openTaskFromProgress('${row.chapter}', '${row.topic}', '${row.number}')"
         >
@@ -515,20 +539,38 @@ function renderProgressTeacherOverrideMarker(row) {
 }
 
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+
 async function openTaskFromProgress(chapter, topic, taskNumber) {
     const chapterSelect = document.getElementById("chapter_select");
-    const topicSelect = document.getElementById("topic_select");
-    const taskSelect = document.getElementById("task_select");
 
     chapterSelect.value = chapter;
-    await fillTopics();
+    await fillTopics({
+        topic,
+        taskNumber,
+        updateProgress: false
+    });
+}
 
-    topicSelect.value = topic;
-    await fillTasks();
 
-    taskSelect.value = taskNumber;
-    await showSelectedTask();
-    updateProgressTable();
+function updateCurrentProgressCell() {
+    const cells = document.querySelectorAll(".progress-cell");
+
+    for (const cell of cells) {
+        const isCurrent =
+            cell.dataset.chapter === STATE.selected.chapter &&
+            cell.dataset.topic === STATE.selected.topic &&
+            cell.dataset.number === STATE.selected.number;
+
+        cell.classList.toggle("current", isCurrent);
+    }
 }
 
 

@@ -42,6 +42,7 @@ def init_database():
             """
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                class_id INTEGER,
                 teacher_id INTEGER,
                 email TEXT,
                 school TEXT NOT NULL,
@@ -52,6 +53,7 @@ def init_database():
                 is_active INTEGER NOT NULL DEFAULT 1,
                 full_name TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (class_id) REFERENCES classes (id),
                 FOREIGN KEY (teacher_id) REFERENCES users (id)
             );
 
@@ -62,6 +64,20 @@ def init_database():
                 full_name TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS classes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                teacher_id INTEGER,
+                school TEXT NOT NULL,
+                grade INTEGER NOT NULL,
+                class_group TEXT NOT NULL DEFAULT '',
+                class_name TEXT NOT NULL,
+                task_class_id TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (teacher_id) REFERENCES users (id),
+                UNIQUE (teacher_id, school, grade, class_group, task_class_id)
             );
 
             CREATE TABLE IF NOT EXISTS task_attempts (
@@ -101,6 +117,7 @@ def init_database():
         backfill_student_teacher(connection)
         backfill_student_class_parts(connection)
         backfill_student_task_class(connection)
+        sync_student_classes(connection)
 
 
 def ensure_user_rows(connection):
@@ -138,6 +155,9 @@ def ensure_student_class_columns(connection):
 
     if "teacher_id" not in columns:
         connection.execute("ALTER TABLE students ADD COLUMN teacher_id INTEGER")
+
+    if "class_id" not in columns:
+        connection.execute("ALTER TABLE students ADD COLUMN class_id INTEGER")
 
     if "class_group" not in columns:
         connection.execute("ALTER TABLE students ADD COLUMN class_group TEXT")
@@ -245,6 +265,141 @@ def backfill_student_task_class(connection):
             """,
             (f"{row['grade']}class", row["id"]),
         )
+
+
+def sync_student_classes(connection=None):
+    """Create class rows from student snapshots and attach students to them."""
+
+    if connection is None:
+        with database_connection() as managed_connection:
+            sync_student_classes(managed_connection)
+        return
+
+    rows = connection.execute(
+        """
+        SELECT id, teacher_id, school, class_name, grade, class_group, task_class_id
+        FROM students
+        WHERE is_active = 1
+          AND teacher_id IS NOT NULL
+          AND school IS NOT NULL
+          AND school != ''
+          AND grade IS NOT NULL
+          AND task_class_id IS NOT NULL
+          AND task_class_id != ''
+        """
+    ).fetchall()
+
+    for row in rows:
+        class_group = row["class_group"] or ""
+        class_id = ensure_class_row(
+            connection,
+            row["teacher_id"],
+            row["school"],
+            row["grade"],
+            class_group,
+            row["class_name"],
+            row["task_class_id"],
+        )
+
+        if row["id"] is not None:
+            connection.execute(
+                """
+                UPDATE students
+                SET class_id = ?
+                WHERE id = ?
+                  AND (class_id IS NULL OR class_id != ?)
+                """,
+                (class_id, row["id"], class_id),
+            )
+
+
+def ensure_class_row(
+    connection,
+    teacher_id,
+    school,
+    grade,
+    class_group,
+    class_name,
+    task_class_id,
+):
+    """Return an existing class row id or create it from student data."""
+
+    if teacher_id is None:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM classes
+            WHERE teacher_id IS NULL
+              AND school = ?
+              AND grade = ?
+              AND class_group = ?
+              AND task_class_id = ?
+            LIMIT 1
+            """,
+            (
+                school,
+                grade,
+                class_group,
+                task_class_id,
+            ),
+        ).fetchone()
+    else:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM classes
+            WHERE teacher_id = ?
+              AND school = ?
+              AND grade = ?
+              AND class_group = ?
+              AND task_class_id = ?
+            LIMIT 1
+            """,
+            (
+                teacher_id,
+                school,
+                grade,
+                class_group,
+                task_class_id,
+            ),
+        ).fetchone()
+
+    if row is not None:
+        connection.execute(
+            """
+            UPDATE classes
+            SET class_name = ?,
+                is_active = 1
+            WHERE id = ?
+            """,
+            (class_name, row["id"]),
+        )
+        return row["id"]
+
+    cursor = connection.execute(
+        """
+        INSERT INTO classes (
+            teacher_id,
+            school,
+            grade,
+            class_group,
+            class_name,
+            task_class_id,
+            is_active
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+        """,
+        (
+            teacher_id,
+            school,
+            grade,
+            class_group,
+            class_name,
+            task_class_id,
+        ),
+    )
+
+    return cursor.lastrowid
 
 
 def parse_class_name(class_name):

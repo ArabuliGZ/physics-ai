@@ -60,6 +60,7 @@ class TeacherProgressOverrideRequest(BaseModel):
     """Request body for manually changing task progress from teacher journal."""
 
     student_id: int
+    teacher_class_id: int | None = None
     class_id: str
     chapter: str
     topic: str

@@ -17,6 +17,9 @@ from app.schemas import StudentCreateRequest
 from app.schemas import StudentLoginRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
+from app.services.classes import ensure_teacher_class
+from app.services.classes import get_teacher_class
+from app.services.classes import list_teacher_classes
 from app.services.progress import get_class_progress_map
 from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
@@ -154,6 +157,13 @@ def get_teacher_students(current_user=Depends(require_teacher_user)):
     return list_students_with_summary(teacher_scope_id(current_user))
 
 
+@router.get("/teacher/classes")
+def get_teacher_classes(current_user=Depends(require_teacher_user)):
+    """Return active class records for the teacher page."""
+
+    return list_teacher_classes(teacher_scope_id(current_user))
+
+
 @router.post("/teacher/import-students")
 async def import_teacher_students(
     school: str = Form(...),
@@ -192,6 +202,14 @@ async def import_teacher_students(
     created = 0
     updated = 0
     errors = []
+    scope_id = teacher_scope_id(current_user)
+    class_record = ensure_teacher_class(
+        scope_id,
+        school,
+        grade,
+        class_group,
+        task_class_id,
+    )
 
     for row_number, row in enumerate(reader, start=2):
         full_name = get_csv_value(row, "full_name", "фио", "ФИО")
@@ -218,7 +236,8 @@ async def import_teacher_students(
             grade=grade,
             class_group=class_group.strip(),
             task_class_id=task_class_id.strip(),
-            teacher_id=teacher_scope_id(current_user),
+            teacher_id=scope_id,
+            class_id=class_record["id"],
         )
 
         if student["action"] == "created":
@@ -252,18 +271,29 @@ def upsert_teacher_student(
             detail="school, grade, class_group and full_name are required"
         )
 
+    task_class_id = (
+        data.task_class_id.strip()
+        if data.task_class_id
+        else f"{data.grade}class"
+    )
+    scope_id = teacher_scope_id(current_user)
+    class_record = ensure_teacher_class(
+        scope_id,
+        data.school,
+        data.grade,
+        data.class_group,
+        task_class_id,
+    )
+
     student = upsert_student_by_email(
         email=data.email,
         full_name=data.full_name.strip(),
         school=data.school.strip(),
         grade=data.grade,
         class_group=data.class_group.strip(),
-        task_class_id=(
-            data.task_class_id.strip()
-            if data.task_class_id
-            else f"{data.grade}class"
-        ),
-        teacher_id=teacher_scope_id(current_user),
+        task_class_id=task_class_id,
+        teacher_id=scope_id,
+        class_id=class_record["id"],
     )
 
     return student
@@ -310,7 +340,28 @@ def override_teacher_progress(
             detail="This student is not assigned to the selected teacher"
         )
 
-    if data.class_id != allowed_task_class_id(student):
+    if data.teacher_class_id is not None:
+        class_record = get_teacher_class(data.teacher_class_id, scope_id)
+
+        if class_record is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Teacher class not found"
+            )
+
+        if student["class_id"] != class_record["id"]:
+            raise HTTPException(
+                status_code=403,
+                detail="This student is not assigned to the selected class"
+            )
+
+        if data.class_id != class_record["task_class_id"]:
+            raise HTTPException(
+                status_code=403,
+                detail="This task base is not available for the selected class"
+            )
+
+    elif data.class_id != allowed_task_class_id(student):
         raise HTTPException(
             status_code=403,
             detail="This task base is not available for the selected student"
@@ -358,19 +409,57 @@ def get_csv_value(row, *names):
     return ""
 
 
-def build_teacher_journal(school, grade, class_group, class_id, current_user):
+def build_teacher_journal(
+    school,
+    grade,
+    class_group,
+    class_id,
+    current_user,
+    teacher_class_id=None,
+):
     """Build the teacher journal data shared by JSON and CSV responses."""
 
-    normalized_group = class_group.strip()
+    scope_id = teacher_scope_id(current_user)
+    class_record = None
 
-    students = [
-        student
-        for student in list_students_with_summary(teacher_scope_id(current_user))
-        if student["school"] == school
-        and student["grade"] == grade
-        and (student["class_group"] or "") == normalized_group
-        and student["task_class_id"] == class_id
-    ]
+    if teacher_class_id is not None:
+        class_record = get_teacher_class(teacher_class_id, scope_id)
+
+        if class_record is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Teacher class not found"
+            )
+
+        school = class_record["school"]
+        grade = class_record["grade"]
+        class_group = class_record["class_group"]
+        class_id = class_record["task_class_id"]
+
+    if school is None or grade is None or class_group is None or class_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="school, grade, class_group and class_id are required"
+        )
+
+    normalized_group = class_group.strip()
+    all_students = list_students_with_summary(scope_id)
+
+    if teacher_class_id is not None:
+        students = [
+            student
+            for student in all_students
+            if student["class_id"] == teacher_class_id
+        ]
+    else:
+        students = [
+            student
+            for student in all_students
+            if student["school"] == school
+            and student["grade"] == grade
+            and (student["class_group"] or "") == normalized_group
+            and student["task_class_id"] == class_id
+        ]
 
     tasks = [
         task
@@ -407,6 +496,7 @@ def build_teacher_journal(school, grade, class_group, class_id, current_user):
     )
 
     return {
+        "class": class_record,
         "students": students,
         "tasks": task_refs,
         "progress": progress,
@@ -415,10 +505,11 @@ def build_teacher_journal(school, grade, class_group, class_id, current_user):
 
 @router.get("/teacher/journal")
 def get_teacher_journal(
-    school: str,
-    grade: int,
-    class_group: str,
-    class_id: str,
+    school: str | None = None,
+    grade: int | None = None,
+    class_group: str | None = None,
+    class_id: str | None = None,
+    teacher_class_id: int | None = None,
     current_user=Depends(require_teacher_user),
 ):
     """Return a teacher journal: one row per student and one column per task."""
@@ -428,16 +519,18 @@ def get_teacher_journal(
         grade,
         class_group,
         class_id,
-        current_user
+        current_user,
+        teacher_class_id=teacher_class_id,
     )
 
 
 @router.get("/teacher/journal/export")
 def export_teacher_journal(
-    school: str,
-    grade: int,
-    class_group: str,
-    class_id: str,
+    school: str | None = None,
+    grade: int | None = None,
+    class_group: str | None = None,
+    class_id: str | None = None,
+    teacher_class_id: int | None = None,
     current_user=Depends(require_teacher_user),
 ):
     """Download the current teacher journal as CSV with pass statuses only."""
@@ -447,7 +540,8 @@ def export_teacher_journal(
         grade,
         class_group,
         class_id,
-        current_user
+        current_user,
+        teacher_class_id=teacher_class_id,
     )
 
     progress_by_cell = {
@@ -494,8 +588,17 @@ def export_teacher_journal(
 
         writer.writerow(row)
 
-    safe_group = class_group.strip() or "class"
-    filename = f"journal-{school}-{grade}-{safe_group}-{class_id}.csv"
+    export_class = journal["class"] or {
+        "school": school,
+        "grade": grade,
+        "class_group": class_group,
+        "task_class_id": class_id,
+    }
+    safe_group = (export_class["class_group"] or "").strip() or "class"
+    filename = (
+        f"journal-{export_class['school']}-{export_class['grade']}-"
+        f"{safe_group}-{export_class['task_class_id']}.csv"
+    )
     quoted_filename = quote(filename.replace('"', ""))
 
     return Response(

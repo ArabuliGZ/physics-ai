@@ -1,5 +1,6 @@
 ﻿const TEACHER_STATE = {
     user: null,
+    classes: [],
     students: [],
     tasks: [],
     groupsById: {},
@@ -128,6 +129,7 @@ async function handleTeacherLogin(event) {
 
 function logoutTeacher() {
     TEACHER_STATE.user = null;
+    TEACHER_STATE.classes = [];
     TEACHER_STATE.students = [];
     TEACHER_STATE.selectedFilters = null;
     TEACHER_STATE.currentJournal = null;
@@ -163,18 +165,20 @@ async function loadTeacherDashboard() {
     summary.textContent = "";
 
     try {
-        const [studentsResponse, tasksResponse, groupsResponse] = await Promise.all([
+        const [classesResponse, studentsResponse, tasksResponse, groupsResponse] = await Promise.all([
+            teacherFetch("/teacher/classes"),
             teacherFetch("/teacher/students"),
             fetch("/tasks"),
             fetch("/groups"),
         ]);
 
-        if (!studentsResponse.ok || !tasksResponse.ok || !groupsResponse.ok) {
+        if (!classesResponse.ok || !studentsResponse.ok || !tasksResponse.ok || !groupsResponse.ok) {
             throw new Error("teacher dashboard request failed");
         }
 
         const groups = await groupsResponse.json();
 
+        TEACHER_STATE.classes = await classesResponse.json();
         TEACHER_STATE.students = await studentsResponse.json();
         TEACHER_STATE.tasks = await tasksResponse.json();
         TEACHER_STATE.groupsById = Object.fromEntries(
@@ -194,6 +198,7 @@ async function loadTeacherDashboard() {
 function readTeacherFilters() {
     const schoolSelect = document.getElementById("teacher_school_select");
     const classSelect = document.getElementById("teacher_student_class_select");
+    const selectedClass = getSelectedTeacherClass();
 
     if (!schoolSelect || !classSelect) {
         return null;
@@ -202,7 +207,8 @@ function readTeacherFilters() {
     return {
         school: schoolSelect.value,
         classKey: classSelect.value,
-        taskClassId: getSelectedTeacherTaskClassId(),
+        teacherClassId: selectedClass?.id || "",
+        taskClassId: selectedClass?.task_class_id || "",
     };
 }
 
@@ -297,14 +303,20 @@ async function addSingleTeacherStudent(event) {
         return;
     }
 
-    const [grade, classGroup] = filters.classKey.split("|");
+    const selectedClass = getSelectedTeacherClass();
+
+    if (!selectedClass) {
+        result.textContent = "Сначала открой нужный журнал класса.";
+        return;
+    }
+
     const payload = {
         full_name: document.getElementById("teacher_single_full_name").value.trim(),
         email: document.getElementById("teacher_single_email").value.trim(),
-        school: filters.school,
-        grade: parseInt(grade, 10),
-        class_group: classGroup,
-        task_class_id: filters.taskClassId,
+        school: selectedClass.school,
+        grade: selectedClass.grade,
+        class_group: selectedClass.class_group,
+        task_class_id: selectedClass.task_class_id,
     };
 
     if (!payload.full_name || !payload.email) {
@@ -352,10 +364,13 @@ async function addSingleTeacherStudent(event) {
 
 function fillTeacherFilters(filters = null) {
     const schoolSelect = document.getElementById("teacher_school_select");
+    const schools = hasTeacherClassRecords()
+        ? uniqueValues(TEACHER_STATE.classes, "school")
+        : uniqueValues(TEACHER_STATE.students, "school");
 
     fillSelect(
         schoolSelect,
-        uniqueValues(TEACHER_STATE.students, "school")
+        schools
     );
 
     setSelectValueIfExists(schoolSelect, filters?.school);
@@ -387,6 +402,42 @@ function handleTeacherClassChange() {
 
 function fillTeacherStudentClasses() {
     const school = document.getElementById("teacher_school_select").value;
+
+    if (hasTeacherClassRecords()) {
+        fillTeacherStudentClassesFromRecords(school);
+        return;
+    }
+
+    fillTeacherStudentClassesFromStudents(school);
+}
+
+
+function fillTeacherStudentClassesFromRecords(school) {
+    const classes = TEACHER_STATE.classes
+        .filter(item => item.school === school)
+        .map(item => ({
+            id: item.id,
+            grade: item.grade,
+            class_group: item.class_group || "",
+            task_class_id: item.task_class_id,
+            title: item.class_name,
+            key: String(item.id),
+        }))
+        .sort((left, right) => (
+            compareClassNames(left.grade, right.grade) ||
+            String(left.class_group).localeCompare(String(right.class_group), "ru") ||
+            compareClassNames(left.task_class_id, right.task_class_id)
+        ));
+
+    const select = document.getElementById("teacher_student_class_select");
+
+    select.innerHTML = classes.map(item => `
+        <option value="${escapeHtml(item.key)}">${escapeHtml(item.title)}</option>
+    `).join("");
+}
+
+
+function fillTeacherStudentClassesFromStudents(school) {
     const classes = TEACHER_STATE.students
         .filter(student => student.school === school)
         .map(student => ({
@@ -411,9 +462,44 @@ function fillTeacherStudentClasses() {
 }
 
 
-function getSelectedTeacherTaskClassId() {
+function getSelectedTeacherClass() {
     const classKey = document.getElementById("teacher_student_class_select").value;
-    const [grade, classGroup] = classKey.split("|");
+
+    if (hasTeacherClassRecords()) {
+        return TEACHER_STATE.classes.find(item => String(item.id) === String(classKey)) || null;
+    }
+
+    const [grade, classGroup = ""] = classKey.split("|");
+    const taskClassId = getSelectedTeacherTaskClassIdFromStudents(grade, classGroup);
+    const student = TEACHER_STATE.students.find(candidate => (
+        String(candidate.grade) === String(grade) &&
+        String(candidate.class_group || "") === String(classGroup || "") &&
+        candidate.task_class_id === taskClassId
+    ));
+
+    if (!student) {
+        return null;
+    }
+
+    return {
+        id: student.class_id,
+        school: student.school,
+        grade: student.grade,
+        class_group: student.class_group || "",
+        class_name: student.class_name,
+        task_class_id: taskClassId,
+    };
+}
+
+
+function getSelectedTeacherTaskClassId() {
+    const selectedClass = getSelectedTeacherClass();
+
+    return selectedClass?.task_class_id || "";
+}
+
+
+function getSelectedTeacherTaskClassIdFromStudents(grade, classGroup) {
     const availableTaskBases = new Set(
         TEACHER_STATE.tasks.map(task => task.class_id)
     );
@@ -450,10 +536,16 @@ function selectTeacherClassByTaskBase(taskClassId) {
 }
 
 
+function hasTeacherClassRecords() {
+    return Array.isArray(TEACHER_STATE.classes) && TEACHER_STATE.classes.length > 0;
+}
+
+
 async function renderTeacherJournal() {
-    const school = document.getElementById("teacher_school_select").value;
     const classKey = document.getElementById("teacher_student_class_select").value;
-    const classId = getSelectedTeacherTaskClassId();
+    const selectedClass = getSelectedTeacherClass();
+    const school = selectedClass?.school || document.getElementById("teacher_school_select").value;
+    const classId = selectedClass?.task_class_id || "";
     const table = document.getElementById("teacher_journal_table");
     const summary = document.getElementById("teacher_journal_summary");
     const exportButton = document.getElementById("teacher_export_button");
@@ -472,7 +564,8 @@ async function renderTeacherJournal() {
         return;
     }
 
-    const [grade, classGroup] = classKey.split("|");
+    const grade = selectedClass.grade;
+    const classGroup = selectedClass.class_group || "";
 
     table.innerHTML = "<div class=\"progress-empty\">Загружаю...</div>";
     summary.textContent = "";
@@ -484,6 +577,10 @@ async function renderTeacherJournal() {
             class_group: classGroup,
             class_id: classId,
         });
+
+        if (selectedClass.id) {
+            params.set("teacher_class_id", selectedClass.id);
+        }
 
         const response = await teacherFetch(`/teacher/journal?${params.toString()}`);
 
@@ -510,22 +607,28 @@ async function renderTeacherJournal() {
 
 
 async function downloadTeacherJournalCsv() {
-    const school = document.getElementById("teacher_school_select").value;
     const classKey = document.getElementById("teacher_student_class_select").value;
-    const classId = getSelectedTeacherTaskClassId();
+    const selectedClass = getSelectedTeacherClass();
+    const school = selectedClass?.school || document.getElementById("teacher_school_select").value;
+    const classId = selectedClass?.task_class_id || "";
     const button = document.getElementById("teacher_export_button");
 
-    if (!school || !classKey || !classId) {
+    if (!school || !classKey || !classId || !selectedClass) {
         return;
     }
 
-    const [grade, classGroup] = classKey.split("|");
+    const grade = selectedClass.grade;
+    const classGroup = selectedClass.class_group || "";
     const params = new URLSearchParams({
         school,
         grade,
         class_group: classGroup,
         class_id: classId,
     });
+
+    if (selectedClass.id) {
+        params.set("teacher_class_id", selectedClass.id);
+    }
 
     button.disabled = true;
 
@@ -593,7 +696,10 @@ function renderJournalTable(journal) {
         );
     }
 
+    const teacherClassId = journal.class?.id || getSelectedTeacherClass()?.id || null;
+
     TEACHER_STATE.currentJournal = {
+        teacherClassId,
         taskColumns,
         journalColumns,
         progressByCell,
@@ -646,7 +752,7 @@ function renderJournalTable(journal) {
                                 </div>
                             </td>
                             ${journalColumns.map(column => (
-                                renderJournalColumnCell(column, student, progressByCell)
+                                renderJournalColumnCell(column, student, progressByCell, teacherClassId)
                             )).join("")}
                               <td
                                   class="teacher-total-column"
@@ -759,13 +865,13 @@ function getJournalSubheadingClass(column) {
 }
 
 
-function renderJournalColumnCell(column, student, progressByCell) {
+function renderJournalColumnCell(column, student, progressByCell, teacherClassId) {
     if (column.type === "chapter-summary") {
         return renderChapterSummaryCell(column, student, progressByCell);
     }
 
     const progress = progressByCell.get(`${student.id}|${column.task.key}`);
-    return renderJournalCell(progress, column.task, student);
+    return renderJournalCell(progress, column.task, student, teacherClassId);
 }
 
 
@@ -794,7 +900,7 @@ function renderChapterSummaryCell(column, student, progressByCell) {
 }
 
 
-function renderJournalCell(progress, task, student) {
+function renderJournalCell(progress, task, student, teacherClassId) {
     const attempts = progress ? progress.attempts_count : 0;
     let statusClass = "empty";
 
@@ -809,7 +915,7 @@ function renderJournalCell(progress, task, student) {
             class="teacher-journal-cell teacher-clickable-cell ${statusClass} ${task.isMajorStart ? "teacher-major-start" : ""}"
             data-progress-student-id="${student.id}"
             data-progress-key="${task.key}"
-            onclick="openTeacherProgressDialog(${student.id}, '${task.class_id}', '${task.chapter}', '${task.topic}', '${task.number}', ${attempts}, ${progress && progress.is_passed === 1 ? 1 : 0})"
+            onclick="openTeacherProgressDialog(${student.id}, ${teacherClassId || "null"}, '${task.class_id}', '${task.chapter}', '${task.topic}', '${task.number}', ${attempts}, ${progress && progress.is_passed === 1 ? 1 : 0})"
             title="${task.chapter}.${task.topic}.${task.number}: ${attempts} попыток"
         >
             ${attempts}
@@ -837,6 +943,7 @@ function renderTeacherOverrideMarker(progress) {
 
 function openTeacherProgressDialog(
     studentId,
+    teacherClassId,
     classId,
     chapter,
     topic,
@@ -846,6 +953,7 @@ function openTeacherProgressDialog(
 ) {
     TEACHER_STATE.manualProgressTarget = {
         student_id: studentId,
+        teacher_class_id: teacherClassId,
         class_id: classId,
         chapter,
         topic,
@@ -955,7 +1063,7 @@ function updateTeacherTaskCell(progress) {
     cell.title = `${task.chapter}.${task.topic}.${task.number}: ${attempts} попыток`;
     cell.setAttribute(
         "onclick",
-        `openTeacherProgressDialog(${progress.student_id}, '${task.class_id}', '${task.chapter}', '${task.topic}', '${task.number}', ${attempts}, ${isPassed ? 1 : 0})`
+        `openTeacherProgressDialog(${progress.student_id}, ${journal.teacherClassId || "null"}, '${task.class_id}', '${task.chapter}', '${task.topic}', '${task.number}', ${attempts}, ${isPassed ? 1 : 0})`
     );
 }
 

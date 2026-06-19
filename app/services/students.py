@@ -3,6 +3,7 @@
 import re
 
 from app.database import database_connection
+from app.database import sync_student_classes
 
 
 def row_to_dict(row):
@@ -66,6 +67,7 @@ def create_student(
     task_class_id=None,
     email=None,
     teacher_id=None,
+    class_id=None,
 ):
     """Create a student and return the saved row."""
 
@@ -81,6 +83,7 @@ def create_student(
             """
             INSERT INTO students (
                 school,
+                class_id,
                 teacher_id,
                 email,
                 class_name,
@@ -89,10 +92,11 @@ def create_student(
                 task_class_id,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 school,
+                class_id,
                 teacher_id,
                 email,
                 class_name,
@@ -105,9 +109,11 @@ def create_student(
 
         student_id = cursor.lastrowid
 
+        sync_student_classes(connection)
+
         row = connection.execute(
             """
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -130,7 +136,7 @@ def find_student(school, class_name, full_name, grade=None, class_group=None):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE school = ?
@@ -156,6 +162,7 @@ def find_or_create_student(
     task_class_id=None,
     email=None,
     teacher_id=None,
+    class_id=None,
 ):
     """Return an existing student or create a new one."""
 
@@ -179,6 +186,7 @@ def find_or_create_student(
         task_class_id=task_class_id,
         email=email,
         teacher_id=teacher_id,
+        class_id=class_id,
     )
 
 
@@ -191,7 +199,7 @@ def find_student_by_email(email, include_inactive=False):
     with database_connection() as connection:
         row = connection.execute(
             f"""
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE lower(email) = ?
@@ -213,6 +221,7 @@ def upsert_student_by_email(
     class_group,
     task_class_id,
     teacher_id=None,
+    class_id=None,
 ):
     """Create or update a student by email and return the saved row."""
 
@@ -233,6 +242,7 @@ def upsert_student_by_email(
                 """
                 INSERT INTO students (
                     email,
+                    class_id,
                     teacher_id,
                     school,
                     class_name,
@@ -241,10 +251,11 @@ def upsert_student_by_email(
                     task_class_id,
                     full_name
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized_email,
+                    class_id,
                     teacher_id,
                     school,
                     class_name,
@@ -262,6 +273,7 @@ def upsert_student_by_email(
                 """
                 UPDATE students
                 SET email = ?,
+                    class_id = ?,
                     teacher_id = ?,
                     school = ?,
                     class_name = ?,
@@ -274,6 +286,7 @@ def upsert_student_by_email(
                 """,
                 (
                     normalized_email,
+                    class_id if class_id is not None else existing["class_id"],
                     teacher_id if teacher_id is not None else existing["teacher_id"],
                     school,
                     class_name,
@@ -286,9 +299,11 @@ def upsert_student_by_email(
             )
             action = "updated"
 
+        sync_student_classes(connection)
+
         row = connection.execute(
             """
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -308,7 +323,7 @@ def get_student(student_id):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE id = ?
@@ -332,7 +347,7 @@ def list_students(teacher_id=None):
     with database_connection() as connection:
         rows = connection.execute(
             f"""
-            SELECT id, teacher_id, email, school, class_name, grade, class_group,
+            SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
                    task_class_id, is_active, full_name, created_at
             FROM students
             WHERE is_active = 1
@@ -360,6 +375,7 @@ def list_students_with_summary(teacher_id=None):
             f"""
             SELECT
                 students.id,
+                students.class_id,
                 students.teacher_id,
                 students.email,
                 students.school,
