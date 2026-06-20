@@ -80,6 +80,13 @@ def init_database():
                 UNIQUE (teacher_id, school, grade, class_group, task_class_id)
             );
 
+            CREATE TABLE IF NOT EXISTS schools (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS task_attempts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
@@ -118,6 +125,7 @@ def init_database():
         backfill_student_class_parts(connection)
         backfill_student_task_class(connection)
         sync_student_classes(connection)
+        sync_schools(connection)
 
 
 def ensure_user_rows(connection):
@@ -139,6 +147,45 @@ def ensure_user_rows(connection):
                 is_active = 1
             """,
             (email, role, full_name),
+        )
+
+
+def sync_schools(connection=None):
+    """Create active school rows from known data and stable demo defaults."""
+
+    if connection is None:
+        with database_connection() as managed_connection:
+            sync_schools(managed_connection)
+        return
+
+    school_names = {"Тестовая школа"}
+
+    rows = connection.execute(
+        """
+        SELECT school
+        FROM classes
+        WHERE school IS NOT NULL
+          AND school != ''
+        UNION
+        SELECT school
+        FROM students
+        WHERE school IS NOT NULL
+          AND school != ''
+        """
+    ).fetchall()
+
+    for row in rows:
+        school_names.add(row["school"])
+
+    for school_name in sorted(school_names):
+        connection.execute(
+            """
+            INSERT INTO schools (name, is_active)
+            VALUES (?, 1)
+            ON CONFLICT(name) DO UPDATE SET
+                is_active = 1
+            """,
+            (school_name,),
         )
 
 

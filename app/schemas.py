@@ -56,6 +56,13 @@ class UserLoginRequest(BaseModel):
     email: str
 
 
+class AdminTeacherRequest(BaseModel):
+    """Request body for creating or updating a teacher."""
+
+    email: str
+    full_name: str
+
+
 class TeacherProgressOverrideRequest(BaseModel):
     """Request body for manually changing task progress from teacher journal."""
 

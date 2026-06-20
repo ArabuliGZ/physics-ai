@@ -15,16 +15,25 @@ from fastapi import UploadFile
 
 from app.schemas import StudentCreateRequest
 from app.schemas import StudentLoginRequest
+from app.schemas import AdminTeacherRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
+from app.services.classes import deactivate_teacher_class
 from app.services.classes import ensure_teacher_class
 from app.services.classes import get_teacher_class
+from app.services.classes import list_admin_classes
 from app.services.classes import list_teacher_classes
+from app.services.classes import restore_teacher_class
 from app.services.progress import get_class_progress_map
 from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
 from app.services.progress import list_student_progress
 from app.services.progress import set_task_progress_passed
+from app.services.schools import active_school_exists
+from app.services.schools import deactivate_school
+from app.services.schools import list_admin_schools
+from app.services.schools import list_active_schools
+from app.services.schools import restore_school
 from app.services.students import allowed_task_class_id
 from app.services.students import create_student
 from app.services.students import deactivate_student
@@ -34,7 +43,12 @@ from app.services.students import list_students
 from app.services.students import list_students_with_summary
 from app.services.students import upsert_student_by_email
 from app.services.task_store import TASKS
+from app.services.users import deactivate_teacher
 from app.services.users import find_user_by_email
+from app.services.users import get_active_teacher
+from app.services.users import list_admin_teachers
+from app.services.users import restore_teacher
+from app.services.users import upsert_teacher
 
 
 router = APIRouter()
@@ -67,6 +81,18 @@ def teacher_scope_id(user):
         return None
 
     return user["id"]
+
+
+def require_admin_user(current_user=Depends(require_teacher_user)):
+    """Return the current user only when they are an administrator."""
+
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access is required"
+        )
+
+    return current_user
 
 
 @router.post("/auth/login")
@@ -164,12 +190,168 @@ def get_teacher_classes(current_user=Depends(require_teacher_user)):
     return list_teacher_classes(teacher_scope_id(current_user))
 
 
+@router.get("/teacher/schools")
+def get_teacher_schools(current_user=Depends(require_teacher_user)):
+    """Return schools available for creating teacher classes."""
+
+    return list_active_schools()
+
+
+@router.post("/teacher/classes/{class_id}/deactivate")
+def deactivate_class(class_id: int, current_user=Depends(require_teacher_user)):
+    """Archive a class and hide its students from active teacher views."""
+
+    result = deactivate_teacher_class(class_id, teacher_scope_id(current_user))
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Active class not found"
+        )
+
+    return result
+
+
+@router.get("/admin/schools")
+def get_admin_schools(current_user=Depends(require_admin_user)):
+    """Return all schools for the admin panel."""
+
+    return list_admin_schools()
+
+
+@router.post("/admin/schools/{school_id}/deactivate")
+def deactivate_admin_school(school_id: int, current_user=Depends(require_admin_user)):
+    """Archive a school when no active classes depend on it."""
+
+    result = deactivate_school(school_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Active school not found"
+        )
+
+    if result.get("blocked"):
+        raise HTTPException(
+            status_code=409,
+            detail="School has active classes"
+        )
+
+    return result
+
+
+@router.post("/admin/schools/{school_id}/restore")
+def restore_admin_school(school_id: int, current_user=Depends(require_admin_user)):
+    """Restore an archived school."""
+
+    result = restore_school(school_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Archived school not found"
+        )
+
+    return result
+
+
+@router.get("/admin/classes")
+def get_admin_classes(current_user=Depends(require_admin_user)):
+    """Return active and archived classes for the admin panel."""
+
+    return list_admin_classes()
+
+
+@router.post("/admin/classes/{class_id}/restore")
+def restore_admin_class(class_id: int, current_user=Depends(require_admin_user)):
+    """Restore an archived class."""
+
+    result = restore_teacher_class(class_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Archived class not found"
+        )
+
+    return result
+
+
+@router.get("/admin/teachers")
+def get_admin_teachers(current_user=Depends(require_admin_user)):
+    """Return teachers for the admin panel."""
+
+    return list_admin_teachers()
+
+
+@router.post("/admin/teachers")
+def upsert_admin_teacher(
+    data: AdminTeacherRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Create or update a teacher account."""
+
+    email = data.email.strip().lower()
+    full_name = data.full_name.strip()
+
+    if not email or not full_name:
+        raise HTTPException(
+            status_code=400,
+            detail="email and full_name are required"
+        )
+
+    if "@" not in email:
+        raise HTTPException(
+            status_code=400,
+            detail="email is invalid"
+        )
+
+    return upsert_teacher(email, full_name)
+
+
+@router.post("/admin/teachers/{teacher_id}/deactivate")
+def deactivate_admin_teacher(teacher_id: int, current_user=Depends(require_admin_user)):
+    """Archive a teacher when no active classes depend on them."""
+
+    result = deactivate_teacher(teacher_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Active teacher not found"
+        )
+
+    if result.get("blocked"):
+        raise HTTPException(
+            status_code=409,
+            detail="Teacher has active classes"
+        )
+
+    return result
+
+
+@router.post("/admin/teachers/{teacher_id}/restore")
+def restore_admin_teacher(teacher_id: int, current_user=Depends(require_admin_user)):
+    """Restore an archived teacher."""
+
+    result = restore_teacher(teacher_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Archived teacher not found"
+        )
+
+    return result
+
+
 @router.post("/teacher/import-students")
 async def import_teacher_students(
     school: str = Form(...),
     grade: int = Form(...),
     class_group: str = Form(...),
     task_class_id: str = Form(...),
+    teacher_id: int | None = Form(default=None),
     file: UploadFile = File(...),
     current_user=Depends(require_teacher_user),
 ):
@@ -179,6 +361,14 @@ async def import_teacher_students(
         raise HTTPException(
             status_code=400,
             detail="Only CSV files are supported"
+        )
+
+    school = school.strip()
+
+    if not active_school_exists(school):
+        raise HTTPException(
+            status_code=400,
+            detail="School is not available"
         )
 
     content = await file.read()
@@ -203,6 +393,24 @@ async def import_teacher_students(
     updated = 0
     errors = []
     scope_id = teacher_scope_id(current_user)
+
+    if current_user["role"] == "admin":
+        if teacher_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="teacher_id is required for admin imports"
+            )
+
+        teacher = get_active_teacher(teacher_id)
+
+        if teacher is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Teacher is not available"
+            )
+
+        scope_id = teacher["id"]
+
     class_record = ensure_teacher_class(
         scope_id,
         school,
@@ -232,7 +440,7 @@ async def import_teacher_students(
         student = upsert_student_by_email(
             email=email,
             full_name=full_name,
-            school=school.strip(),
+            school=school,
             grade=grade,
             class_group=class_group.strip(),
             task_class_id=task_class_id.strip(),
@@ -271,6 +479,14 @@ def upsert_teacher_student(
             detail="school, grade, class_group and full_name are required"
         )
 
+    school = data.school.strip()
+
+    if not active_school_exists(school):
+        raise HTTPException(
+            status_code=400,
+            detail="School is not available"
+        )
+
     task_class_id = (
         data.task_class_id.strip()
         if data.task_class_id
@@ -279,7 +495,7 @@ def upsert_teacher_student(
     scope_id = teacher_scope_id(current_user)
     class_record = ensure_teacher_class(
         scope_id,
-        data.school,
+        school,
         data.grade,
         data.class_group,
         task_class_id,
@@ -288,7 +504,7 @@ def upsert_teacher_student(
     student = upsert_student_by_email(
         email=data.email,
         full_name=data.full_name.strip(),
-        school=data.school.strip(),
+        school=school,
         grade=data.grade,
         class_group=data.class_group.strip(),
         task_class_id=task_class_id,

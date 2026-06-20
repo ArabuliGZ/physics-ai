@@ -146,3 +146,134 @@ def list_teacher_classes(teacher_id=None):
         ).fetchall()
 
         return [row_to_dict(row) for row in rows]
+
+
+def deactivate_teacher_class(class_id, teacher_id=None):
+    """Archive one class and hide its active students while preserving history."""
+
+    teacher_clause = ""
+    params = [class_id]
+
+    if teacher_id is not None:
+        teacher_clause = "AND teacher_id = ?"
+        params.append(teacher_id)
+
+    with database_connection() as connection:
+        row = connection.execute(
+            f"""
+            SELECT id
+            FROM classes
+            WHERE id = ?
+              AND is_active = 1
+              {teacher_clause}
+            LIMIT 1
+            """,
+            params,
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE classes
+            SET is_active = 0
+            WHERE id = ?
+            """,
+            (class_id,),
+        )
+        connection.execute(
+            """
+            UPDATE students
+            SET is_active = 0
+            WHERE class_id = ?
+              AND is_active = 1
+            """,
+            (class_id,),
+        )
+
+        return {
+            "id": class_id,
+            "is_active": 0,
+        }
+
+
+def list_admin_classes():
+    """Return all classes with teacher and active student counters."""
+
+    with database_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                classes.id,
+                classes.teacher_id,
+                users.full_name AS teacher_name,
+                users.email AS teacher_email,
+                classes.school,
+                classes.grade,
+                classes.class_group,
+                classes.class_name,
+                classes.task_class_id,
+                classes.is_active,
+                classes.created_at,
+                COALESCE(student_summary.active_students, 0) AS active_students
+            FROM classes
+            LEFT JOIN users
+                ON users.id = classes.teacher_id
+            LEFT JOIN (
+                SELECT class_id, COUNT(*) AS active_students
+                FROM students
+                WHERE is_active = 1
+                GROUP BY class_id
+            ) AS student_summary
+                ON student_summary.class_id = classes.id
+            ORDER BY classes.is_active DESC,
+                     classes.school,
+                     classes.grade,
+                     classes.class_group,
+                     classes.task_class_id
+            """
+        ).fetchall()
+
+        return [row_to_dict(row) for row in rows]
+
+
+def restore_teacher_class(class_id):
+    """Reactivate an archived class and its students."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM classes
+            WHERE id = ?
+              AND is_active = 0
+            LIMIT 1
+            """,
+            (class_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE classes
+            SET is_active = 1
+            WHERE id = ?
+            """,
+            (class_id,),
+        )
+        connection.execute(
+            """
+            UPDATE students
+            SET is_active = 1
+            WHERE class_id = ?
+            """,
+            (class_id,),
+        )
+
+        return {
+            "id": class_id,
+            "is_active": 1,
+        }

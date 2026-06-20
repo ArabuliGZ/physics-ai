@@ -15,6 +15,7 @@ from app.api.pages import router as pages_router
 from app.api.students import router as students_router
 from app.api.tasks import router as tasks_router
 from app.database import init_database
+from app.database import sync_schools
 from app.database import sync_student_classes
 from app.demo_seed import seed_demo_data
 
@@ -48,6 +49,7 @@ def create_app():
         if is_demo_seed_enabled():
             result = seed_demo_data()
             sync_student_classes()
+            sync_schools()
             print(f"Demo seed enabled: {result}")
         else:
             print("Demo seed disabled. Set SEED_DEMO_DATA=1 to create demo students.")

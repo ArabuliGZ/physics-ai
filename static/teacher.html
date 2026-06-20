@@ -111,10 +111,12 @@
                 <button
                     type="button"
                     class="teacher-tab"
-                    data-teacher-tab="create"
-                    onclick="switchTeacherView('create')"
+                    data-teacher-tab="admin"
+                    data-admin-only="true"
+                    onclick="switchTeacherView('admin')"
+                    hidden
                 >
-                    Создать класс
+                    Админ
                 </button>
             </nav>
 
@@ -153,83 +155,108 @@
                 <div>
                     <h2>Мои классы</h2>
                 </div>
+
+                <div class="teacher-panel-header-actions">
+                    <span id="teacher_import_result"></span>
+
+                    <button
+                        type="button"
+                        class="teacher-secondary-button"
+                        onclick="toggleTeacherCreateClassForm()"
+                    >
+                        Создать класс
+                    </button>
+                </div>
+            </div>
+
+            <div
+                id="teacher_create_class_panel"
+                class="teacher-create-class-panel"
+                hidden
+            >
+                <form
+                    class="teacher-import-form"
+                    onsubmit="importTeacherStudents(event)"
+                >
+                    <div class="teacher-import-fields">
+                        <label
+                            class="teacher-import-teacher-field"
+                            data-admin-only="true"
+                            hidden
+                        >
+                            <span>Учитель</span>
+                            <select id="teacher_import_teacher"></select>
+                        </label>
+
+                        <label class="teacher-import-common-field teacher-import-school-field">
+                            <span>Школа</span>
+                            <select
+                                id="teacher_import_school"
+                                required
+                            ></select>
+                        </label>
+
+                        <label class="teacher-import-common-field">
+                            <span>Параллель</span>
+                            <select id="teacher_import_grade">
+                                <option value="7">7 класс</option>
+                                <option value="8">8 класс</option>
+                                <option value="9">9 класс</option>
+                                <option value="10">10 класс</option>
+                            </select>
+                        </label>
+
+                        <label class="teacher-import-common-field">
+                            <span>Класс</span>
+                            <input
+                                id="teacher_import_class_group"
+                                type="text"
+                                placeholder="А или 1"
+                                required
+                            >
+                        </label>
+
+                        <label class="teacher-import-common-field">
+                            <span>База задач</span>
+                            <select id="teacher_import_task_class"></select>
+                        </label>
+                    </div>
+
+                    <div class="teacher-import-file-row">
+                        <label>
+                            <span>CSV</span>
+                            <input
+                                id="teacher_import_file"
+                                type="file"
+                                accept=".csv,text/csv"
+                            >
+                        </label>
+
+                        <div class="teacher-import-actions">
+                            <button
+                                type="button"
+                                class="teacher-secondary-button teacher-template-button"
+                                onclick="downloadStudentCsvTemplate()"
+                            >
+                                Скачать шаблон
+                            </button>
+
+                            <button
+                                id="teacher_import_button"
+                                type="submit"
+                                class="teacher-secondary-button"
+                            >
+                                Загрузить CSV
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <div
                 id="teacher_classes_list"
                 class="teacher-classes-list"
             ></div>
-        </section>
-
-        <section
-            class="teacher-panel"
-            data-teacher-view="create"
-            hidden
-        >
-            <div class="teacher-panel-header">
-                <div>
-                    <h2>Создать класс</h2>
-                </div>
-
-                <span id="teacher_import_result"></span>
-            </div>
-
-            <form
-                class="teacher-import-form"
-                onsubmit="importTeacherStudents(event)"
-            >
-                <label>
-                    <span>Школа</span>
-                    <input
-                        id="teacher_import_school"
-                        type="text"
-                        placeholder="Название школы"
-                        required
-                    >
-                </label>
-
-                <label>
-                    <span>Параллель</span>
-                    <select id="teacher_import_grade">
-                        <option value="7">7 класс</option>
-                        <option value="8">8 класс</option>
-                        <option value="9">9 класс</option>
-                        <option value="10">10 класс</option>
-                    </select>
-                </label>
-
-                <label>
-                    <span>Класс</span>
-                    <input
-                        id="teacher_import_class_group"
-                        type="text"
-                        placeholder="А или 1"
-                        required
-                    >
-                </label>
-
-                <label>
-                    <span>База задач</span>
-                    <select id="teacher_import_task_class"></select>
-                </label>
-
-                <label>
-                    <span>CSV</span>
-                    <input
-                        id="teacher_import_file"
-                        type="file"
-                        accept=".csv,text/csv"
-                    >
-                </label>
-
-                <button
-                    id="teacher_import_button"
-                    type="submit"
-                    class="teacher-secondary-button"
-                >
-                    Загрузить CSV
-                </button>
-            </form>
         </section>
 
         <section
@@ -288,7 +315,7 @@
         >
             <div class="teacher-panel-header">
                 <div>
-                    <h2>Ученики текущего класса</h2>
+                    <h2>Добавить ученика в этот класс</h2>
                 </div>
 
                 <span id="teacher_single_result"></span>
@@ -320,6 +347,89 @@
                     Добавить
                 </button>
             </form>
+        </section>
+
+        <section
+            class="teacher-panel"
+            data-teacher-view="admin"
+            hidden
+        >
+            <div class="teacher-panel-header">
+                <div>
+                    <h2>Админ</h2>
+                </div>
+            </div>
+
+            <div class="teacher-admin-grid">
+                <section class="teacher-admin-section">
+                    <div class="teacher-admin-section-header">
+                        <h3>Учителя</h3>
+                    </div>
+
+                    <form
+                        class="teacher-admin-teacher-form"
+                        onsubmit="upsertAdminTeacher(event)"
+                    >
+                        <input
+                            id="admin_teacher_full_name"
+                            type="text"
+                            placeholder="ФИО"
+                            required
+                        >
+
+                        <input
+                            id="admin_teacher_email"
+                            type="email"
+                            placeholder="email"
+                            required
+                        >
+
+                        <button
+                            type="submit"
+                            class="teacher-secondary-button"
+                        >
+                            Добавить
+                        </button>
+
+                        <span id="admin_teacher_result"></span>
+                    </form>
+
+                    <div
+                        id="admin_teachers_table"
+                        class="teacher-admin-table"
+                    ></div>
+                </section>
+
+                <section class="teacher-admin-section">
+                    <div class="teacher-admin-section-header">
+                        <h3>Школы</h3>
+                    </div>
+
+                    <div
+                        id="admin_schools_table"
+                        class="teacher-admin-table"
+                    ></div>
+                </section>
+
+                <section class="teacher-admin-section">
+                    <div class="teacher-admin-section-header">
+                        <h3>Классы</h3>
+
+                        <label class="teacher-admin-filter">
+                            <span>Школа</span>
+                            <select
+                                id="admin_class_school_filter"
+                                onchange="handleAdminClassSchoolFilterChange()"
+                            ></select>
+                        </label>
+                    </div>
+
+                    <div
+                        id="admin_classes_table"
+                        class="teacher-admin-table"
+                    ></div>
+                </section>
+            </div>
         </section>
     </div>
 

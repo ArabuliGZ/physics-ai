@@ -236,9 +236,22 @@
 
         .teacher-entry a:hover,
         .teacher-link:hover,
-        .teacher-secondary-button:hover {
+.teacher-secondary-button:hover {
 
             background: #f9fafb;
+        }
+
+        .teacher-template-button {
+
+            min-height: 32px;
+
+            padding: 6px 9px;
+
+            color: #4b5563;
+
+            font-size: 13px;
+
+            box-shadow: none;
         }
 
         .student-bar[hidden],
@@ -1428,6 +1441,12 @@
     overflow: hidden;
 }
 
+.teacher-create-class-panel {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #eef2f7;
+}
+
 .teacher-class-row {
     display: grid;
     grid-template-columns: minmax(260px, 1fr) 120px auto;
@@ -1473,6 +1492,146 @@
     white-space: nowrap;
 }
 
+.teacher-class-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.teacher-delete-class-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #9ca3af;
+    font: inherit;
+    font-size: 20px;
+    line-height: 26px;
+    cursor: pointer;
+}
+
+.teacher-delete-class-button:hover {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.teacher-admin-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.teacher-admin-section {
+    min-width: 0;
+}
+
+.teacher-admin-section-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.teacher-admin-section-header h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.teacher-admin-teacher-form {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) auto minmax(120px, auto);
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.teacher-admin-teacher-form input {
+    min-height: 34px;
+    padding: 7px 10px;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: white;
+    font: inherit;
+    font-size: 13px;
+}
+
+#admin_teacher_result {
+    color: #6b7280;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.teacher-admin-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.teacher-admin-filter select {
+    min-height: 32px;
+    padding: 5px 9px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: white;
+    font: inherit;
+    font-size: 13px;
+}
+
+.teacher-admin-table {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+}
+
+.teacher-admin-list {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.teacher-admin-list th,
+.teacher-admin-list td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #eef2f7;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.teacher-admin-list th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.teacher-admin-list tr:last-child td {
+    border-bottom: 0;
+}
+
+.teacher-admin-action {
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid #e5e7eb;
+    border-radius: 9px;
+    background: white;
+    color: #374151;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.teacher-admin-action:hover {
+    background: #f9fafb;
+}
+
 .teacher-filters label {
     display: flex;
     flex-direction: column;
@@ -1492,10 +1651,42 @@
 }
 
 .teacher-import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.teacher-import-fields {
     display: grid;
-    grid-template-columns: 1.4fr 120px 120px 160px 1.3fr auto;
+    grid-template-columns: repeat(4, minmax(140px, 1fr));
     gap: 12px;
     align-items: end;
+}
+
+.teacher-import-teacher-field {
+    grid-column: 1;
+}
+
+.teacher-import-school-field {
+    grid-column: 1;
+}
+
+.teacher-import-common-field {
+    min-width: 0;
+}
+
+.teacher-import-file-row {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.teacher-import-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 .teacher-single-form {
