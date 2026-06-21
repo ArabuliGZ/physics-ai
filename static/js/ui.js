@@ -100,7 +100,15 @@ function clearImagePreview() {
     ).value = "";
 }
 
-function removeImage() {
+function resetSolutionImageMemory() {
+
+    STATE.upload.attachedFile = null;
+    STATE.upload.solutionImage = null;
 
     clearImagePreview();
+}
+
+function removeImage() {
+
+    resetSolutionImageMemory();
 }

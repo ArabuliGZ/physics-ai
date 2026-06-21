@@ -134,7 +134,6 @@ def list_teacher_classes(teacher_id=None):
             LEFT JOIN (
                 SELECT class_id, COUNT(*) AS students_count
                 FROM students
-                WHERE is_active = 1
                 GROUP BY class_id
             ) AS student_summary
                 ON student_summary.class_id = classes.id
@@ -220,14 +219,13 @@ def list_admin_classes():
                 classes.task_class_id,
                 classes.is_active,
                 classes.created_at,
-                COALESCE(student_summary.active_students, 0) AS active_students
+                COALESCE(student_summary.students_count, 0) AS active_students
             FROM classes
             LEFT JOIN users
                 ON users.id = classes.teacher_id
             LEFT JOIN (
-                SELECT class_id, COUNT(*) AS active_students
+                SELECT class_id, COUNT(*) AS students_count
                 FROM students
-                WHERE is_active = 1
                 GROUP BY class_id
             ) AS student_summary
                 ON student_summary.class_id = classes.id

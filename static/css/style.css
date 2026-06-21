@@ -941,8 +941,8 @@
 /* Баббл пользователя */
 /* Общий user-bubble */
 .message.user {
-    background: #e98a3a;
-    color: white;
+    background: #fff1df;
+    color: #7c3a08;
     max-width: 75%;
     border-radius: 14px;
     padding: 8px 12px;
@@ -1724,64 +1724,67 @@
     border-radius: 12px;
 }
 
+.teacher-admin-classes-table {
+    overflow-x: hidden;
+}
+
 .teacher-admin-list {
     width: 100%;
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
+    box-sizing: border-box;
     font-size: 13px;
 }
 
+.teacher-admin-classes-list {
+    min-width: 0;
+}
+
 .teacher-admin-list .admin-class-col-school {
-    width: 22%;
+    width: 30%;
 }
 
 .teacher-admin-list .admin-class-col-class {
-    width: 19%;
-}
-
-.teacher-admin-list .admin-class-col-teacher {
-    width: 23%;
+    width: 30%;
 }
 
 .teacher-admin-list .admin-class-col-base {
-    width: 13%;
-}
-
-.teacher-admin-list .admin-class-col-students {
-    width: 7%;
-}
-
-.teacher-admin-list .admin-class-col-actions {
     width: 16%;
 }
 
-.teacher-admin-list-compact .admin-class-col-school {
-    width: 29%;
+.teacher-admin-list .admin-class-col-actions {
+    width: 24%;
 }
 
-.teacher-admin-list-compact .admin-class-col-class {
-    width: 25%;
+.teacher-admin-classes-list-admin .admin-class-col-school {
+    width: 22%;
 }
 
-.teacher-admin-list-compact .admin-class-col-base {
-    width: 18%;
+.teacher-admin-classes-list-admin .admin-class-col-class {
+    width: 24%;
 }
 
-.teacher-admin-list-compact .admin-class-col-students {
-    width: 8%;
+.teacher-admin-classes-list-admin .admin-class-col-base {
+    width: 12%;
 }
 
-.teacher-admin-list-compact .admin-class-col-actions {
-    width: 20%;
+.teacher-admin-classes-list-admin .admin-class-col-actions {
+    width: 16%;
+}
+
+.teacher-admin-classes-list-admin .admin-class-col-teacher {
+    width: 26%;
 }
 
 .teacher-admin-list th,
 .teacher-admin-list td {
     padding: 8px 9px;
+    box-sizing: border-box;
     border-bottom: 1px solid #eef2f7;
     text-align: left;
     white-space: nowrap;
+    overflow: hidden;
 }
 
 .teacher-admin-list th {
@@ -1795,6 +1798,9 @@
 .teacher-admin-th-plain {
     display: inline-block;
     padding: 1px 9px 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .teacher-admin-cell-text {
@@ -1809,13 +1815,20 @@
     align-items: center;
     gap: 7px;
     justify-content: space-between;
+    width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     padding-left: 9px;
 }
 
 .teacher-admin-class-cell .teacher-admin-cell-text {
     flex: 1 1 auto;
     padding: 0;
+}
+
+.teacher-admin-class-count {
+    color: #6b7280;
+    font-weight: 500;
 }
 
 .teacher-admin-class-journal-button {
@@ -1832,6 +1845,13 @@
     font-weight: 600;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
     cursor: pointer;
+    white-space: nowrap;
+}
+
+.teacher-admin-list .teacher-admin-class-journal-button {
+    min-width: 88px;
+    padding-right: 9px;
+    padding-left: 9px;
 }
 
 .teacher-admin-class-journal-button:hover {
@@ -1865,7 +1885,9 @@
     align-items: center;
     justify-content: flex-start;
     gap: 6px;
+    min-width: 0;
     max-width: 100%;
+    overflow: hidden;
 }
 
 .teacher-admin-action {
@@ -1881,6 +1903,13 @@
     font-weight: 600;
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
     cursor: pointer;
+}
+
+.teacher-admin-list .teacher-admin-action {
+    min-width: 88px;
+    padding-right: 10px;
+    padding-left: 10px;
+    white-space: nowrap;
 }
 
 .teacher-admin-action:hover {
@@ -1915,6 +1944,7 @@
     min-height: 30px;
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
     padding: 5px 34px 5px 8px;
     border: 1px solid #d1d5db;
     border-radius: 10px;

@@ -841,12 +841,11 @@ function renderAdminClasses() {
     });
 
     table.innerHTML = `
-        <table class="teacher-admin-list ${isAdmin ? "" : "teacher-admin-list-compact"}">
+        <table class="teacher-admin-list teacher-admin-classes-list ${isAdmin ? "teacher-admin-classes-list-admin" : ""}">
             <colgroup>
                 <col class="admin-class-col-school">
                 <col class="admin-class-col-class">
                 <col class="admin-class-col-base">
-                <col class="admin-class-col-students">
                 <col class="admin-class-col-actions">
                 ${isAdmin ? "<col class=\"admin-class-col-teacher\">" : ""}
             </colgroup>
@@ -885,7 +884,6 @@ function renderAdminClasses() {
                             </select>
                         </div>
                     </th>
-                    <th><span class="teacher-admin-th-plain">Ученики</span></th>
                     <th><span class="teacher-admin-th-plain">Действия</span></th>
                     ${isAdmin ? `
                     <th>
@@ -905,19 +903,21 @@ function renderAdminClasses() {
             <tbody>
                 ${filteredClasses.length === 0 ? `
                     <tr>
-                        <td colspan="${isAdmin ? 6 : 5}">Классов по выбранным фильтрам нет.</td>
+                        <td colspan="${isAdmin ? 5 : 4}">Классов по выбранным фильтрам нет.</td>
                     </tr>
                 ` : filteredClasses.map(classItem => `
                     <tr class="${classItem.is_active ? "" : "teacher-admin-row-archived"}">
                         <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.school)}</span></td>
                         <td>
                             <div class="teacher-admin-class-cell">
-                                <span class="teacher-admin-cell-text">${escapeHtml(classItem.class_name)}</span>
+                                <span class="teacher-admin-cell-text">
+                                    ${escapeHtml(classItem.class_name)}
+                                    <span class="teacher-admin-class-count">(${classItem.active_students})</span>
+                                </span>
                                 ${renderAdminClassJournalButton(classItem)}
                             </div>
                         </td>
                         <td><span class="teacher-admin-cell-text">${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span></td>
-                        <td><span class="teacher-admin-cell-text">${classItem.active_students}</span></td>
                         <td>
                             ${renderAdminClassAction(classItem)}
                         </td>

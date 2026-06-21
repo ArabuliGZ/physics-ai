@@ -259,6 +259,7 @@ async function fillTasks(options = {}) {
 async function showSelectedTask() {
 
     STATE.chat.history = [];
+    resetSolutionImageMemory();
 
     document.getElementById(
         "chat"
