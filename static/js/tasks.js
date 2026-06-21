@@ -394,7 +394,11 @@ async function updateProgressTable() {
     });
 
     try {
-        const response = await fetch(
+        const fetchWithStudentAuth =
+            typeof studentFetch === "function"
+                ? studentFetch
+                : fetch;
+        const response = await fetchWithStudentAuth(
             `/students/${STATE.student.current.id}/class-task-map?${params.toString()}`
         );
 

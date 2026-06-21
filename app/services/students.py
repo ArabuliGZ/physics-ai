@@ -3,7 +3,10 @@
 import re
 
 from app.database import database_connection
+from app.database import DEFAULT_TEST_PASSWORD
 from app.database import sync_student_classes
+from app.security import hash_password
+from app.security import verify_password
 
 
 def row_to_dict(row):
@@ -86,19 +89,21 @@ def create_student(
                 class_id,
                 teacher_id,
                 email,
+                password_hash,
                 class_name,
                 grade,
                 class_group,
                 task_class_id,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 school,
                 class_id,
                 teacher_id,
                 email,
+                hash_password(DEFAULT_TEST_PASSWORD),
                 class_name,
                 grade,
                 class_group,
@@ -213,6 +218,33 @@ def find_student_by_email(email, include_inactive=False):
         return row_to_dict(row)
 
 
+def authenticate_student(email, password):
+    """Return an active student only when email and password match."""
+
+    normalized_email = normalize_email(email)
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, class_id, teacher_id, email, password_hash, school, class_name,
+                   grade, class_group, task_class_id, is_active, full_name, created_at
+            FROM students
+            WHERE lower(email) = ?
+              AND is_active = 1
+            ORDER BY id
+            LIMIT 1
+            """,
+            (normalized_email,),
+        ).fetchone()
+
+        if row is None or not verify_password(password, row["password_hash"]):
+            return None
+
+        result = row_to_dict(row)
+        result.pop("password_hash", None)
+        return result
+
+
 def upsert_student_by_email(
     email,
     full_name,
@@ -242,6 +274,7 @@ def upsert_student_by_email(
                 """
                 INSERT INTO students (
                     email,
+                    password_hash,
                     class_id,
                     teacher_id,
                     school,
@@ -251,10 +284,11 @@ def upsert_student_by_email(
                     task_class_id,
                     full_name
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized_email,
+                    hash_password(DEFAULT_TEST_PASSWORD),
                     class_id,
                     teacher_id,
                     school,

@@ -1,6 +1,7 @@
 """Маршрут проверки решения через LLM."""
 
 from fastapi import APIRouter
+from fastapi import Header
 from fastapi import HTTPException
 
 from app.schemas import CheckRequest
@@ -9,6 +10,7 @@ from app.services.media import is_image_file
 from app.services.media import resolve_task_media_url
 from app.services.progress import get_task_progress
 from app.services.progress import record_task_attempt
+from app.services.sessions import find_student_by_session_token
 from app.services.students import allowed_task_class_id
 from app.services.students import get_student
 from llm import ask_llm
@@ -17,8 +19,25 @@ from llm import ask_llm
 router = APIRouter()
 
 
+def bearer_token(authorization):
+    """Extract a bearer token from the Authorization header."""
+
+    if not authorization:
+        return None
+
+    scheme, _, token = authorization.partition(" ")
+
+    if scheme.lower() != "bearer" or not token:
+        return None
+
+    return token.strip()
+
+
 @router.post("/check")
-async def check(data: CheckRequest):
+async def check(
+    data: CheckRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
     """Проверяет решение ученика.
 
     Поведение сохранено: текст задачи, ответ ученика, история и картинки
@@ -33,7 +52,24 @@ async def check(data: CheckRequest):
         and data.topic is not None
         and data.number is not None
     )
-    student = get_student(data.student_id) if has_tracking_data else None
+    token = bearer_token(authorization)
+    session_student = find_student_by_session_token(token) if token else None
+
+    if (
+        has_tracking_data
+        and session_student is not None
+        and int(session_student["id"]) != int(data.student_id)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Student session does not match submitted student"
+        )
+
+    student = (
+        session_student
+        if session_student is not None
+        else get_student(data.student_id) if has_tracking_data else None
+    )
 
     if (
         has_tracking_data

@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 from app.database import database_connection
+from app.database import DEFAULT_TEST_PASSWORD
+from app.security import hash_password
 
 
 DEMO_SCHOOL = "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u0448\u043a\u043e\u043b\u0430"
@@ -99,16 +101,19 @@ def group_tasks_by_class():
 def ensure_demo_user(connection, email, role, full_name):
     """Create or reactivate one demo teacher/admin account."""
 
+    password_hash = hash_password(DEFAULT_TEST_PASSWORD)
+
     connection.execute(
         """
-        INSERT INTO users (email, role, full_name, is_active)
-        VALUES (?, ?, ?, 1)
+        INSERT INTO users (email, password_hash, role, full_name, is_active)
+        VALUES (?, ?, ?, ?, 1)
         ON CONFLICT(email) DO UPDATE SET
+            password_hash = COALESCE(users.password_hash, excluded.password_hash),
             role = excluded.role,
             full_name = excluded.full_name,
             is_active = 1
         """,
-        (email, role, full_name),
+        (email, password_hash, role, full_name),
     )
 
     row = connection.execute(
@@ -135,6 +140,7 @@ def demo_email(grade, index):
 def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
     """Create or update one demo student."""
 
+    password_hash = hash_password(DEFAULT_TEST_PASSWORD)
     class_name = f"{grade}-demo"
     full_name = (
         f"\u0422\u0435\u0441\u0442\u043e\u0432\u044b\u0439 "
@@ -157,6 +163,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
             """
             INSERT INTO students (
                 email,
+                password_hash,
                 teacher_id,
                 school,
                 class_name,
@@ -166,10 +173,11 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
                 is_active,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
             """,
             (
                 email,
+                password_hash,
                 teacher_id,
                 DEMO_SCHOOL,
                 class_name,

@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=admin-skeleton-1">
+    <link rel="stylesheet" href="/static/css/style.css?v=admin-actions-1">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -44,6 +44,13 @@
                 autocomplete="email"
             >
 
+            <input
+                id="teacher_password"
+                type="password"
+                placeholder="Пароль"
+                autocomplete="current-password"
+            >
+
             <button
                 id="teacher_login_button"
                 type="submit"
@@ -60,6 +67,10 @@
 
             <p class="login-demo-hint">
                 Учитель: teacher@test.ru · Админ: admin@test.ru
+            </p>
+
+            <p class="login-demo-hint">
+                Пароль: test
             </p>
 
             <div
@@ -102,6 +113,17 @@
                 <button
                     type="button"
                     class="teacher-tab"
+                    data-teacher-tab="admin-classes"
+                    data-admin-only="true"
+                    onclick="switchTeacherView('admin-classes')"
+                    hidden
+                >
+                    Классы
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
                     data-teacher-tab="journal"
                     onclick="switchTeacherView('journal')"
                 >
@@ -111,9 +133,32 @@
                 <button
                     type="button"
                     class="teacher-tab"
-                    data-teacher-tab="admin"
+                    data-teacher-tab="admin-schools"
                     data-admin-only="true"
-                    onclick="switchTeacherView('admin')"
+                    onclick="switchTeacherView('admin-schools')"
+                    hidden
+                >
+                    Школы
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
+                    data-teacher-tab="admin-teachers"
+                    data-admin-only="true"
+                    onclick="switchTeacherView('admin-teachers')"
+                    hidden
+                >
+                    Учителя
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
+                    data-teacher-tab="admin-schools"
+                    data-legacy-admin-tab="true"
+                    data-admin-only="true"
+                    onclick="switchTeacherView('admin-schools')"
                     hidden
                 >
                     Админ
@@ -360,8 +405,41 @@
                 </div>
             </div>
 
+            <nav class="teacher-admin-tabs">
+                <button
+                    type="button"
+                    class="teacher-admin-tab"
+                    data-admin-tab="classes"
+                    onclick="switchAdminView('classes')"
+                >
+                    Классы
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-tab"
+                    data-admin-tab="teachers"
+                    onclick="switchAdminView('teachers')"
+                >
+                    Учителя
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-tab"
+                    data-admin-tab="schools"
+                    onclick="switchAdminView('schools')"
+                >
+                    Школы
+                </button>
+            </nav>
+
             <div class="teacher-admin-grid">
-                <section class="teacher-admin-section">
+                <section
+                    class="teacher-admin-section"
+                    data-admin-view="teachers"
+                    hidden
+                >
                     <div class="teacher-admin-section-header">
                         <h3>Учителя</h3>
                     </div>
@@ -411,7 +489,11 @@
                     ></div>
                 </section>
 
-                <section class="teacher-admin-section">
+                <section
+                    class="teacher-admin-section"
+                    data-admin-view="schools"
+                    hidden
+                >
                     <div class="teacher-admin-section-header">
                         <h3>Школы</h3>
                     </div>
@@ -454,7 +536,10 @@
                     ></div>
                 </section>
 
-                <section class="teacher-admin-section">
+                <section
+                    class="teacher-admin-section"
+                    data-admin-view="classes"
+                >
                     <div class="teacher-admin-section-header teacher-admin-section-header-stacked">
                         <h3>Классы</h3>
 
@@ -623,6 +708,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=admin-skeleton-1"></script>
+    <script src="/static/js/teacher.js?v=admin-actions-1"></script>
 </body>
 </html>

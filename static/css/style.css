@@ -338,6 +338,8 @@
 
         .student-card {
 
+            position: relative;
+
             width: 420px;
 
             max-width: calc(100vw - 40px);
@@ -455,6 +457,14 @@
 
         .login-demo-hint {
 
+            position: absolute;
+
+            top: calc(100% + 12px);
+
+            left: 24px;
+
+            right: 24px;
+
             margin: 0;
 
             display: flex;
@@ -466,6 +476,11 @@
             font-size: 13px;
 
             line-height: 17px;
+        }
+
+        .login-demo-hint + .login-demo-hint {
+
+            top: calc(100% + 36px);
         }
 
         .student-error {
@@ -1524,6 +1539,42 @@
     gap: 16px;
 }
 
+.teacher-admin-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 14px;
+    padding: 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb;
+}
+
+[data-legacy-admin-tab],
+[data-teacher-view="admin"] > .teacher-panel-header,
+.teacher-admin-tabs {
+    display: none !important;
+}
+
+.teacher-admin-tab {
+    min-height: 30px;
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #4b5563;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.teacher-admin-tab.active {
+    background: white;
+    color: #1d4ed8;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+}
+
 .teacher-admin-section {
     min-width: 0;
 }
@@ -1616,6 +1667,32 @@
     grid-column: 2;
 }
 
+.teacher-admin-th-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.teacher-admin-th-filter span {
+    padding: 0 9px;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.teacher-admin-th-filter select {
+    width: 100%;
+    min-height: 30px;
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: white;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+}
+
 .teacher-admin-table {
     overflow-x: auto;
     border: 1px solid #e5e7eb;
@@ -1624,9 +1701,25 @@
 
 .teacher-admin-list {
     width: 100%;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 13px;
+}
+
+.teacher-admin-list .admin-class-col-school,
+.teacher-admin-list .admin-class-col-class,
+.teacher-admin-list .admin-class-col-teacher,
+.teacher-admin-list .admin-class-col-base {
+    width: 19%;
+}
+
+.teacher-admin-list .admin-class-col-students {
+    width: 10%;
+}
+
+.teacher-admin-list .admin-class-col-actions {
+    width: 14%;
 }
 
 .teacher-admin-list th,
@@ -1637,32 +1730,44 @@
     white-space: nowrap;
 }
 
-.teacher-admin-list th:last-child,
-.teacher-admin-list td:last-child {
-    width: 190px;
-    text-align: right;
-}
-
 .teacher-admin-list th {
     background: #f9fafb;
     color: #4b5563;
     font-size: 12px;
     font-weight: 700;
+    vertical-align: top;
 }
 
-.teacher-admin-filter-row th {
-    background: white;
-    vertical-align: bottom;
+.teacher-admin-th-plain {
+    display: inline-block;
+    padding: 1px 9px 0;
+}
+
+.teacher-admin-cell-text {
+    display: block;
+    overflow: hidden;
+    padding: 0 9px;
+    text-overflow: ellipsis;
 }
 
 .teacher-admin-list tr:last-child td {
     border-bottom: 0;
 }
 
+.teacher-admin-row-archived td {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.teacher-admin-row-archived .teacher-admin-cell-text,
+.teacher-admin-row-archived .teacher-admin-inline-select {
+    color: #4b5563;
+}
+
 .teacher-admin-actions {
     display: inline-flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 6px;
 }
 
@@ -1683,13 +1788,34 @@
     background: #f9fafb;
 }
 
+.teacher-admin-action-archive {
+    border-color: rgba(220, 38, 38, 0.2);
+    background: rgba(254, 226, 226, 0.65);
+    color: #991b1b;
+}
+
+.teacher-admin-action-archive:hover {
+    background: rgba(254, 202, 202, 0.8);
+}
+
+.teacher-admin-action-restore {
+    border-color: rgba(22, 163, 74, 0.22);
+    background: rgba(220, 252, 231, 0.72);
+    color: #166534;
+}
+
+.teacher-admin-action-restore:hover {
+    background: rgba(187, 247, 208, 0.84);
+}
+
 .teacher-admin-create-class-toggle {
     margin-bottom: 10px;
 }
 
 .teacher-admin-inline-select {
     min-height: 30px;
-    min-width: 150px;
+    width: 100%;
+    min-width: 0;
     padding: 5px 8px;
     border: 1px solid #e5e7eb;
     border-radius: 9px;

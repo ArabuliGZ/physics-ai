@@ -5,8 +5,11 @@ from contextlib import contextmanager
 import sqlite3
 import re
 
+from app.security import hash_password
+
 
 DATABASE_PATH = Path("data") / "physics_ai.db"
+DEFAULT_TEST_PASSWORD = "test"
 
 
 def get_connection():
@@ -45,6 +48,7 @@ def init_database():
                 class_id INTEGER,
                 teacher_id INTEGER,
                 email TEXT,
+                password_hash TEXT,
                 school TEXT NOT NULL,
                 class_name TEXT NOT NULL,
                 grade INTEGER,
@@ -60,6 +64,7 @@ def init_database():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL UNIQUE,
+                password_hash TEXT,
                 role TEXT NOT NULL CHECK (role IN ('admin', 'teacher')),
                 full_name TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
@@ -85,6 +90,20 @@ def init_database():
                 name TEXT NOT NULL UNIQUE,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                token TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS student_sessions (
+                token TEXT PRIMARY KEY,
+                student_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS task_attempts (
@@ -118,7 +137,9 @@ def init_database():
             """
         )
 
+        ensure_password_columns(connection)
         ensure_user_rows(connection)
+        backfill_password_hashes(connection)
         ensure_student_class_columns(connection)
         ensure_task_progress_columns(connection)
         backfill_student_teacher(connection)
@@ -131,6 +152,7 @@ def init_database():
 def ensure_user_rows(connection):
     """Create stable local test users for role-based login."""
 
+    password_hash = hash_password(DEFAULT_TEST_PASSWORD)
     users = (
         ("teacher@test.ru", "teacher", "Тестовый учитель"),
         ("admin@test.ru", "admin", "Администратор"),
@@ -139,15 +161,54 @@ def ensure_user_rows(connection):
     for email, role, full_name in users:
         connection.execute(
             """
-            INSERT INTO users (email, role, full_name, is_active)
-            VALUES (?, ?, ?, 1)
+            INSERT INTO users (email, password_hash, role, full_name, is_active)
+            VALUES (?, ?, ?, ?, 1)
             ON CONFLICT(email) DO UPDATE SET
+                password_hash = COALESCE(users.password_hash, excluded.password_hash),
                 role = excluded.role,
                 full_name = excluded.full_name,
                 is_active = 1
             """,
-            (email, role, full_name),
+            (email, password_hash, role, full_name),
         )
+
+
+def ensure_password_columns(connection):
+    """Add password hash columns to existing local databases."""
+
+    user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+    student_columns = {row["name"] for row in connection.execute("PRAGMA table_info(students)")}
+
+    if "password_hash" not in user_columns:
+        connection.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
+
+    if "password_hash" not in student_columns:
+        connection.execute("ALTER TABLE students ADD COLUMN password_hash TEXT")
+
+
+def backfill_password_hashes(connection):
+    """Give existing demo-era accounts the temporary password 'test'."""
+
+    password_hash = hash_password(DEFAULT_TEST_PASSWORD)
+
+    connection.execute(
+        """
+        UPDATE users
+        SET password_hash = ?
+        WHERE password_hash IS NULL
+           OR password_hash = ''
+        """,
+        (password_hash,),
+    )
+    connection.execute(
+        """
+        UPDATE students
+        SET password_hash = ?
+        WHERE password_hash IS NULL
+           OR password_hash = ''
+        """,
+        (password_hash,),
+    )
 
 
 def sync_schools(connection=None):

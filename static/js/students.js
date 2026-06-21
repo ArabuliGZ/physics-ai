@@ -8,6 +8,20 @@ function clearSavedStudent() {
 }
 
 
+function studentFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+
+    if (STATE.student.current?.session_token) {
+        headers.set("Authorization", `Bearer ${STATE.student.current.session_token}`);
+    }
+
+    return fetch(url, {
+        ...options,
+        headers,
+    });
+}
+
+
 function renderStudentSession() {
     const bar = document.getElementById("student_bar");
     const name = document.getElementById("student_name");
@@ -80,11 +94,12 @@ async function handleStudentLogin(event) {
     const errorBox = document.getElementById("student_login_error");
 
     const payload = {
-        email: document.getElementById("student_email").value.trim()
+        email: document.getElementById("student_email").value.trim(),
+        password: document.getElementById("student_password").value
     };
 
-    if (!payload.email) {
-        errorBox.textContent = "Введи email.";
+    if (!payload.email || !payload.password) {
+        errorBox.textContent = "Введи email и пароль.";
         return;
     }
 
@@ -114,7 +129,7 @@ async function handleStudentLogin(event) {
         renderStudentSession();
     } catch (error) {
         console.error("Student login failed:", error);
-        errorBox.textContent = "Ученик с таким email не найден.";
+        errorBox.textContent = "Неверный email или пароль.";
     } finally {
         button.disabled = false;
     }
@@ -122,6 +137,22 @@ async function handleStudentLogin(event) {
 
 
 function logoutStudent() {
+    const sessionToken = STATE.student.current?.session_token;
+
+    if (sessionToken) {
+        fetch(
+            "/students/logout",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${sessionToken}`,
+                },
+            }
+        ).catch(error => {
+            console.warn("Student logout request failed:", error);
+        });
+    }
+
     clearSavedStudent();
     resetStudentWorkspace();
     renderStudentSession();

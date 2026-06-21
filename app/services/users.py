@@ -1,6 +1,9 @@
 """Helpers for role-based users."""
 
+from app.database import DEFAULT_TEST_PASSWORD
 from app.database import database_connection
+from app.security import hash_password
+from app.security import verify_password
 
 
 def row_to_dict(row):
@@ -35,6 +38,30 @@ def find_user_by_email(email):
         ).fetchone()
 
         return row_to_dict(row)
+
+
+def authenticate_user(email, password):
+    """Return an active user only when email and password match."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, email, password_hash, role, full_name, is_active, created_at
+            FROM users
+            WHERE lower(email) = ?
+              AND is_active = 1
+            ORDER BY id
+            LIMIT 1
+            """,
+            (normalize_email(email),),
+        ).fetchone()
+
+        if row is None or not verify_password(password, row["password_hash"]):
+            return None
+
+        result = row_to_dict(row)
+        result.pop("password_hash", None)
+        return result
 
 
 def get_active_teacher(teacher_id):
@@ -154,10 +181,10 @@ def upsert_teacher(email, full_name, teacher_id=None):
             if existing is None:
                 cursor = connection.execute(
                     """
-                    INSERT INTO users (email, role, full_name, is_active)
-                    VALUES (?, 'teacher', ?, 1)
+                    INSERT INTO users (email, password_hash, role, full_name, is_active)
+                    VALUES (?, ?, 'teacher', ?, 1)
                     """,
-                    (normalized_email, full_name),
+                    (normalized_email, hash_password(DEFAULT_TEST_PASSWORD), full_name),
                 )
                 teacher_id = cursor.lastrowid
                 action = "created"

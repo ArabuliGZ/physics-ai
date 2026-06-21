@@ -14,6 +14,13 @@ def home():
     return FileResponse("static/index.html")
 
 
+@router.get("/healthz")
+def healthz():
+    """Simple health check for reverse proxies and uptime monitors."""
+
+    return {"status": "ok"}
+
+
 @router.get("/teacher")
 def teacher():
     """Return the teacher overview page."""

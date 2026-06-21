@@ -125,7 +125,12 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
         number: STATE.selected.number
     };
 
-    const response = await fetch("/check", {
+    const fetchWithStudentAuth =
+        typeof studentFetch === "function"
+            ? studentFetch
+            : fetch;
+
+    const response = await fetchWithStudentAuth("/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

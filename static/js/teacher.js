@@ -10,9 +10,12 @@
     groupsById: {},
     selectedFilters: null,
     adminClassSchoolFilter: "",
+    adminClassNameFilter: "",
     adminClassTeacherFilter: "",
+    adminClassTaskBaseFilter: "",
     adminTeacherEditingId: null,
     adminSchoolEditingId: null,
+    activeAdminView: "classes",
     manualProgressTarget: null,
     currentJournal: null,
     activeView: "classes",
@@ -81,6 +84,7 @@ function renderTeacherSession() {
 
 function resetTeacherWorkspaceUi() {
     TEACHER_STATE.activeView = "classes";
+    TEACHER_STATE.activeAdminView = "classes";
 
     const createClassPanel = document.getElementById("teacher_create_class_panel");
     const adminCreateClassPanel = document.getElementById("admin_create_class_panel");
@@ -112,16 +116,29 @@ function resetTeacherWorkspaceUi() {
 
     if (document.getElementById("teacher_app")) {
         switchTeacherView("classes");
+        switchAdminView("classes");
     }
 }
 
 
 function switchTeacherView(viewName) {
-    if (viewName === "admin" && TEACHER_STATE.user?.role !== "admin") {
+    const adminViewByTeacherView = {
+        "admin-classes": "classes",
+        "admin-schools": "schools",
+        "admin-teachers": "teachers",
+    };
+    let isAdminView = Object.prototype.hasOwnProperty.call(adminViewByTeacherView, viewName);
+
+    if (isAdminView && TEACHER_STATE.user?.role !== "admin") {
         viewName = "classes";
+        isAdminView = false;
     }
 
     TEACHER_STATE.activeView = viewName;
+
+    if (isAdminView) {
+        switchAdminView(adminViewByTeacherView[viewName]);
+    }
 
     document
         .querySelectorAll("[data-teacher-tab]")
@@ -135,7 +152,30 @@ function switchTeacherView(viewName) {
     document
         .querySelectorAll("[data-teacher-view]")
         .forEach(section => {
-            section.hidden = section.dataset.teacherView !== viewName;
+            section.hidden = section.dataset.teacherView !== (isAdminView ? "admin" : viewName);
+        });
+}
+
+
+function switchAdminView(viewName) {
+    const allowedViews = new Set(["classes", "teachers", "schools"]);
+
+    if (!allowedViews.has(viewName)) {
+        viewName = "classes";
+    }
+
+    TEACHER_STATE.activeAdminView = viewName;
+
+    document
+        .querySelectorAll("[data-admin-view]")
+        .forEach(section => {
+            section.hidden = section.dataset.adminView !== viewName;
+        });
+
+    document
+        .querySelectorAll("[data-admin-tab]")
+        .forEach(tab => {
+            tab.classList.toggle("active", tab.dataset.adminTab === viewName);
         });
 }
 
@@ -149,7 +189,7 @@ function renderAdminAccess() {
             element.hidden = !isAdmin;
         });
 
-    if (!isAdmin && TEACHER_STATE.activeView === "admin") {
+    if (!isAdmin && TEACHER_STATE.activeView.startsWith("admin-")) {
         switchTeacherView("classes");
     }
 }
@@ -192,9 +232,10 @@ async function handleTeacherLogin(event) {
     const button = document.getElementById("teacher_login_button");
     const errorBox = document.getElementById("teacher_login_error");
     const email = document.getElementById("teacher_email").value.trim().toLowerCase();
+    const password = document.getElementById("teacher_password").value;
 
-    if (!email) {
-        errorBox.textContent = "Введи email.";
+    if (!email || !password) {
+        errorBox.textContent = "Введи email и пароль.";
         return;
     }
 
@@ -209,7 +250,7 @@ async function handleTeacherLogin(event) {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ email, password }),
             }
         );
 
@@ -238,6 +279,22 @@ async function handleTeacherLogin(event) {
 
 
 function logoutTeacher() {
+    const sessionToken = TEACHER_STATE.user?.session_token;
+
+    if (sessionToken) {
+        fetch(
+            "/auth/logout",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${sessionToken}`,
+                },
+            }
+        ).catch(error => {
+            console.warn("Teacher logout request failed:", error);
+        });
+    }
+
     TEACHER_STATE.user = null;
     TEACHER_STATE.schools = [];
     TEACHER_STATE.adminTeachers = [];
@@ -256,7 +313,9 @@ function logoutTeacher() {
 function teacherFetch(url, options = {}) {
     const headers = new Headers(options.headers || {});
 
-    if (TEACHER_STATE.user?.email) {
+    if (TEACHER_STATE.user?.session_token) {
+        headers.set("Authorization", `Bearer ${TEACHER_STATE.user.session_token}`);
+    } else if (TEACHER_STATE.user?.email) {
         headers.set("X-User-Email", TEACHER_STATE.user.email);
     }
 
@@ -339,12 +398,13 @@ async function loadAdminDashboardIfNeeded() {
 
 
 function renderAdminDashboard() {
-        renderAdminTeachers();
-        renderAdminSchools();
-        fillAdminClassSchoolFilter();
-        fillAdminClassTeacherFilter();
-        fillAdminImportForm();
-        renderAdminClasses();
+    renderAdminTeachers();
+    renderAdminSchools();
+    fillAdminClassSchoolFilter();
+    fillAdminClassTeacherFilter();
+    fillAdminImportForm();
+    renderAdminClasses();
+    switchAdminView(TEACHER_STATE.activeAdminView);
 }
 
 
@@ -367,17 +427,15 @@ function renderAdminTeachers() {
                     <th>ФИО</th>
                     <th>Email</th>
                     <th>Классы</th>
-                    <th>Статус</th>
-                    <th></th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 ${TEACHER_STATE.adminTeachers.map(teacher => `
-                    <tr>
+                    <tr class="${teacher.is_active ? "" : "teacher-admin-row-archived"}">
                         <td>${escapeHtml(teacher.full_name)}</td>
                         <td>${escapeHtml(teacher.email)}</td>
                         <td>${teacher.active_classes} / ${teacher.archived_classes}</td>
-                        <td>${teacher.is_active ? "активен" : "архив"}</td>
                         <td>
                             ${renderAdminTeacherAction(teacher)}
                         </td>
@@ -406,7 +464,7 @@ function renderAdminTeacherAction(teacher) {
                 ${editButton}
                 <button
                     type="button"
-                    class="teacher-admin-action"
+                    class="teacher-admin-action teacher-admin-action-archive"
                     onclick="deactivateAdminTeacher(${teacher.id})"
                 >
                     Архивировать
@@ -420,7 +478,7 @@ function renderAdminTeacherAction(teacher) {
             ${editButton}
             <button
                 type="button"
-                class="teacher-admin-action"
+                class="teacher-admin-action teacher-admin-action-restore"
                 onclick="restoreAdminTeacher(${teacher.id})"
             >
                 Восстановить
@@ -589,10 +647,14 @@ function fillAdminClassTeacherFilter() {
 
 function handleAdminClassFilterChange() {
     const schoolSelect = document.getElementById("admin_class_school_filter");
+    const classSelect = document.getElementById("admin_class_name_filter");
     const teacherSelect = document.getElementById("admin_class_teacher_filter");
+    const taskBaseSelect = document.getElementById("admin_class_task_base_filter");
 
     TEACHER_STATE.adminClassSchoolFilter = schoolSelect?.value || "";
+    TEACHER_STATE.adminClassNameFilter = classSelect?.value || "";
     TEACHER_STATE.adminClassTeacherFilter = teacherSelect?.value || "";
+    TEACHER_STATE.adminClassTaskBaseFilter = taskBaseSelect?.value || "";
     renderAdminClasses();
 }
 
@@ -616,17 +678,15 @@ function renderAdminSchools() {
                     <th>Школа</th>
                     <th>Классы</th>
                     <th>Ученики</th>
-                    <th>Статус</th>
-                    <th></th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 ${TEACHER_STATE.adminSchools.map(school => `
-                    <tr>
+                    <tr class="${school.is_active ? "" : "teacher-admin-row-archived"}">
                         <td>${escapeHtml(school.name)}</td>
                         <td>${school.active_classes} / ${school.archived_classes}</td>
                         <td>${school.active_students}</td>
-                        <td>${school.is_active ? "активна" : "архив"}</td>
                         <td>
                             ${renderAdminSchoolAction(school)}
                         </td>
@@ -655,7 +715,7 @@ function renderAdminSchoolAction(school) {
                 ${editButton}
                 <button
                     type="button"
-                    class="teacher-admin-action"
+                    class="teacher-admin-action teacher-admin-action-archive"
                     onclick="deactivateAdminSchool(${school.id})"
                 >
                     Архивировать
@@ -669,7 +729,7 @@ function renderAdminSchoolAction(school) {
             ${editButton}
             <button
                 type="button"
-                class="teacher-admin-action"
+                class="teacher-admin-action teacher-admin-action-restore"
                 onclick="restoreAdminSchool(${school.id})"
             >
                 Восстановить
@@ -780,18 +840,30 @@ function renderAdminClasses() {
     const filteredClasses = TEACHER_STATE.adminClasses.filter(classItem => {
         const matchesSchool = !TEACHER_STATE.adminClassSchoolFilter
             || classItem.school === TEACHER_STATE.adminClassSchoolFilter;
+        const matchesClassName = !TEACHER_STATE.adminClassNameFilter
+            || String(classItem.grade) === String(TEACHER_STATE.adminClassNameFilter);
         const matchesTeacher = !TEACHER_STATE.adminClassTeacherFilter
             || String(classItem.teacher_id) === String(TEACHER_STATE.adminClassTeacherFilter);
+        const matchesTaskBase = !TEACHER_STATE.adminClassTaskBaseFilter
+            || classItem.task_class_id === TEACHER_STATE.adminClassTaskBaseFilter;
 
-        return matchesSchool && matchesTeacher;
+        return matchesSchool && matchesClassName && matchesTeacher && matchesTaskBase;
     });
 
     table.innerHTML = `
         <table class="teacher-admin-list">
+            <colgroup>
+                <col class="admin-class-col-school">
+                <col class="admin-class-col-class">
+                <col class="admin-class-col-teacher">
+                <col class="admin-class-col-base">
+                <col class="admin-class-col-students">
+                <col class="admin-class-col-actions">
+            </colgroup>
             <thead>
-                <tr class="teacher-admin-filter-row">
+                <tr>
                     <th>
-                        <label class="teacher-admin-filter">
+                        <div class="teacher-admin-th-filter">
                             <span>Школа</span>
                             <select
                                 id="admin_class_school_filter"
@@ -799,10 +871,21 @@ function renderAdminClasses() {
                             >
                                 ${renderAdminClassSchoolFilterOptions()}
                             </select>
-                        </label>
+                        </div>
                     </th>
                     <th>
-                        <label class="teacher-admin-filter">
+                        <div class="teacher-admin-th-filter">
+                            <span>Класс</span>
+                            <select
+                                id="admin_class_name_filter"
+                                onchange="handleAdminClassFilterChange()"
+                            >
+                                ${renderAdminClassNameFilterOptions()}
+                            </select>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="teacher-admin-th-filter">
                             <span>Учитель</span>
                             <select
                                 id="admin_class_teacher_filter"
@@ -810,20 +893,21 @@ function renderAdminClasses() {
                             >
                                 ${renderAdminClassTeacherFilterOptions()}
                             </select>
-                        </label>
+                        </div>
                     </th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                </tr>
-                <tr>
-                    <th>Класс</th>
-                    <th>Учитель</th>
-                    <th>База</th>
-                    <th>Ученики</th>
-                    <th>Статус</th>
-                    <th></th>
+                    <th>
+                        <div class="teacher-admin-th-filter">
+                            <span>База</span>
+                            <select
+                                id="admin_class_task_base_filter"
+                                onchange="handleAdminClassFilterChange()"
+                            >
+                                ${renderAdminClassTaskBaseFilterOptions()}
+                            </select>
+                        </div>
+                    </th>
+                    <th><span class="teacher-admin-th-plain">Ученики</span></th>
+                    <th><span class="teacher-admin-th-plain">Действия</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -832,12 +916,12 @@ function renderAdminClasses() {
                         <td colspan="6">Классов по выбранным фильтрам нет.</td>
                     </tr>
                 ` : filteredClasses.map(classItem => `
-                    <tr>
-                        <td>${escapeHtml(classItem.school)} · ${escapeHtml(classItem.class_name)}</td>
+                    <tr class="${classItem.is_active ? "" : "teacher-admin-row-archived"}">
+                        <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.school)}</span></td>
+                        <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.class_name)}</span></td>
                         <td>${renderAdminClassTeacherControl(classItem)}</td>
-                        <td>${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</td>
-                        <td>${classItem.active_students}</td>
-                        <td>${classItem.is_active ? "активен" : "архив"}</td>
+                        <td><span class="teacher-admin-cell-text">${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span></td>
+                        <td><span class="teacher-admin-cell-text">${classItem.active_students}</span></td>
                         <td>
                             ${renderAdminClassAction(classItem)}
                         </td>
@@ -872,6 +956,29 @@ function renderAdminClassSchoolFilterOptions() {
 }
 
 
+function renderAdminClassNameFilterOptions() {
+    const grades = [
+        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.grade))
+    ].filter(grade => grade !== null && grade !== undefined).sort((left, right) => Number(left) - Number(right));
+
+    if (!grades.map(String).includes(String(TEACHER_STATE.adminClassNameFilter))) {
+        TEACHER_STATE.adminClassNameFilter = "";
+    }
+
+    return `
+        <option value="">Все параллели</option>
+        ${grades.map(grade => `
+            <option
+                value="${grade}"
+                ${String(grade) === String(TEACHER_STATE.adminClassNameFilter) ? "selected" : ""}
+            >
+                ${grade}
+            </option>
+        `).join("")}
+    `;
+}
+
+
 function renderAdminClassTeacherFilterOptions() {
     const teacherIds = [
         ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.teacher_id))
@@ -892,6 +999,29 @@ function renderAdminClassTeacherFilterOptions() {
                 ${String(teacher.id) === String(TEACHER_STATE.adminClassTeacherFilter) ? "selected" : ""}
             >
                 ${escapeHtml(teacher.full_name)}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+function renderAdminClassTaskBaseFilterOptions() {
+    const taskBases = [
+        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.task_class_id))
+    ].filter(Boolean).sort(compareClassNames);
+
+    if (!taskBases.includes(TEACHER_STATE.adminClassTaskBaseFilter)) {
+        TEACHER_STATE.adminClassTaskBaseFilter = "";
+    }
+
+    return `
+        <option value="">Все базы</option>
+        ${taskBases.map(taskBase => `
+            <option
+                value="${escapeHtml(taskBase)}"
+                ${taskBase === TEACHER_STATE.adminClassTaskBaseFilter ? "selected" : ""}
+            >
+                ${escapeHtml(TEACHER_STATE.groupsById[taskBase] || taskBase)}
             </option>
         `).join("")}
     `;
@@ -938,7 +1068,7 @@ function renderAdminClassAction(classItem) {
             <div class="teacher-admin-actions">
                 <button
                     type="button"
-                    class="teacher-admin-action"
+                    class="teacher-admin-action teacher-admin-action-archive"
                     onclick="deactivateAdminClass(${classItem.id})"
                 >
                     Архивировать
@@ -951,7 +1081,7 @@ function renderAdminClassAction(classItem) {
         <div class="teacher-admin-actions">
             <button
                 type="button"
-                class="teacher-admin-action"
+                class="teacher-admin-action teacher-admin-action-restore"
                 onclick="restoreAdminClass(${classItem.id})"
             >
                 Восстановить

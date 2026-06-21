@@ -48,12 +48,14 @@ class StudentLoginRequest(BaseModel):
     """Request body for student email login."""
 
     email: str
+    password: str
 
 
 class UserLoginRequest(BaseModel):
     """Request body for role-based user login."""
 
     email: str
+    password: str
 
 
 class AdminTeacherRequest(BaseModel):

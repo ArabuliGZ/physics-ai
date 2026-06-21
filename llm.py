@@ -355,6 +355,14 @@ def ask_openrouter(
     task_image_base64=None
 ):
 
+    if not OPENROUTER_API_KEY:
+
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": "OPENROUTER_API_KEY is not configured"
+        }
+
     url = (
         "https://openrouter.ai/api/v1/"
         "chat/completions"
@@ -392,7 +400,8 @@ def ask_openrouter(
             task_image_base64
         ),
 
-        "max_tokens": MAX_TOKENS
+        "max_tokens": MAX_TOKENS,
+        "temperature": TEMPERATURE
     }
 
     # ===== HEADERS =====
@@ -411,7 +420,8 @@ def ask_openrouter(
     response = requests.post(
         url,
         json=payload,
-        headers=headers
+        headers=headers,
+        timeout=60
     )
 
     print(

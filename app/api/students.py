@@ -38,7 +38,14 @@ from app.services.schools import list_admin_schools
 from app.services.schools import list_active_schools
 from app.services.schools import restore_school
 from app.services.schools import upsert_school
+from app.services.sessions import create_user_session
+from app.services.sessions import create_student_session
+from app.services.sessions import delete_student_session
+from app.services.sessions import delete_user_session
+from app.services.sessions import find_student_by_session_token
+from app.services.sessions import find_user_by_session_token
 from app.services.students import allowed_task_class_id
+from app.services.students import authenticate_student
 from app.services.students import create_student
 from app.services.students import deactivate_student
 from app.services.students import find_student_by_email
@@ -48,6 +55,7 @@ from app.services.students import list_students_with_summary
 from app.services.students import upsert_student_by_email
 from app.services.task_store import TASKS
 from app.services.users import deactivate_teacher
+from app.services.users import authenticate_user
 from app.services.users import find_user_by_email
 from app.services.users import get_active_teacher
 from app.services.users import list_admin_teachers
@@ -58,18 +66,43 @@ from app.services.users import upsert_teacher
 router = APIRouter()
 
 
-def require_teacher_user(x_user_email: str | None = Header(default=None, alias="X-User-Email")):
-    """Return the current teacher/admin user from a temporary email header."""
+def bearer_token(authorization):
+    """Extract a bearer token from the Authorization header."""
 
-    if not x_user_email:
+    if not authorization:
+        return None
+
+    scheme, _, token = authorization.partition(" ")
+
+    if scheme.lower() != "bearer" or not token:
+        return None
+
+    return token.strip()
+
+
+def require_teacher_user(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_user_email: str | None = Header(default=None, alias="X-User-Email"),
+):
+    """Return the current teacher/admin user from a session token.
+
+    X-User-Email remains as a temporary fallback while older browser sessions
+    are being replaced by token-based sessions.
+    """
+
+    token = bearer_token(authorization)
+    user = find_user_by_session_token(token) if token else None
+
+    if user is None and x_user_email:
+        user = find_user_by_email(x_user_email)
+
+    if user is None:
         raise HTTPException(
             status_code=401,
             detail="Teacher login is required"
         )
 
-    user = find_user_by_email(x_user_email)
-
-    if user is None or user["role"] not in ("teacher", "admin"):
+    if user["role"] not in ("teacher", "admin"):
         raise HTTPException(
             status_code=403,
             detail="Teacher access is required"
@@ -99,27 +132,72 @@ def require_admin_user(current_user=Depends(require_teacher_user)):
     return current_user
 
 
-@router.post("/auth/login")
-def login_user(data: UserLoginRequest):
-    """Login a role-based user by email."""
+def require_student_or_legacy(
+    student_id,
+    authorization: str | None = None,
+):
+    """Return the session student or fall back to legacy student_id lookup.
 
-    email = data.email.strip().lower()
+    The fallback keeps existing frontend flows alive while student token
+    headers are being rolled out everywhere.
+    """
 
-    if not email:
+    token = bearer_token(authorization)
+    session_student = find_student_by_session_token(token) if token else None
+
+    if session_student is not None:
+        if int(session_student["id"]) != int(student_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Student session does not match requested student"
+            )
+
+        return session_student
+
+    student = get_student(student_id)
+
+    if student is None:
         raise HTTPException(
-            status_code=400,
-            detail="email is required"
+            status_code=404,
+            detail="Student not found"
         )
 
-    user = find_user_by_email(email)
+    return student
+
+
+@router.post("/auth/login")
+def login_user(data: UserLoginRequest):
+    """Login a role-based user by email and password."""
+
+    email = data.email.strip().lower()
+    password = data.password
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="email and password are required"
+        )
+
+    user = authenticate_user(email, password)
 
     if user is None:
         raise HTTPException(
-            status_code=404,
-            detail="User with this email was not found"
+            status_code=401,
+            detail="Invalid email or password"
         )
 
+    user["session_token"] = create_user_session(user["id"])
     return user
+
+
+@router.post("/auth/logout")
+def logout_user(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
+    """Logout the current teacher/admin session token."""
+
+    delete_user_session(bearer_token(authorization))
+    return {"ok": True}
 
 
 @router.post("/students")
@@ -152,25 +230,37 @@ def add_student(data: StudentCreateRequest):
 
 @router.post("/students/login")
 def login_student(data: StudentLoginRequest):
-    """Find an existing student by email."""
+    """Login an existing student by email and password."""
 
     email = data.email.strip().lower()
+    password = data.password
 
-    if not email:
+    if not email or not password:
         raise HTTPException(
             status_code=400,
-            detail="email is required"
+            detail="email and password are required"
         )
 
-    student = find_student_by_email(email)
+    student = authenticate_student(email, password)
 
     if student is None:
         raise HTTPException(
-            status_code=404,
-            detail="Student with this email was not found"
+            status_code=401,
+            detail="Invalid email or password"
         )
 
+    student["session_token"] = create_student_session(student["id"])
     return student
+
+
+@router.post("/students/logout")
+def logout_student(
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
+    """Logout the current student session token."""
+
+    delete_student_session(bearer_token(authorization))
+    return {"ok": True}
 
 
 @router.get("/students")
@@ -905,31 +995,23 @@ def export_teacher_journal(
 
 
 @router.get("/students/{student_id}")
-def get_student_by_id(student_id: int):
+def get_student_by_id(
+    student_id: int,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
     """Return one student by id."""
 
-    student = get_student(student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    return student
+    return require_student_or_legacy(student_id, authorization)
 
 
 @router.get("/students/{student_id}/progress")
-def get_progress_by_student(student_id: int):
+def get_progress_by_student(
+    student_id: int,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
     """Return current task progress for one student."""
 
-    student = get_student(student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
+    require_student_or_legacy(student_id, authorization)
 
     return list_student_progress(student_id)
 
@@ -939,17 +1021,12 @@ def get_student_task_map(
     student_id: int,
     class_id: str,
     chapter: str,
-    topic: str
+    topic: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ):
     """Return all tasks in a section with this student's progress."""
 
-    student = get_student(student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
+    student = require_student_or_legacy(student_id, authorization)
 
     if class_id != allowed_task_class_id(student):
         raise HTTPException(
@@ -1022,17 +1099,12 @@ def get_student_task_map(
 @router.get("/students/{student_id}/class-task-map")
 def get_student_class_task_map(
     student_id: int,
-    class_id: str
+    class_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
 ):
     """Return all class tasks with this student's progress."""
 
-    student = get_student(student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
+    student = require_student_or_legacy(student_id, authorization)
 
     if class_id != allowed_task_class_id(student):
         raise HTTPException(
