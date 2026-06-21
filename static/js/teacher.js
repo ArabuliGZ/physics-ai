@@ -19,6 +19,7 @@
     manualProgressTarget: null,
     currentJournal: null,
     activeView: "classes",
+    confirmResolver: null,
 };
 
 
@@ -71,6 +72,7 @@ function renderTeacherSession() {
             formatTeacherRole(TEACHER_STATE.user.role),
         ].join(" · ");
         renderAdminAccess();
+        switchTeacherView("classes");
 
         return;
     }
@@ -86,19 +88,13 @@ function resetTeacherWorkspaceUi() {
     TEACHER_STATE.activeView = "classes";
     TEACHER_STATE.activeAdminView = "classes";
 
-    const createClassPanel = document.getElementById("teacher_create_class_panel");
     const adminCreateClassPanel = document.getElementById("admin_create_class_panel");
-
-    if (createClassPanel) {
-        createClassPanel.hidden = true;
-    }
 
     if (adminCreateClassPanel) {
         adminCreateClassPanel.hidden = true;
     }
 
     [
-        "teacher_import_result",
         "admin_import_result",
         "teacher_single_result",
         "admin_teacher_result",
@@ -123,7 +119,6 @@ function resetTeacherWorkspaceUi() {
 
 function switchTeacherView(viewName) {
     const adminViewByTeacherView = {
-        "admin-classes": "classes",
         "admin-schools": "schools",
         "admin-teachers": "teachers",
     };
@@ -134,10 +129,14 @@ function switchTeacherView(viewName) {
         isAdminView = false;
     }
 
+    const isClassesView = viewName === "classes";
+
     TEACHER_STATE.activeView = viewName;
 
     if (isAdminView) {
         switchAdminView(adminViewByTeacherView[viewName]);
+    } else if (isClassesView) {
+        switchAdminView("classes");
     }
 
     document
@@ -152,7 +151,7 @@ function switchTeacherView(viewName) {
     document
         .querySelectorAll("[data-teacher-view]")
         .forEach(section => {
-            section.hidden = section.dataset.teacherView !== (isAdminView ? "admin" : viewName);
+            section.hidden = section.dataset.teacherView !== (isAdminView || isClassesView ? "admin" : viewName);
         });
 }
 
@@ -192,17 +191,6 @@ function renderAdminAccess() {
     if (!isAdmin && TEACHER_STATE.activeView.startsWith("admin-")) {
         switchTeacherView("classes");
     }
-}
-
-
-function toggleTeacherCreateClassForm() {
-    const panel = document.getElementById("teacher_create_class_panel");
-
-    if (!panel) {
-        return;
-    }
-
-    panel.hidden = !panel.hidden;
 }
 
 
@@ -361,12 +349,11 @@ async function loadTeacherDashboard() {
             groups.map(group => [group.id, group.name])
         );
 
-        fillTeacherImportTaskBases();
-        fillTeacherImportSchools();
         fillTeacherFilters(currentFilters || TEACHER_STATE.selectedFilters);
-        renderTeacherClassesList();
         await loadAdminDashboardIfNeeded();
-        fillTeacherImportTeachers();
+        fillAdminImportForm();
+        renderAdminClasses();
+        switchAdminView(TEACHER_STATE.activeAdminView);
         await renderTeacherJournal();
     } catch (error) {
         console.error("Teacher dashboard failed:", error);
@@ -832,17 +819,20 @@ async function upsertAdminSchool(event) {
 
 function renderAdminClasses() {
     const table = document.getElementById("admin_classes_table");
+    const isAdmin = TEACHER_STATE.user?.role === "admin";
 
     if (!table) {
         return;
     }
 
-    const filteredClasses = TEACHER_STATE.adminClasses.filter(classItem => {
+    const classRows = getClassTableRows();
+    const filteredClasses = classRows.filter(classItem => {
         const matchesSchool = !TEACHER_STATE.adminClassSchoolFilter
             || classItem.school === TEACHER_STATE.adminClassSchoolFilter;
         const matchesClassName = !TEACHER_STATE.adminClassNameFilter
             || String(classItem.grade) === String(TEACHER_STATE.adminClassNameFilter);
-        const matchesTeacher = !TEACHER_STATE.adminClassTeacherFilter
+        const matchesTeacher = !isAdmin
+            || !TEACHER_STATE.adminClassTeacherFilter
             || String(classItem.teacher_id) === String(TEACHER_STATE.adminClassTeacherFilter);
         const matchesTaskBase = !TEACHER_STATE.adminClassTaskBaseFilter
             || classItem.task_class_id === TEACHER_STATE.adminClassTaskBaseFilter;
@@ -851,14 +841,14 @@ function renderAdminClasses() {
     });
 
     table.innerHTML = `
-        <table class="teacher-admin-list">
+        <table class="teacher-admin-list ${isAdmin ? "" : "teacher-admin-list-compact"}">
             <colgroup>
                 <col class="admin-class-col-school">
                 <col class="admin-class-col-class">
-                <col class="admin-class-col-teacher">
                 <col class="admin-class-col-base">
                 <col class="admin-class-col-students">
                 <col class="admin-class-col-actions">
+                ${isAdmin ? "<col class=\"admin-class-col-teacher\">" : ""}
             </colgroup>
             <thead>
                 <tr>
@@ -886,17 +876,6 @@ function renderAdminClasses() {
                     </th>
                     <th>
                         <div class="teacher-admin-th-filter">
-                            <span>Учитель</span>
-                            <select
-                                id="admin_class_teacher_filter"
-                                onchange="handleAdminClassFilterChange()"
-                            >
-                                ${renderAdminClassTeacherFilterOptions()}
-                            </select>
-                        </div>
-                    </th>
-                    <th>
-                        <div class="teacher-admin-th-filter">
                             <span>База</span>
                             <select
                                 id="admin_class_task_base_filter"
@@ -908,23 +887,41 @@ function renderAdminClasses() {
                     </th>
                     <th><span class="teacher-admin-th-plain">Ученики</span></th>
                     <th><span class="teacher-admin-th-plain">Действия</span></th>
+                    ${isAdmin ? `
+                    <th>
+                        <div class="teacher-admin-th-filter">
+                            <span>Учитель</span>
+                            <select
+                                id="admin_class_teacher_filter"
+                                onchange="handleAdminClassFilterChange()"
+                            >
+                                ${renderAdminClassTeacherFilterOptions()}
+                            </select>
+                        </div>
+                    </th>
+                    ` : ""}
                 </tr>
             </thead>
             <tbody>
                 ${filteredClasses.length === 0 ? `
                     <tr>
-                        <td colspan="6">Классов по выбранным фильтрам нет.</td>
+                        <td colspan="${isAdmin ? 6 : 5}">Классов по выбранным фильтрам нет.</td>
                     </tr>
                 ` : filteredClasses.map(classItem => `
                     <tr class="${classItem.is_active ? "" : "teacher-admin-row-archived"}">
                         <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.school)}</span></td>
-                        <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.class_name)}</span></td>
-                        <td>${renderAdminClassTeacherControl(classItem)}</td>
+                        <td>
+                            <div class="teacher-admin-class-cell">
+                                <span class="teacher-admin-cell-text">${escapeHtml(classItem.class_name)}</span>
+                                ${renderAdminClassJournalButton(classItem)}
+                            </div>
+                        </td>
                         <td><span class="teacher-admin-cell-text">${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span></td>
                         <td><span class="teacher-admin-cell-text">${classItem.active_students}</span></td>
                         <td>
                             ${renderAdminClassAction(classItem)}
                         </td>
+                        ${isAdmin ? `<td>${renderAdminClassTeacherControl(classItem)}</td>` : ""}
                     </tr>
                 `).join("")}
             </tbody>
@@ -933,9 +930,22 @@ function renderAdminClasses() {
 }
 
 
+function getClassTableRows() {
+    const isAdmin = TEACHER_STATE.user?.role === "admin";
+    const source = isAdmin ? TEACHER_STATE.adminClasses : TEACHER_STATE.classes;
+
+    return source.map(classItem => ({
+        ...classItem,
+        active_students: classItem.active_students ?? classItem.students_count ?? 0,
+        is_active: classItem.is_active ?? 1,
+    }));
+}
+
+
 function renderAdminClassSchoolFilterOptions() {
+    const classRows = getClassTableRows();
     const schools = [
-        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.school))
+        ...new Set(classRows.map(classItem => classItem.school))
     ].filter(Boolean).sort((left, right) => String(left).localeCompare(String(right), "ru"));
 
     if (!schools.includes(TEACHER_STATE.adminClassSchoolFilter)) {
@@ -957,8 +967,9 @@ function renderAdminClassSchoolFilterOptions() {
 
 
 function renderAdminClassNameFilterOptions() {
+    const classRows = getClassTableRows();
     const grades = [
-        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.grade))
+        ...new Set(classRows.map(classItem => classItem.grade))
     ].filter(grade => grade !== null && grade !== undefined).sort((left, right) => Number(left) - Number(right));
 
     if (!grades.map(String).includes(String(TEACHER_STATE.adminClassNameFilter))) {
@@ -980,8 +991,9 @@ function renderAdminClassNameFilterOptions() {
 
 
 function renderAdminClassTeacherFilterOptions() {
+    const classRows = getClassTableRows();
     const teacherIds = [
-        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.teacher_id))
+        ...new Set(classRows.map(classItem => classItem.teacher_id))
     ].filter(Boolean).map(String);
     const teachers = TEACHER_STATE.adminTeachers
         .filter(teacher => teacherIds.includes(String(teacher.id)))
@@ -1006,8 +1018,9 @@ function renderAdminClassTeacherFilterOptions() {
 
 
 function renderAdminClassTaskBaseFilterOptions() {
+    const classRows = getClassTableRows();
     const taskBases = [
-        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.task_class_id))
+        ...new Set(classRows.map(classItem => classItem.task_class_id))
     ].filter(Boolean).sort(compareClassNames);
 
     if (!taskBases.includes(TEACHER_STATE.adminClassTaskBaseFilter)) {
@@ -1091,6 +1104,71 @@ function renderAdminClassAction(classItem) {
 }
 
 
+function renderAdminClassJournalButton(classItem) {
+    if (!classItem.is_active) {
+        return `
+            <button
+                type="button"
+                class="teacher-admin-class-journal-button"
+                disabled
+            >
+                Открыть журнал
+            </button>
+        `;
+    }
+
+    return `
+        <button
+            type="button"
+            class="teacher-admin-class-journal-button"
+            onclick="openAdminClassJournal(${classItem.id})"
+        >
+            Открыть журнал
+        </button>
+    `;
+}
+
+
+async function openAdminClassJournal(classId) {
+    const classItem = getClassTableRows().find(item => String(item.id) === String(classId));
+
+    if (!classItem || !classItem.is_active) {
+        return;
+    }
+
+    ensureTeacherClassAvailable(classItem);
+    TEACHER_STATE.selectedFilters = {
+        school: classItem.school,
+        classKey: String(classItem.id),
+        teacherClassId: classItem.id,
+        taskClassId: classItem.task_class_id,
+    };
+
+    fillTeacherFilters(TEACHER_STATE.selectedFilters);
+    switchTeacherView("journal");
+    await renderTeacherJournal();
+}
+
+
+function ensureTeacherClassAvailable(classItem) {
+    if (TEACHER_STATE.classes.some(item => String(item.id) === String(classItem.id))) {
+        return;
+    }
+
+    TEACHER_STATE.classes.push({
+        id: classItem.id,
+        teacher_id: classItem.teacher_id,
+        school: classItem.school,
+        grade: classItem.grade,
+        class_group: classItem.class_group || "",
+        class_name: classItem.class_name,
+        task_class_id: classItem.task_class_id,
+        is_active: classItem.is_active,
+        students_count: classItem.active_students || 0,
+    });
+}
+
+
 async function updateAdminClassTeacher(classId, teacherId) {
     try {
         const response = await teacherFetch(
@@ -1123,7 +1201,17 @@ async function updateAdminClassTeacher(classId, teacherId) {
 async function deactivateAdminTeacher(teacherId) {
     const teacher = TEACHER_STATE.adminTeachers.find(item => item.id === teacherId);
 
-    if (!teacher || !window.confirm(`Архивировать учителя ${teacher.full_name}?`)) {
+    if (!teacher) {
+        return;
+    }
+
+    const confirmed = await showTeacherConfirm({
+        title: "Архивировать учителя",
+        message: `Архивировать учителя ${teacher.full_name}?`,
+        acceptText: "Архивировать",
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -1145,7 +1233,17 @@ async function restoreAdminTeacher(teacherId) {
 async function deactivateAdminSchool(schoolId) {
     const school = TEACHER_STATE.adminSchools.find(item => item.id === schoolId);
 
-    if (!school || !window.confirm(`Архивировать школу ${school.name}?`)) {
+    if (!school) {
+        return;
+    }
+
+    const confirmed = await showTeacherConfirm({
+        title: "Архивировать школу",
+        message: `Архивировать школу ${school.name}?`,
+        acceptText: "Архивировать",
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -1165,9 +1263,19 @@ async function restoreAdminSchool(schoolId) {
 
 
 async function deactivateAdminClass(classId) {
-    const classItem = TEACHER_STATE.adminClasses.find(item => item.id === classId);
+    const classItem = getClassTableRows().find(item => String(item.id) === String(classId));
 
-    if (!classItem || !window.confirm(`Архивировать класс ${classItem.school} · ${classItem.class_name}?`)) {
+    if (!classItem) {
+        return;
+    }
+
+    const confirmed = await showTeacherConfirm({
+        title: "Архивировать класс",
+        message: `Архивировать класс ${classItem.school} · ${classItem.class_name}?`,
+        acceptText: "Архивировать",
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -1179,8 +1287,12 @@ async function deactivateAdminClass(classId) {
 
 
 async function restoreAdminClass(classId) {
+    const url = TEACHER_STATE.user?.role === "admin"
+        ? `/admin/classes/${classId}/restore`
+        : `/teacher/classes/${classId}/restore`;
+
     await runAdminAction(
-        `/admin/classes/${classId}/restore`,
+        url,
         "Не получилось восстановить класс."
     );
 }
@@ -1209,16 +1321,6 @@ async function runAdminAction(url, errorMessage) {
                 ? "Сначала архивируй или передай активные классы этого учителя."
             : errorMessage);
     }
-}
-
-
-function fillTeacherImportSchools() {
-    fillImportSchoolSelect("teacher");
-}
-
-
-function fillTeacherImportTeachers() {
-    fillImportTeacherSelect("teacher");
 }
 
 
@@ -1261,114 +1363,6 @@ function fillImportTeacherSelect(prefix) {
 }
 
 
-function renderTeacherClassesList() {
-    const list = document.getElementById("teacher_classes_list");
-
-    if (!list) {
-        return;
-    }
-
-    if (!hasTeacherClassRecords()) {
-        list.innerHTML = "<div class=\"progress-empty\">Пока нет созданных классов.</div>";
-        return;
-    }
-
-    const classes = [...TEACHER_STATE.classes].sort((left, right) => (
-        String(left.school).localeCompare(String(right.school), "ru") ||
-        compareClassNames(left.grade, right.grade) ||
-        String(left.class_group || "").localeCompare(String(right.class_group || ""), "ru") ||
-        compareClassNames(left.task_class_id, right.task_class_id)
-    ));
-
-    list.innerHTML = classes.map(classItem => `
-        <article class="teacher-class-row">
-            <div class="teacher-class-main">
-                <strong>${escapeHtml(classItem.school)} · ${escapeHtml(classItem.class_name)}</strong>
-                <span>${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span>
-            </div>
-
-            <div class="teacher-class-meta">
-                ${formatStudentsCount(classItem.students_count || 0)}
-            </div>
-
-            <div class="teacher-class-actions">
-                <button
-                    type="button"
-                    class="teacher-secondary-button"
-                    onclick="openTeacherClassJournal(${classItem.id})"
-                >
-                    Открыть журнал
-                </button>
-
-                <button
-                    type="button"
-                    class="teacher-delete-class-button"
-                    onclick="deactivateTeacherClass(${classItem.id})"
-                    aria-label="Удалить класс"
-                    title="Удалить класс"
-                >
-                    &times;
-                </button>
-            </div>
-        </article>
-    `).join("");
-}
-
-
-function openTeacherClassJournal(classId) {
-    const classItem = TEACHER_STATE.classes.find(item => String(item.id) === String(classId));
-
-    if (!classItem) {
-        return;
-    }
-
-    const schoolSelect = document.getElementById("teacher_school_select");
-    const classSelect = document.getElementById("teacher_student_class_select");
-
-    schoolSelect.value = classItem.school;
-    fillTeacherStudentClasses();
-    classSelect.value = String(classItem.id);
-    rememberTeacherFilters();
-    switchTeacherView("journal");
-    renderTeacherJournal();
-}
-
-
-async function deactivateTeacherClass(classId) {
-    const classItem = TEACHER_STATE.classes.find(item => String(item.id) === String(classId));
-
-    if (!classItem) {
-        return;
-    }
-
-    const confirmed = window.confirm(
-        `Удалить класс ${classItem.school} · ${classItem.class_name}? Ученики исчезнут из активного журнала, история решений сохранится.`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        const response = await teacherFetch(
-            `/teacher/classes/${classId}/deactivate`,
-            { method: "POST" }
-        );
-
-        if (!response.ok) {
-            throw new Error("class deactivate failed");
-        }
-
-        TEACHER_STATE.selectedFilters = null;
-        TEACHER_STATE.currentJournal = null;
-        await loadTeacherDashboard();
-    } catch (error) {
-        console.error("Class deactivate failed:", error);
-        alert("Не получилось удалить класс.");
-    }
-}
-
-
 function readTeacherFilters() {
     const schoolSelect = document.getElementById("teacher_school_select");
     const classSelect = document.getElementById("teacher_student_class_select");
@@ -1389,11 +1383,6 @@ function readTeacherFilters() {
 
 function rememberTeacherFilters() {
     TEACHER_STATE.selectedFilters = readTeacherFilters();
-}
-
-
-function fillTeacherImportTaskBases() {
-    fillImportTaskBaseSelect("teacher");
 }
 
 
@@ -1441,17 +1430,10 @@ function downloadStudentCsvTemplate() {
 }
 
 
-async function importTeacherStudents(event) {
-    event.preventDefault();
-
-    await importStudentsFromCsv("teacher", TEACHER_STATE.user?.role === "admin");
-}
-
-
 async function importAdminStudents(event) {
     event.preventDefault();
 
-    await importStudentsFromCsv("admin", true);
+    await importStudentsFromCsv("admin", TEACHER_STATE.user?.role === "admin");
 }
 
 
@@ -1647,7 +1629,7 @@ function fillTeacherStudentClasses() {
 
 function fillTeacherStudentClassesFromRecords(school) {
     const classes = TEACHER_STATE.classes
-        .filter(item => item.school === school)
+        .filter(item => item.school === school && item.is_active)
         .map(item => ({
             id: item.id,
             grade: item.grade,
@@ -2003,7 +1985,13 @@ function renderJournalTable(journal) {
 
 
 async function deactivateTeacherStudent(studentId) {
-    if (!window.confirm("Убрать ученика из журнала? История решений сохранится.")) {
+    const confirmed = await showTeacherConfirm({
+        title: "Убрать ученика",
+        message: "Убрать ученика из журнала? История решений сохранится.",
+        acceptText: "Убрать",
+    });
+
+    if (!confirmed) {
         return;
     }
 
@@ -2206,6 +2194,33 @@ function openTeacherProgressDialog(
 function closeTeacherProgressDialog() {
     TEACHER_STATE.manualProgressTarget = null;
     document.getElementById("teacher_progress_dialog").hidden = true;
+}
+
+
+function showTeacherConfirm({ title = "Подтверждение", message, acceptText = "Подтвердить" }) {
+    const dialog = document.getElementById("teacher_confirm_dialog");
+
+    document.getElementById("teacher_confirm_title").textContent = title;
+    document.getElementById("teacher_confirm_message").textContent = message;
+    document.getElementById("teacher_confirm_accept").textContent = acceptText;
+    dialog.hidden = false;
+
+    return new Promise(resolve => {
+        TEACHER_STATE.confirmResolver = resolve;
+    });
+}
+
+
+function closeTeacherConfirmDialog(confirmed) {
+    const dialog = document.getElementById("teacher_confirm_dialog");
+    const resolver = TEACHER_STATE.confirmResolver;
+
+    dialog.hidden = true;
+    TEACHER_STATE.confirmResolver = null;
+
+    if (resolver) {
+        resolver(Boolean(confirmed));
+    }
 }
 
 

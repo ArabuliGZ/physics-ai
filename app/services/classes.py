@@ -107,7 +107,7 @@ def get_teacher_class(class_id, teacher_id=None):
 
 
 def list_teacher_classes(teacher_id=None):
-    """Return active classes visible to a teacher or admin."""
+    """Return active and archived classes visible to a teacher or admin."""
 
     teacher_clause = ""
     params = ()
@@ -138,9 +138,13 @@ def list_teacher_classes(teacher_id=None):
                 GROUP BY class_id
             ) AS student_summary
                 ON student_summary.class_id = classes.id
-            WHERE classes.is_active = 1
+            WHERE 1 = 1
               {teacher_clause}
-            ORDER BY classes.school, classes.grade, classes.class_group, classes.task_class_id
+            ORDER BY classes.is_active DESC,
+                     classes.school,
+                     classes.grade,
+                     classes.class_group,
+                     classes.task_class_id
             """,
             params,
         ).fetchall()
@@ -238,19 +242,27 @@ def list_admin_classes():
         return [row_to_dict(row) for row in rows]
 
 
-def restore_teacher_class(class_id):
+def restore_teacher_class(class_id, teacher_id=None):
     """Reactivate an archived class and its students."""
+
+    teacher_clause = ""
+    params = [class_id]
+
+    if teacher_id is not None:
+        teacher_clause = "AND teacher_id = ?"
+        params.append(teacher_id)
 
     with database_connection() as connection:
         row = connection.execute(
-            """
+            f"""
             SELECT id
             FROM classes
             WHERE id = ?
               AND is_active = 0
+              {teacher_clause}
             LIMIT 1
             """,
-            (class_id,),
+            params,
         ).fetchone()
 
         if row is None:

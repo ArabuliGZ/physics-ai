@@ -279,7 +279,7 @@ def get_teacher_students(current_user=Depends(require_teacher_user)):
 
 @router.get("/teacher/classes")
 def get_teacher_classes(current_user=Depends(require_teacher_user)):
-    """Return active class records for the teacher page."""
+    """Return class records for the teacher page."""
 
     return list_teacher_classes(teacher_scope_id(current_user))
 
@@ -301,6 +301,21 @@ def deactivate_class(class_id: int, current_user=Depends(require_teacher_user)):
         raise HTTPException(
             status_code=404,
             detail="Active class not found"
+        )
+
+    return result
+
+
+@router.post("/teacher/classes/{class_id}/restore")
+def restore_class(class_id: int, current_user=Depends(require_teacher_user)):
+    """Restore an archived class owned by the current teacher."""
+
+    result = restore_teacher_class(class_id, teacher_scope_id(current_user))
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Archived class not found"
         )
 
     return result

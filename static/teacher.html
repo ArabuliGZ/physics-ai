@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=admin-actions-1">
+    <link rel="stylesheet" href="/static/css/style.css?v=custom-confirm-dialog-1">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -87,10 +87,14 @@
         <header class="app-topbar teacher-topbar">
             <div class="teacher-topbar-main">
                 <div class="app-brand">
-                    <span class="app-brand-mark">P</span>
+                    <img
+                        class="app-brand-mark"
+                        src="/static/favicon.png"
+                        alt="PhysAIs"
+                    >
 
                     <div class="app-brand-text">
-                        <strong>Physics AI</strong>
+                        <strong>PhysAIs</strong>
                         <span>Журнал учителя</span>
                     </div>
                 </div>
@@ -106,17 +110,6 @@
                     class="teacher-tab is-active"
                     data-teacher-tab="classes"
                     onclick="switchTeacherView('classes')"
-                >
-                    Мои классы
-                </button>
-
-                <button
-                    type="button"
-                    class="teacher-tab"
-                    data-teacher-tab="admin-classes"
-                    data-admin-only="true"
-                    onclick="switchTeacherView('admin-classes')"
-                    hidden
                 >
                     Классы
                 </button>
@@ -193,127 +186,11 @@
     </header>
 
         <section
-            class="teacher-panel"
-            data-teacher-view="classes"
-        >
-            <div class="teacher-panel-header">
-                <div>
-                    <h2>Мои классы</h2>
-                </div>
-
-                <div class="teacher-panel-header-actions">
-                    <span id="teacher_import_result"></span>
-
-                    <button
-                        type="button"
-                        class="teacher-secondary-button"
-                        onclick="toggleTeacherCreateClassForm()"
-                    >
-                        Создать класс
-                    </button>
-                </div>
-            </div>
-
-            <div
-                id="teacher_create_class_panel"
-                class="teacher-create-class-panel"
-                hidden
-            >
-                <form
-                    class="teacher-import-form"
-                    onsubmit="importTeacherStudents(event)"
-                >
-                    <div class="teacher-import-fields">
-                        <label
-                            class="teacher-import-teacher-field"
-                            data-admin-only="true"
-                            hidden
-                        >
-                            <span>Учитель</span>
-                            <select id="teacher_import_teacher"></select>
-                        </label>
-
-                        <label class="teacher-import-common-field teacher-import-school-field">
-                            <span>Школа</span>
-                            <select
-                                id="teacher_import_school"
-                                required
-                            ></select>
-                        </label>
-
-                        <label class="teacher-import-common-field">
-                            <span>Параллель</span>
-                            <select id="teacher_import_grade">
-                                <option value="7">7 класс</option>
-                                <option value="8">8 класс</option>
-                                <option value="9">9 класс</option>
-                                <option value="10">10 класс</option>
-                            </select>
-                        </label>
-
-                        <label class="teacher-import-common-field">
-                            <span>Класс</span>
-                            <input
-                                id="teacher_import_class_group"
-                                type="text"
-                                placeholder="А или 1"
-                                required
-                            >
-                        </label>
-
-                        <label class="teacher-import-common-field">
-                            <span>База задач</span>
-                            <select id="teacher_import_task_class"></select>
-                        </label>
-                    </div>
-
-                    <div class="teacher-import-file-row">
-                        <label>
-                            <span>CSV</span>
-                            <input
-                                id="teacher_import_file"
-                                type="file"
-                                accept=".csv,text/csv"
-                            >
-                        </label>
-
-                        <div class="teacher-import-actions">
-                            <button
-                                type="button"
-                                class="teacher-secondary-button teacher-template-button"
-                                onclick="downloadStudentCsvTemplate()"
-                            >
-                                Скачать шаблон
-                            </button>
-
-                            <button
-                                id="teacher_import_button"
-                                type="submit"
-                                class="teacher-secondary-button"
-                            >
-                                Загрузить CSV
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <div
-                id="teacher_classes_list"
-                class="teacher-classes-list"
-            ></div>
-        </section>
-
-        <section
             class="teacher-panel teacher-journal-panel"
             data-teacher-view="journal"
             hidden
         >
             <div class="teacher-panel-header">
-                <div>
-                    <h2>Журнал</h2>
-                </div>
-
                 <div class="teacher-panel-header-actions">
                     <span id="teacher_journal_summary"></span>
 
@@ -399,12 +276,6 @@
             data-teacher-view="admin"
             hidden
         >
-            <div class="teacher-panel-header">
-                <div>
-                    <h2>Админ</h2>
-                </div>
-            </div>
-
             <nav class="teacher-admin-tabs">
                 <button
                     type="button"
@@ -440,10 +311,6 @@
                     data-admin-view="teachers"
                     hidden
                 >
-                    <div class="teacher-admin-section-header">
-                        <h3>Учителя</h3>
-                    </div>
-
                     <form
                         class="teacher-admin-teacher-form"
                         onsubmit="upsertAdminTeacher(event)"
@@ -494,10 +361,6 @@
                     data-admin-view="schools"
                     hidden
                 >
-                    <div class="teacher-admin-section-header">
-                        <h3>Школы</h3>
-                    </div>
-
                     <form
                         class="teacher-admin-school-form"
                         onsubmit="upsertAdminSchool(event)"
@@ -540,28 +403,6 @@
                     class="teacher-admin-section"
                     data-admin-view="classes"
                 >
-                    <div class="teacher-admin-section-header teacher-admin-section-header-stacked">
-                        <h3>Классы</h3>
-
-                        <div class="teacher-admin-filters" hidden>
-                        <label class="teacher-admin-filter">
-                            <span>Школа</span>
-                            <select
-                                id="admin_class_school_filter_old"
-                                onchange="handleAdminClassFilterChange()"
-                            ></select>
-                        </label>
-
-                        <label class="teacher-admin-filter">
-                            <span>Учитель</span>
-                            <select
-                                id="admin_class_teacher_filter_old"
-                                onchange="handleAdminClassFilterChange()"
-                            ></select>
-                        </label>
-                        </div>
-                    </div>
-
                     <button
                         type="button"
                         class="teacher-secondary-button teacher-admin-create-class-toggle"
@@ -580,7 +421,11 @@
                             onsubmit="importAdminStudents(event)"
                         >
                             <div class="teacher-import-fields">
-                                <label class="teacher-import-teacher-field">
+                                <label
+                                    class="teacher-import-teacher-field"
+                                    data-admin-only="true"
+                                    hidden
+                                >
                                     <span>Учитель</span>
                                     <select id="admin_import_teacher"></select>
                                 </label>
@@ -708,6 +553,53 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=admin-actions-1"></script>
+    <div
+        id="teacher_confirm_dialog"
+        class="teacher-dialog"
+        hidden
+    >
+        <div
+            class="teacher-dialog-backdrop"
+            onclick="closeTeacherConfirmDialog(false)"
+        ></div>
+
+        <section class="teacher-dialog-panel">
+            <div class="teacher-dialog-header">
+                <h2 id="teacher_confirm_title">Подтверждение</h2>
+
+                <button
+                    type="button"
+                    class="teacher-dialog-close"
+                    onclick="closeTeacherConfirmDialog(false)"
+                    aria-label="Закрыть"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <p id="teacher_confirm_message"></p>
+
+            <div class="teacher-dialog-actions teacher-confirm-actions">
+                <button
+                    type="button"
+                    class="teacher-secondary-button"
+                    onclick="closeTeacherConfirmDialog(false)"
+                >
+                    Отмена
+                </button>
+
+                <button
+                    id="teacher_confirm_accept"
+                    type="button"
+                    class="teacher-secondary-button teacher-confirm-accept"
+                    onclick="closeTeacherConfirmDialog(true)"
+                >
+                    Архивировать
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/js/teacher.js?v=custom-confirm-dialog-1"></script>
 </body>
 </html>
