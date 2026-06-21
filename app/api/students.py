@@ -15,6 +15,8 @@ from fastapi import UploadFile
 
 from app.schemas import StudentCreateRequest
 from app.schemas import StudentLoginRequest
+from app.schemas import AdminClassTeacherRequest
+from app.schemas import AdminSchoolRequest
 from app.schemas import AdminTeacherRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
@@ -24,6 +26,7 @@ from app.services.classes import get_teacher_class
 from app.services.classes import list_admin_classes
 from app.services.classes import list_teacher_classes
 from app.services.classes import restore_teacher_class
+from app.services.classes import update_class_teacher
 from app.services.progress import get_class_progress_map
 from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
@@ -34,6 +37,7 @@ from app.services.schools import deactivate_school
 from app.services.schools import list_admin_schools
 from app.services.schools import list_active_schools
 from app.services.schools import restore_school
+from app.services.schools import upsert_school
 from app.services.students import allowed_task_class_id
 from app.services.students import create_student
 from app.services.students import deactivate_student
@@ -219,6 +223,38 @@ def get_admin_schools(current_user=Depends(require_admin_user)):
     return list_admin_schools()
 
 
+@router.post("/admin/schools")
+def upsert_admin_school(
+    data: AdminSchoolRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Create a school or rename an existing school."""
+
+    name = data.name.strip()
+
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="name is required"
+        )
+
+    result = upsert_school(name, data.school_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="School not found"
+        )
+
+    if result.get("blocked"):
+        raise HTTPException(
+            status_code=409,
+            detail="School already exists"
+        )
+
+    return result
+
+
 @router.post("/admin/schools/{school_id}/deactivate")
 def deactivate_admin_school(school_id: int, current_user=Depends(require_admin_user)):
     """Archive a school when no active classes depend on it."""
@@ -260,6 +296,31 @@ def get_admin_classes(current_user=Depends(require_admin_user)):
     """Return active and archived classes for the admin panel."""
 
     return list_admin_classes()
+
+
+@router.post("/admin/classes/{class_id}/teacher")
+def update_admin_class_teacher(
+    class_id: int,
+    data: AdminClassTeacherRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Assign a class to another active teacher."""
+
+    result = update_class_teacher(class_id, data.teacher_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Class not found"
+        )
+
+    if result.get("blocked"):
+        raise HTTPException(
+            status_code=404,
+            detail="Active teacher not found"
+        )
+
+    return result
 
 
 @router.post("/admin/classes/{class_id}/restore")
@@ -306,7 +367,21 @@ def upsert_admin_teacher(
             detail="email is invalid"
         )
 
-    return upsert_teacher(email, full_name)
+    result = upsert_teacher(email, full_name, data.teacher_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Teacher not found"
+        )
+
+    if result.get("blocked"):
+        raise HTTPException(
+            status_code=409,
+            detail="Teacher email already exists"
+        )
+
+    return result
 
 
 @router.post("/admin/teachers/{teacher_id}/deactivate")

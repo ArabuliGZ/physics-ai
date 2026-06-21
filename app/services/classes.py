@@ -277,3 +277,53 @@ def restore_teacher_class(class_id):
             "id": class_id,
             "is_active": 1,
         }
+
+
+def update_class_teacher(class_id, teacher_id):
+    """Assign a class to an active teacher without changing students or progress."""
+
+    with database_connection() as connection:
+        teacher = connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE id = ?
+              AND role = 'teacher'
+              AND is_active = 1
+            LIMIT 1
+            """,
+            (teacher_id,),
+        ).fetchone()
+
+        if teacher is None:
+            return {
+                "blocked": True,
+                "detail": "teacher_not_found",
+            }
+
+        row = connection.execute(
+            """
+            SELECT id
+            FROM classes
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (class_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE classes
+            SET teacher_id = ?
+            WHERE id = ?
+            """,
+            (teacher_id, class_id),
+        )
+
+        return {
+            "id": class_id,
+            "teacher_id": teacher_id,
+        }

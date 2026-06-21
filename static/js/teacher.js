@@ -10,6 +10,9 @@
     groupsById: {},
     selectedFilters: null,
     adminClassSchoolFilter: "",
+    adminClassTeacherFilter: "",
+    adminTeacherEditingId: null,
+    adminSchoolEditingId: null,
     manualProgressTarget: null,
     currentJournal: null,
     activeView: "classes",
@@ -80,15 +83,22 @@ function resetTeacherWorkspaceUi() {
     TEACHER_STATE.activeView = "classes";
 
     const createClassPanel = document.getElementById("teacher_create_class_panel");
+    const adminCreateClassPanel = document.getElementById("admin_create_class_panel");
 
     if (createClassPanel) {
         createClassPanel.hidden = true;
     }
 
+    if (adminCreateClassPanel) {
+        adminCreateClassPanel.hidden = true;
+    }
+
     [
         "teacher_import_result",
+        "admin_import_result",
         "teacher_single_result",
         "admin_teacher_result",
+        "admin_school_result",
     ].forEach(elementId => {
         const element = document.getElementById(elementId);
 
@@ -96,6 +106,9 @@ function resetTeacherWorkspaceUi() {
             element.textContent = "";
         }
     });
+
+    cancelAdminTeacherEdit();
+    cancelAdminSchoolEdit();
 
     if (document.getElementById("teacher_app")) {
         switchTeacherView("classes");
@@ -144,6 +157,17 @@ function renderAdminAccess() {
 
 function toggleTeacherCreateClassForm() {
     const panel = document.getElementById("teacher_create_class_panel");
+
+    if (!panel) {
+        return;
+    }
+
+    panel.hidden = !panel.hidden;
+}
+
+
+function toggleAdminCreateClassForm() {
+    const panel = document.getElementById("admin_create_class_panel");
 
     if (!panel) {
         return;
@@ -315,10 +339,12 @@ async function loadAdminDashboardIfNeeded() {
 
 
 function renderAdminDashboard() {
-    renderAdminTeachers();
-    renderAdminSchools();
-    fillAdminClassSchoolFilter();
-    renderAdminClasses();
+        renderAdminTeachers();
+        renderAdminSchools();
+        fillAdminClassSchoolFilter();
+        fillAdminClassTeacherFilter();
+        fillAdminImportForm();
+        renderAdminClasses();
 }
 
 
@@ -364,27 +390,93 @@ function renderAdminTeachers() {
 
 
 function renderAdminTeacherAction(teacher) {
+    const editButton = `
+        <button
+            type="button"
+            class="teacher-admin-action"
+            onclick="editAdminTeacher(${teacher.id})"
+        >
+            Изменить
+        </button>
+    `;
+
     if (teacher.is_active) {
         return `
-            <button
-                type="button"
-                class="teacher-admin-action"
-                onclick="deactivateAdminTeacher(${teacher.id})"
-            >
-                Архивировать
-            </button>
+            <div class="teacher-admin-actions">
+                ${editButton}
+                <button
+                    type="button"
+                    class="teacher-admin-action"
+                    onclick="deactivateAdminTeacher(${teacher.id})"
+                >
+                    Архивировать
+                </button>
+            </div>
         `;
     }
 
     return `
-        <button
-            type="button"
-            class="teacher-admin-action"
-            onclick="restoreAdminTeacher(${teacher.id})"
-        >
-            Восстановить
-        </button>
+        <div class="teacher-admin-actions">
+            ${editButton}
+            <button
+                type="button"
+                class="teacher-admin-action"
+                onclick="restoreAdminTeacher(${teacher.id})"
+            >
+                Восстановить
+            </button>
+        </div>
     `;
+}
+
+
+function editAdminTeacher(teacherId) {
+    const teacher = TEACHER_STATE.adminTeachers.find(item => item.id === teacherId);
+
+    if (!teacher) {
+        return;
+    }
+
+    TEACHER_STATE.adminTeacherEditingId = teacher.id;
+    document.getElementById("admin_teacher_full_name").value = teacher.full_name || "";
+    document.getElementById("admin_teacher_email").value = teacher.email || "";
+
+    const submitButton = document.getElementById("admin_teacher_button");
+    const cancelButton = document.getElementById("admin_teacher_cancel");
+
+    if (submitButton) {
+        submitButton.textContent = "Сохранить";
+    }
+
+    if (cancelButton) {
+        cancelButton.hidden = false;
+    }
+}
+
+
+function cancelAdminTeacherEdit() {
+    TEACHER_STATE.adminTeacherEditingId = null;
+
+    const fullNameInput = document.getElementById("admin_teacher_full_name");
+    const emailInput = document.getElementById("admin_teacher_email");
+    const submitButton = document.getElementById("admin_teacher_button");
+    const cancelButton = document.getElementById("admin_teacher_cancel");
+
+    if (fullNameInput) {
+        fullNameInput.value = "";
+    }
+
+    if (emailInput) {
+        emailInput.value = "";
+    }
+
+    if (submitButton) {
+        submitButton.textContent = "Добавить";
+    }
+
+    if (cancelButton) {
+        cancelButton.hidden = true;
+    }
 }
 
 
@@ -393,6 +485,7 @@ async function upsertAdminTeacher(event) {
 
     const result = document.getElementById("admin_teacher_result");
     const payload = {
+        teacher_id: TEACHER_STATE.adminTeacherEditingId,
         full_name: document.getElementById("admin_teacher_full_name").value.trim(),
         email: document.getElementById("admin_teacher_email").value.trim().toLowerCase(),
     };
@@ -423,13 +516,16 @@ async function upsertAdminTeacher(event) {
 
         document.getElementById("admin_teacher_full_name").value = "";
         document.getElementById("admin_teacher_email").value = "";
+        cancelAdminTeacherEdit();
         result.textContent = data.action === "created"
             ? "Учитель добавлен."
             : "Учитель обновлён.";
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Teacher save failed:", error);
-        result.textContent = "Не получилось сохранить учителя.";
+        result.textContent = error.message === "Teacher email already exists"
+            ? "Такой email уже есть."
+            : "Не получилось сохранить учителя.";
     }
 }
 
@@ -461,10 +557,42 @@ function fillAdminClassSchoolFilter() {
 }
 
 
-function handleAdminClassSchoolFilterChange() {
-    const select = document.getElementById("admin_class_school_filter");
+function fillAdminClassTeacherFilter() {
+    const select = document.getElementById("admin_class_teacher_filter");
 
-    TEACHER_STATE.adminClassSchoolFilter = select?.value || "";
+    if (!select) {
+        return;
+    }
+
+    const teacherIds = [
+        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.teacher_id))
+    ].filter(Boolean).map(String);
+    const teachers = TEACHER_STATE.adminTeachers
+        .filter(teacher => teacherIds.includes(String(teacher.id)))
+        .sort((left, right) => String(left.full_name).localeCompare(String(right.full_name), "ru"));
+    const previousValue = TEACHER_STATE.adminClassTeacherFilter;
+
+    select.innerHTML = `
+        <option value="">Все учителя</option>
+        ${teachers.map(teacher => `
+            <option value="${teacher.id}">${escapeHtml(teacher.full_name)}</option>
+        `).join("")}
+    `;
+
+    if (teachers.some(teacher => String(teacher.id) === String(previousValue))) {
+        select.value = previousValue;
+    } else {
+        TEACHER_STATE.adminClassTeacherFilter = "";
+    }
+}
+
+
+function handleAdminClassFilterChange() {
+    const schoolSelect = document.getElementById("admin_class_school_filter");
+    const teacherSelect = document.getElementById("admin_class_teacher_filter");
+
+    TEACHER_STATE.adminClassSchoolFilter = schoolSelect?.value || "";
+    TEACHER_STATE.adminClassTeacherFilter = teacherSelect?.value || "";
     renderAdminClasses();
 }
 
@@ -511,27 +639,134 @@ function renderAdminSchools() {
 
 
 function renderAdminSchoolAction(school) {
+    const editButton = `
+        <button
+            type="button"
+            class="teacher-admin-action"
+            onclick="editAdminSchool(${school.id})"
+        >
+            Изменить
+        </button>
+    `;
+
     if (school.is_active) {
         return `
-            <button
-                type="button"
-                class="teacher-admin-action"
-                onclick="deactivateAdminSchool(${school.id})"
-            >
-                Архивировать
-            </button>
+            <div class="teacher-admin-actions">
+                ${editButton}
+                <button
+                    type="button"
+                    class="teacher-admin-action"
+                    onclick="deactivateAdminSchool(${school.id})"
+                >
+                    Архивировать
+                </button>
+            </div>
         `;
     }
 
     return `
-        <button
-            type="button"
-            class="teacher-admin-action"
-            onclick="restoreAdminSchool(${school.id})"
-        >
-            Восстановить
-        </button>
+        <div class="teacher-admin-actions">
+            ${editButton}
+            <button
+                type="button"
+                class="teacher-admin-action"
+                onclick="restoreAdminSchool(${school.id})"
+            >
+                Восстановить
+            </button>
+        </div>
     `;
+}
+
+
+function editAdminSchool(schoolId) {
+    const school = TEACHER_STATE.adminSchools.find(item => item.id === schoolId);
+
+    if (!school) {
+        return;
+    }
+
+    TEACHER_STATE.adminSchoolEditingId = school.id;
+    document.getElementById("admin_school_name").value = school.name || "";
+
+    const submitButton = document.getElementById("admin_school_button");
+    const cancelButton = document.getElementById("admin_school_cancel");
+
+    if (submitButton) {
+        submitButton.textContent = "Сохранить";
+    }
+
+    if (cancelButton) {
+        cancelButton.hidden = false;
+    }
+}
+
+
+function cancelAdminSchoolEdit() {
+    TEACHER_STATE.adminSchoolEditingId = null;
+
+    const nameInput = document.getElementById("admin_school_name");
+    const submitButton = document.getElementById("admin_school_button");
+    const cancelButton = document.getElementById("admin_school_cancel");
+
+    if (nameInput) {
+        nameInput.value = "";
+    }
+
+    if (submitButton) {
+        submitButton.textContent = "Добавить";
+    }
+
+    if (cancelButton) {
+        cancelButton.hidden = true;
+    }
+}
+
+
+async function upsertAdminSchool(event) {
+    event.preventDefault();
+
+    const result = document.getElementById("admin_school_result");
+    const payload = {
+        school_id: TEACHER_STATE.adminSchoolEditingId,
+        name: document.getElementById("admin_school_name").value.trim(),
+    };
+
+    if (!payload.name) {
+        result.textContent = "Напиши название школы.";
+        return;
+    }
+
+    result.textContent = "Сохраняю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/schools",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "school save failed");
+        }
+
+        cancelAdminSchoolEdit();
+        result.textContent = data.action === "created"
+            ? "Школа добавлена."
+            : "Школа обновлена.";
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("School save failed:", error);
+        result.textContent = error.message === "School already exists"
+            ? "Такая школа уже есть."
+            : "Не получилось сохранить школу.";
+    }
 }
 
 
@@ -542,35 +777,65 @@ function renderAdminClasses() {
         return;
     }
 
-    const filteredClasses = TEACHER_STATE.adminClassSchoolFilter
-        ? TEACHER_STATE.adminClasses.filter(classItem => (
-            classItem.school === TEACHER_STATE.adminClassSchoolFilter
-        ))
-        : TEACHER_STATE.adminClasses;
+    const filteredClasses = TEACHER_STATE.adminClasses.filter(classItem => {
+        const matchesSchool = !TEACHER_STATE.adminClassSchoolFilter
+            || classItem.school === TEACHER_STATE.adminClassSchoolFilter;
+        const matchesTeacher = !TEACHER_STATE.adminClassTeacherFilter
+            || String(classItem.teacher_id) === String(TEACHER_STATE.adminClassTeacherFilter);
 
-    if (filteredClasses.length === 0) {
-        table.innerHTML = "<div class=\"progress-empty\">Классов пока нет.</div>";
-        return;
-    }
+        return matchesSchool && matchesTeacher;
+    });
 
     table.innerHTML = `
         <table class="teacher-admin-list">
             <thead>
+                <tr class="teacher-admin-filter-row">
+                    <th>
+                        <label class="teacher-admin-filter">
+                            <span>Школа</span>
+                            <select
+                                id="admin_class_school_filter"
+                                onchange="handleAdminClassFilterChange()"
+                            >
+                                ${renderAdminClassSchoolFilterOptions()}
+                            </select>
+                        </label>
+                    </th>
+                    <th>
+                        <label class="teacher-admin-filter">
+                            <span>Учитель</span>
+                            <select
+                                id="admin_class_teacher_filter"
+                                onchange="handleAdminClassFilterChange()"
+                            >
+                                ${renderAdminClassTeacherFilterOptions()}
+                            </select>
+                        </label>
+                    </th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                </tr>
                 <tr>
                     <th>Класс</th>
-                    <th>База</th>
                     <th>Учитель</th>
+                    <th>База</th>
                     <th>Ученики</th>
                     <th>Статус</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
-                ${filteredClasses.map(classItem => `
+                ${filteredClasses.length === 0 ? `
+                    <tr>
+                        <td colspan="6">Классов по выбранным фильтрам нет.</td>
+                    </tr>
+                ` : filteredClasses.map(classItem => `
                     <tr>
                         <td>${escapeHtml(classItem.school)} · ${escapeHtml(classItem.class_name)}</td>
+                        <td>${renderAdminClassTeacherControl(classItem)}</td>
                         <td>${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</td>
-                        <td>${escapeHtml(classItem.teacher_name || classItem.teacher_email || "Без учителя")}</td>
                         <td>${classItem.active_students}</td>
                         <td>${classItem.is_active ? "активен" : "архив"}</td>
                         <td>
@@ -584,28 +849,144 @@ function renderAdminClasses() {
 }
 
 
+function renderAdminClassSchoolFilterOptions() {
+    const schools = [
+        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.school))
+    ].filter(Boolean).sort((left, right) => String(left).localeCompare(String(right), "ru"));
+
+    if (!schools.includes(TEACHER_STATE.adminClassSchoolFilter)) {
+        TEACHER_STATE.adminClassSchoolFilter = "";
+    }
+
+    return `
+        <option value="">Все школы</option>
+        ${schools.map(school => `
+            <option
+                value="${escapeHtml(school)}"
+                ${school === TEACHER_STATE.adminClassSchoolFilter ? "selected" : ""}
+            >
+                ${escapeHtml(school)}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+function renderAdminClassTeacherFilterOptions() {
+    const teacherIds = [
+        ...new Set(TEACHER_STATE.adminClasses.map(classItem => classItem.teacher_id))
+    ].filter(Boolean).map(String);
+    const teachers = TEACHER_STATE.adminTeachers
+        .filter(teacher => teacherIds.includes(String(teacher.id)))
+        .sort((left, right) => String(left.full_name).localeCompare(String(right.full_name), "ru"));
+
+    if (!teachers.some(teacher => String(teacher.id) === String(TEACHER_STATE.adminClassTeacherFilter))) {
+        TEACHER_STATE.adminClassTeacherFilter = "";
+    }
+
+    return `
+        <option value="">Все учителя</option>
+        ${teachers.map(teacher => `
+            <option
+                value="${teacher.id}"
+                ${String(teacher.id) === String(TEACHER_STATE.adminClassTeacherFilter) ? "selected" : ""}
+            >
+                ${escapeHtml(teacher.full_name)}
+            </option>
+        `).join("")}
+    `;
+}
+
+
+function renderAdminClassTeacherControl(classItem) {
+    const currentTeacherExists = TEACHER_STATE.adminTeachers.some(teacher => (
+        Number(teacher.id) === Number(classItem.teacher_id)
+    ));
+    const teachers = TEACHER_STATE.adminTeachers.filter(teacher => (
+        teacher.is_active || Number(teacher.id) === Number(classItem.teacher_id)
+    ));
+
+    if (!currentTeacherExists && classItem.teacher_id) {
+        teachers.push({
+            id: classItem.teacher_id,
+            full_name: classItem.teacher_name || classItem.teacher_email || "Архивный учитель",
+            is_active: 0,
+        });
+    }
+
+    return `
+        <select
+            class="teacher-admin-inline-select"
+            onchange="updateAdminClassTeacher(${classItem.id}, this.value)"
+        >
+            ${teachers.map(teacher => `
+                <option
+                    value="${teacher.id}"
+                    ${Number(teacher.id) === Number(classItem.teacher_id) ? "selected" : ""}
+                >
+                    ${escapeHtml(teacher.full_name)}${teacher.is_active ? "" : " · архив"}
+                </option>
+            `).join("")}
+        </select>
+    `;
+}
+
+
 function renderAdminClassAction(classItem) {
     if (classItem.is_active) {
         return `
-            <button
-                type="button"
-                class="teacher-admin-action"
-                onclick="deactivateAdminClass(${classItem.id})"
-            >
-                Архивировать
-            </button>
+            <div class="teacher-admin-actions">
+                <button
+                    type="button"
+                    class="teacher-admin-action"
+                    onclick="deactivateAdminClass(${classItem.id})"
+                >
+                    Архивировать
+                </button>
+            </div>
         `;
     }
 
     return `
-        <button
-            type="button"
-            class="teacher-admin-action"
-            onclick="restoreAdminClass(${classItem.id})"
-        >
-            Восстановить
-        </button>
+        <div class="teacher-admin-actions">
+            <button
+                type="button"
+                class="teacher-admin-action"
+                onclick="restoreAdminClass(${classItem.id})"
+            >
+                Восстановить
+            </button>
+        </div>
     `;
+}
+
+
+async function updateAdminClassTeacher(classId, teacherId) {
+    try {
+        const response = await teacherFetch(
+            `/admin/classes/${classId}/teacher`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    teacher_id: Number(teacherId),
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.detail || "class teacher update failed");
+        }
+
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Class teacher update failed:", error);
+        alert("Не получилось назначить учителя классу.");
+        renderAdminClasses();
+    }
 }
 
 
@@ -702,7 +1083,24 @@ async function runAdminAction(url, errorMessage) {
 
 
 function fillTeacherImportSchools() {
-    const select = document.getElementById("teacher_import_school");
+    fillImportSchoolSelect("teacher");
+}
+
+
+function fillTeacherImportTeachers() {
+    fillImportTeacherSelect("teacher");
+}
+
+
+function fillAdminImportForm() {
+    fillImportSchoolSelect("admin");
+    fillImportTeacherSelect("admin");
+    fillImportTaskBaseSelect("admin");
+}
+
+
+function fillImportSchoolSelect(prefix) {
+    const select = document.getElementById(`${prefix}_import_school`);
 
     if (!select) {
         return;
@@ -716,8 +1114,8 @@ function fillTeacherImportSchools() {
 }
 
 
-function fillTeacherImportTeachers() {
-    const select = document.getElementById("teacher_import_teacher");
+function fillImportTeacherSelect(prefix) {
+    const select = document.getElementById(`${prefix}_import_teacher`);
 
     if (!select) {
         return;
@@ -865,7 +1263,17 @@ function rememberTeacherFilters() {
 
 
 function fillTeacherImportTaskBases() {
-    const select = document.getElementById("teacher_import_task_class");
+    fillImportTaskBaseSelect("teacher");
+}
+
+
+function fillImportTaskBaseSelect(prefix) {
+    const select = document.getElementById(`${prefix}_import_task_class`);
+
+    if (!select) {
+        return;
+    }
+
     const bases = [
         ...new Set(TEACHER_STATE.tasks.map(task => task.class_id))
     ].sort(compareClassNames);
@@ -906,9 +1314,21 @@ function downloadStudentCsvTemplate() {
 async function importTeacherStudents(event) {
     event.preventDefault();
 
-    const button = document.getElementById("teacher_import_button");
-    const result = document.getElementById("teacher_import_result");
-    const fileInput = document.getElementById("teacher_import_file");
+    await importStudentsFromCsv("teacher", TEACHER_STATE.user?.role === "admin");
+}
+
+
+async function importAdminStudents(event) {
+    event.preventDefault();
+
+    await importStudentsFromCsv("admin", true);
+}
+
+
+async function importStudentsFromCsv(prefix, requireTeacher) {
+    const button = document.getElementById(`${prefix}_import_button`);
+    const result = document.getElementById(`${prefix}_import_result`);
+    const fileInput = document.getElementById(`${prefix}_import_file`);
     const file = fileInput.files[0];
 
     if (!file) {
@@ -917,13 +1337,13 @@ async function importTeacherStudents(event) {
     }
 
     const formData = new FormData();
-    formData.append("school", document.getElementById("teacher_import_school").value);
-    formData.append("grade", document.getElementById("teacher_import_grade").value);
-    formData.append("class_group", document.getElementById("teacher_import_class_group").value.trim());
-    formData.append("task_class_id", document.getElementById("teacher_import_task_class").value);
+    formData.append("school", document.getElementById(`${prefix}_import_school`).value);
+    formData.append("grade", document.getElementById(`${prefix}_import_grade`).value);
+    formData.append("class_group", document.getElementById(`${prefix}_import_class_group`).value.trim());
+    formData.append("task_class_id", document.getElementById(`${prefix}_import_task_class`).value);
 
-    if (TEACHER_STATE.user?.role === "admin") {
-        const teacherId = document.getElementById("teacher_import_teacher").value;
+    if (requireTeacher) {
+        const teacherId = document.getElementById(`${prefix}_import_teacher`).value;
 
         if (!teacherId) {
             result.textContent = "Выбери учителя.";

@@ -61,6 +61,20 @@ class AdminTeacherRequest(BaseModel):
 
     email: str
     full_name: str
+    teacher_id: int | None = None
+
+
+class AdminSchoolRequest(BaseModel):
+    """Request body for creating or renaming a school."""
+
+    name: str
+    school_id: int | None = None
+
+
+class AdminClassTeacherRequest(BaseModel):
+    """Request body for assigning a class to another teacher."""
+
+    teacher_id: int
 
 
 class TeacherProgressOverrideRequest(BaseModel):

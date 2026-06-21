@@ -90,46 +90,90 @@ def list_admin_teachers():
         return [row_to_dict(row) for row in rows]
 
 
-def upsert_teacher(email, full_name):
-    """Create or reactivate a teacher by email."""
+def upsert_teacher(email, full_name, teacher_id=None):
+    """Create, reactivate, or update a teacher account."""
 
     normalized_email = normalize_email(email)
     full_name = (full_name or "").strip()
 
     with database_connection() as connection:
-        existing = connection.execute(
-            """
-            SELECT id
-            FROM users
-            WHERE lower(email) = ?
-            LIMIT 1
-            """,
-            (normalized_email,),
-        ).fetchone()
-
-        if existing is None:
-            cursor = connection.execute(
+        if teacher_id is not None:
+            duplicate = connection.execute(
                 """
-                INSERT INTO users (email, role, full_name, is_active)
-                VALUES (?, 'teacher', ?, 1)
+                SELECT id
+                FROM users
+                WHERE lower(email) = ?
+                  AND id != ?
+                LIMIT 1
                 """,
-                (normalized_email, full_name),
-            )
-            teacher_id = cursor.lastrowid
-            action = "created"
-        else:
-            teacher_id = existing["id"]
+                (normalized_email, teacher_id),
+            ).fetchone()
+
+            if duplicate is not None:
+                return {
+                    "blocked": True,
+                    "detail": "duplicate_email",
+                }
+
+            existing = connection.execute(
+                """
+                SELECT id
+                FROM users
+                WHERE id = ?
+                  AND role = 'teacher'
+                LIMIT 1
+                """,
+                (teacher_id,),
+            ).fetchone()
+
+            if existing is None:
+                return None
+
             connection.execute(
                 """
                 UPDATE users
-                SET role = 'teacher',
+                SET email = ?,
                     full_name = ?,
                     is_active = 1
                 WHERE id = ?
                 """,
-                (full_name, teacher_id),
+                (normalized_email, full_name, teacher_id),
             )
             action = "updated"
+        else:
+            existing = connection.execute(
+                """
+                SELECT id
+                FROM users
+                WHERE lower(email) = ?
+                LIMIT 1
+                """,
+                (normalized_email,),
+            ).fetchone()
+
+            if existing is None:
+                cursor = connection.execute(
+                    """
+                    INSERT INTO users (email, role, full_name, is_active)
+                    VALUES (?, 'teacher', ?, 1)
+                    """,
+                    (normalized_email, full_name),
+                )
+                teacher_id = cursor.lastrowid
+                action = "created"
+            else:
+                teacher_id = existing["id"]
+                connection.execute(
+                    """
+                    UPDATE users
+                    SET role = 'teacher',
+                        full_name = ?,
+                        is_active = 1
+                    WHERE id = ?
+                    """,
+                    (full_name, teacher_id),
+                )
+                action = "updated"
 
         row = connection.execute(
             """

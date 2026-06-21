@@ -84,6 +84,104 @@ def active_school_exists(name):
         return row is not None
 
 
+def upsert_school(name, school_id=None):
+    """Create a school or rename an existing one.
+
+    Classes and students keep the school name as a denormalized display field,
+    so renaming a school must update all three places in one transaction.
+    """
+
+    name = (name or "").strip()
+
+    if not name:
+        return None
+
+    with database_connection() as connection:
+        duplicate = connection.execute(
+            """
+            SELECT id
+            FROM schools
+            WHERE name = ?
+              AND (? IS NULL OR id != ?)
+            LIMIT 1
+            """,
+            (name, school_id, school_id),
+        ).fetchone()
+
+        if duplicate is not None:
+            return {
+                "blocked": True,
+                "detail": "duplicate",
+            }
+
+        if school_id is None:
+            cursor = connection.execute(
+                """
+                INSERT INTO schools (name, is_active)
+                VALUES (?, 1)
+                """,
+                (name,),
+            )
+            saved_id = cursor.lastrowid
+            action = "created"
+        else:
+            row = connection.execute(
+                """
+                SELECT id, name
+                FROM schools
+                WHERE id = ?
+                LIMIT 1
+                """,
+                (school_id,),
+            ).fetchone()
+
+            if row is None:
+                return None
+
+            old_name = row["name"]
+            saved_id = row["id"]
+
+            connection.execute(
+                """
+                UPDATE schools
+                SET name = ?,
+                    is_active = 1
+                WHERE id = ?
+                """,
+                (name, saved_id),
+            )
+            connection.execute(
+                """
+                UPDATE classes
+                SET school = ?
+                WHERE school = ?
+                """,
+                (name, old_name),
+            )
+            connection.execute(
+                """
+                UPDATE students
+                SET school = ?
+                WHERE school = ?
+                """,
+                (name, old_name),
+            )
+            action = "updated"
+
+        row = connection.execute(
+            """
+            SELECT id, name, is_active, created_at
+            FROM schools
+            WHERE id = ?
+            """,
+            (saved_id,),
+        ).fetchone()
+
+        result = row_to_dict(row)
+        result["action"] = action
+        return result
+
+
 def deactivate_school(school_id):
     """Archive a school if it has no active classes."""
 
