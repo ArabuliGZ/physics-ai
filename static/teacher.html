@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=classes-same-layout-1">
+    <link rel="stylesheet" href="/static/css/style.css?v=class-add-error-status-1">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -313,10 +313,11 @@
                 >
                     <form
                         class="teacher-admin-teacher-form"
-                        onsubmit="upsertAdminTeacher(event)"
+                        onsubmit="return false"
                     >
                         <input
                             id="admin_teacher_full_name"
+                            hidden
                             type="text"
                             placeholder="ФИО"
                             required
@@ -324,6 +325,7 @@
 
                         <input
                             id="admin_teacher_email"
+                            hidden
                             type="email"
                             placeholder="email"
                             required
@@ -331,8 +333,9 @@
 
                         <button
                             id="admin_teacher_button"
-                            type="submit"
-                            class="teacher-secondary-button"
+                            type="button"
+                            class="teacher-secondary-button teacher-admin-add-button"
+                            onclick="startAdminTeacherAdd()"
                         >
                             Добавить
                         </button>
@@ -363,10 +366,11 @@
                 >
                     <form
                         class="teacher-admin-school-form"
-                        onsubmit="upsertAdminSchool(event)"
+                        onsubmit="return false"
                     >
                         <input
                             id="admin_school_name"
+                            hidden
                             type="text"
                             placeholder="Название школы"
                             required
@@ -374,8 +378,9 @@
 
                         <button
                             id="admin_school_button"
-                            type="submit"
-                            class="teacher-secondary-button"
+                            type="button"
+                            class="teacher-secondary-button teacher-admin-add-button"
+                            onclick="startAdminSchoolAdd()"
                         >
                             Добавить
                         </button>
@@ -403,13 +408,25 @@
                     class="teacher-admin-section"
                     data-admin-view="classes"
                 >
-                    <button
-                        type="button"
-                        class="teacher-secondary-button teacher-admin-create-class-toggle"
-                        onclick="toggleAdminCreateClassForm()"
-                    >
-                        Создать класс
-                    </button>
+                    <div class="teacher-admin-top-actions">
+                        <button
+                            type="button"
+                            class="teacher-secondary-button teacher-admin-add-button teacher-admin-create-class-toggle"
+                            onclick="startAdminClassAdd()"
+                        >
+                            Добавить
+                        </button>
+
+                        <button
+                            type="button"
+                            class="teacher-secondary-button teacher-admin-add-button teacher-admin-template-button"
+                            onclick="downloadStudentCsvTemplate()"
+                        >
+                            Скачать csv-шаблон
+                        </button>
+
+                        <span id="admin_class_add_result"></span>
+                    </div>
 
                     <div
                         id="admin_create_class_panel"
@@ -475,14 +492,6 @@
                                 </label>
 
                                 <div class="teacher-import-actions">
-                                    <button
-                                        type="button"
-                                        class="teacher-secondary-button teacher-template-button"
-                                        onclick="downloadStudentCsvTemplate()"
-                                    >
-                                        Скачать шаблон
-                                    </button>
-
                                     <button
                                         id="admin_import_button"
                                         type="submit"
@@ -600,6 +609,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=classes-same-layout-1"></script>
+    <script src="/static/js/teacher.js?v=class-add-error-status-1"></script>
 </body>
 </html>

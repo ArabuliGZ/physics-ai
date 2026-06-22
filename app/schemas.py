@@ -79,6 +79,16 @@ class AdminClassTeacherRequest(BaseModel):
     teacher_id: int
 
 
+class ClassUpdateRequest(BaseModel):
+    """Request body for editing a teacher class row."""
+
+    school: str
+    grade: int
+    class_group: str
+    task_class_id: str
+    teacher_id: int | None = None
+
+
 class TeacherProgressOverrideRequest(BaseModel):
     """Request body for manually changing task progress from teacher journal."""
 

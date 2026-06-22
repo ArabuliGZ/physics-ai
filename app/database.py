@@ -55,6 +55,7 @@ def init_database():
                 class_group TEXT,
                 task_class_id TEXT,
                 is_active INTEGER NOT NULL DEFAULT 1,
+                hidden_by_class_archive INTEGER NOT NULL DEFAULT 0,
                 full_name TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES classes (id),
@@ -80,6 +81,7 @@ def init_database():
                 class_name TEXT NOT NULL,
                 task_class_id TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
+                archived_students_count INTEGER,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (teacher_id) REFERENCES users (id),
                 UNIQUE (teacher_id, school, grade, class_group, task_class_id)
@@ -141,6 +143,7 @@ def init_database():
         ensure_user_rows(connection)
         backfill_password_hashes(connection)
         ensure_student_class_columns(connection)
+        ensure_class_archive_columns(connection)
         ensure_task_progress_columns(connection)
         backfill_student_teacher(connection)
         backfill_student_class_parts(connection)
@@ -279,6 +282,52 @@ def ensure_student_class_columns(connection):
     if "is_active" not in columns:
         connection.execute(
             "ALTER TABLE students ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
+        )
+
+
+def ensure_class_archive_columns(connection):
+    """Add class archive metadata to older local databases."""
+
+    class_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(classes)").fetchall()
+    }
+    student_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(students)").fetchall()
+    }
+
+    if "archived_students_count" not in class_columns:
+        connection.execute("ALTER TABLE classes ADD COLUMN archived_students_count INTEGER")
+        connection.execute(
+            """
+            UPDATE classes
+            SET archived_students_count = (
+                SELECT COUNT(*)
+                FROM students
+                WHERE students.class_id = classes.id
+                  AND students.is_active = 0
+            )
+            WHERE is_active = 0
+              AND archived_students_count IS NULL
+            """
+        )
+
+    if "hidden_by_class_archive" not in student_columns:
+        connection.execute(
+            "ALTER TABLE students ADD COLUMN hidden_by_class_archive INTEGER NOT NULL DEFAULT 0"
+        )
+        connection.execute(
+            """
+            UPDATE students
+            SET hidden_by_class_archive = 1
+            WHERE is_active = 0
+              AND class_id IN (
+                  SELECT id
+                  FROM classes
+                  WHERE is_active = 0
+              )
+            """
         )
 
 

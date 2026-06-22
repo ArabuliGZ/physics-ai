@@ -227,6 +227,14 @@
             background: #f9fafb;
         }
 
+.teacher-admin-add-button {
+    justify-self: start;
+    min-height: 32px;
+    min-width: auto;
+    padding: 6px 12px;
+    width: auto;
+}
+
         .teacher-link {
 
             min-height: auto;
@@ -1639,10 +1647,15 @@
 
 #admin_teacher_result,
 #admin_school_result,
+#admin_class_add_result,
 #admin_import_result {
     color: #6b7280;
     font-size: 13px;
     white-space: nowrap;
+}
+
+.teacher-admin-status-error {
+    color: #991b1b !important;
 }
 
 .teacher-admin-filter {
@@ -1814,7 +1827,7 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -1826,6 +1839,63 @@
     padding: 0;
 }
 
+.teacher-admin-school-cell,
+.teacher-admin-teacher-cell {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-left: 9px;
+}
+
+.teacher-admin-school-cell .teacher-admin-cell-text,
+.teacher-admin-teacher-cell .teacher-admin-cell-text {
+    flex: 1 1 auto;
+    padding: 0;
+}
+
+.teacher-admin-class-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.teacher-admin-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+    color: #7c3a08;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+    cursor: pointer;
+}
+
+.teacher-admin-icon-button:hover {
+    background: #fff1df;
+}
+
+.teacher-admin-class-name-edit {
+    display: grid;
+    grid-template-columns: minmax(58px, 0.6fr) minmax(52px, 1fr);
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .teacher-admin-class-count {
     color: #6b7280;
     font-weight: 500;
@@ -1833,6 +1903,7 @@
 
 .teacher-admin-class-journal-button {
     flex: 0 0 auto;
+    margin-left: auto;
     min-height: 32px;
     min-width: 112px;
     padding: 6px 12px;
@@ -1936,8 +2007,35 @@
     background: rgba(187, 247, 208, 0.84);
 }
 
-.teacher-admin-create-class-toggle {
+.teacher-admin-action-save {
+    border-color: rgba(22, 163, 74, 0.22);
+    background: rgba(220, 252, 231, 0.72);
+    color: #166534;
+}
+
+.teacher-admin-action-save:hover {
+    background: rgba(187, 247, 208, 0.84);
+}
+
+.teacher-admin-action-cancel {
+    border-color: rgba(220, 38, 38, 0.2);
+    background: rgba(254, 226, 226, 0.65);
+    color: #991b1b;
+}
+
+.teacher-admin-action-cancel:hover {
+    background: rgba(254, 202, 202, 0.8);
+}
+
+.teacher-admin-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
+}
+
+.teacher-admin-create-class-toggle {
+    margin-bottom: 0;
 }
 
 .teacher-admin-inline-select {
@@ -1946,6 +2044,20 @@
     min-width: 0;
     box-sizing: border-box;
     padding: 5px 34px 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background-color: white;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.teacher-admin-inline-input {
+    min-height: 30px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 5px 8px;
     border: 1px solid #d1d5db;
     border-radius: 10px;
     background-color: white;

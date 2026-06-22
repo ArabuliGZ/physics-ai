@@ -97,16 +97,39 @@ def list_admin_teachers():
                 users.is_active,
                 users.created_at,
                 COALESCE(class_summary.active_classes, 0) AS active_classes,
-                COALESCE(class_summary.archived_classes, 0) AS archived_classes
+                COALESCE(class_summary.archived_classes, 0) AS archived_classes,
+                COALESCE(class_summary.active_class_students, 0) AS active_class_students,
+                COALESCE(class_summary.archived_class_students, 0) AS archived_class_students
             FROM users
             LEFT JOIN (
                 SELECT
-                    teacher_id,
-                    SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active_classes,
-                    SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS archived_classes
+                    classes.teacher_id,
+                    SUM(CASE WHEN classes.is_active = 1 THEN 1 ELSE 0 END) AS active_classes,
+                    SUM(CASE WHEN classes.is_active = 0 THEN 1 ELSE 0 END) AS archived_classes,
+                    SUM(
+                        CASE
+                            WHEN classes.is_active = 1
+                            THEN COALESCE(student_summary.active_students, 0)
+                            ELSE 0
+                        END
+                    ) AS active_class_students,
+                    SUM(
+                        CASE
+                            WHEN classes.is_active = 0
+                            THEN COALESCE(classes.archived_students_count, 0)
+                            ELSE 0
+                        END
+                    ) AS archived_class_students
                 FROM classes
-                WHERE teacher_id IS NOT NULL
-                GROUP BY teacher_id
+                LEFT JOIN (
+                    SELECT class_id, COUNT(*) AS active_students
+                    FROM students
+                    WHERE is_active = 1
+                    GROUP BY class_id
+                ) AS student_summary
+                    ON student_summary.class_id = classes.id
+                WHERE classes.teacher_id IS NOT NULL
+                GROUP BY classes.teacher_id
             ) AS class_summary
                 ON class_summary.teacher_id = users.id
             WHERE users.role = 'teacher'

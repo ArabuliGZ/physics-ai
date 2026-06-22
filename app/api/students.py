@@ -18,6 +18,7 @@ from app.schemas import StudentLoginRequest
 from app.schemas import AdminClassTeacherRequest
 from app.schemas import AdminSchoolRequest
 from app.schemas import AdminTeacherRequest
+from app.schemas import ClassUpdateRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
 from app.services.classes import deactivate_teacher_class
@@ -27,6 +28,7 @@ from app.services.classes import list_admin_classes
 from app.services.classes import list_teacher_classes
 from app.services.classes import restore_teacher_class
 from app.services.classes import update_class_teacher
+from app.services.classes import update_teacher_class
 from app.services.progress import get_class_progress_map
 from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
@@ -38,6 +40,7 @@ from app.services.schools import list_admin_schools
 from app.services.schools import list_active_schools
 from app.services.schools import restore_school
 from app.services.schools import upsert_school
+from app.services.task_store import GROUPS
 from app.services.sessions import create_user_session
 from app.services.sessions import create_student_session
 from app.services.sessions import delete_student_session
@@ -291,6 +294,148 @@ def get_teacher_schools(current_user=Depends(require_teacher_user)):
     return list_active_schools()
 
 
+def save_class_row(
+    class_id,
+    data,
+    scope_teacher_id,
+    allow_teacher_change,
+):
+    """Validate and save class edits from teacher/admin screens."""
+
+    school = data.school.strip()
+    class_group = data.class_group.strip()
+    task_class_id = data.task_class_id.strip()
+
+    if not school or data.grade is None or not class_group or not task_class_id:
+        raise HTTPException(
+            status_code=400,
+            detail="school, grade, class_group and task_class_id are required"
+        )
+
+    if not active_school_exists(school):
+        raise HTTPException(
+            status_code=400,
+            detail="School is not available"
+        )
+
+    if task_class_id not in available_task_class_ids():
+        raise HTTPException(
+            status_code=400,
+            detail="Task base is not available"
+        )
+
+    teacher_id = data.teacher_id if allow_teacher_change else None
+
+    if allow_teacher_change and teacher_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="teacher_id is required"
+        )
+
+    result = update_teacher_class(
+        class_id,
+        school,
+        data.grade,
+        class_group,
+        task_class_id,
+        teacher_id=teacher_id,
+        scope_teacher_id=scope_teacher_id,
+    )
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Class not found"
+        )
+
+    if result.get("blocked"):
+        detail = result.get("detail")
+        status_code = 409 if detail == "class_already_exists" else 400
+
+        raise HTTPException(
+            status_code=status_code,
+            detail=detail
+        )
+
+    return result
+
+
+def create_class_row(data, teacher_id):
+    """Validate and create a class row without importing students."""
+
+    school = data.school.strip()
+    class_group = data.class_group.strip()
+    task_class_id = data.task_class_id.strip()
+
+    if not school or data.grade is None or not class_group or not task_class_id:
+        raise HTTPException(
+            status_code=400,
+            detail="school, grade, class_group and task_class_id are required"
+        )
+
+    if not active_school_exists(school):
+        raise HTTPException(
+            status_code=400,
+            detail="School is not available"
+        )
+
+    if task_class_id not in available_task_class_ids():
+        raise HTTPException(
+            status_code=400,
+            detail="Task base is not available"
+        )
+
+    return ensure_teacher_class(
+        teacher_id,
+        school,
+        data.grade,
+        class_group,
+        task_class_id,
+    )
+
+
+def available_task_class_ids():
+    """Return task base ids loaded from groups.json."""
+
+    return {
+        group["id"]
+        for group in GROUPS
+        if isinstance(group, dict) and group.get("id")
+    }
+
+
+@router.post("/teacher/classes")
+def create_teacher_class_row(
+    data: ClassUpdateRequest,
+    current_user=Depends(require_teacher_user),
+):
+    """Create an empty class owned by the current teacher."""
+
+    if current_user["role"] == "admin":
+        raise HTTPException(
+            status_code=400,
+            detail="teacher_id is required"
+        )
+
+    return create_class_row(data, current_user["id"])
+
+
+@router.post("/teacher/classes/{class_id}")
+def update_teacher_class_row(
+    class_id: int,
+    data: ClassUpdateRequest,
+    current_user=Depends(require_teacher_user),
+):
+    """Edit a class owned by the current teacher."""
+
+    return save_class_row(
+        class_id,
+        data,
+        scope_teacher_id=teacher_scope_id(current_user),
+        allow_teacher_change=False,
+    )
+
+
 @router.post("/teacher/classes/{class_id}/deactivate")
 def deactivate_class(class_id: int, current_user=Depends(require_teacher_user)):
     """Archive a class and hide its students from active teacher views."""
@@ -401,6 +546,46 @@ def get_admin_classes(current_user=Depends(require_admin_user)):
     """Return active and archived classes for the admin panel."""
 
     return list_admin_classes()
+
+
+@router.post("/admin/classes")
+def create_admin_class_row(
+    data: ClassUpdateRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Create an empty class for a selected teacher."""
+
+    if data.teacher_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="teacher_id is required"
+        )
+
+    teacher = get_active_teacher(data.teacher_id)
+
+    if teacher is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Teacher is not available"
+        )
+
+    return create_class_row(data, teacher["id"])
+
+
+@router.post("/admin/classes/{class_id}")
+def update_admin_class_row(
+    class_id: int,
+    data: ClassUpdateRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Edit any class from the admin panel."""
+
+    return save_class_row(
+        class_id,
+        data,
+        scope_teacher_id=None,
+        allow_teacher_change=True,
+    )
 
 
 @router.post("/admin/classes/{class_id}/teacher")

@@ -13,8 +13,12 @@
     adminClassNameFilter: "",
     adminClassTeacherFilter: "",
     adminClassTaskBaseFilter: "",
+    adminTeacherAdding: false,
     adminTeacherEditingId: null,
+    adminSchoolAdding: false,
     adminSchoolEditingId: null,
+    classAdding: false,
+    classEditingId: null,
     activeAdminView: "classes",
     manualProgressTarget: null,
     currentJournal: null,
@@ -87,6 +91,12 @@ function renderTeacherSession() {
 function resetTeacherWorkspaceUi() {
     TEACHER_STATE.activeView = "classes";
     TEACHER_STATE.activeAdminView = "classes";
+    TEACHER_STATE.adminTeacherAdding = false;
+    TEACHER_STATE.adminTeacherEditingId = null;
+    TEACHER_STATE.adminSchoolAdding = false;
+    TEACHER_STATE.adminSchoolEditingId = null;
+    TEACHER_STATE.classAdding = false;
+    TEACHER_STATE.classEditingId = null;
 
     const adminCreateClassPanel = document.getElementById("admin_create_class_panel");
 
@@ -96,6 +106,7 @@ function resetTeacherWorkspaceUi() {
 
     [
         "admin_import_result",
+        "admin_class_add_result",
         "teacher_single_result",
         "admin_teacher_result",
         "admin_school_result",
@@ -402,7 +413,7 @@ function renderAdminTeachers() {
         return;
     }
 
-    if (TEACHER_STATE.adminTeachers.length === 0) {
+    if (TEACHER_STATE.adminTeachers.length === 0 && !TEACHER_STATE.adminTeacherAdding) {
         table.innerHTML = "<div class=\"progress-empty\">Учителей пока нет.</div>";
         return;
     }
@@ -413,42 +424,152 @@ function renderAdminTeachers() {
                 <tr>
                     <th>ФИО</th>
                     <th>Email</th>
-                    <th>Классы</th>
+                    <th>Активные классы</th>
+                    <th>Классы в архиве</th>
                     <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
-                ${TEACHER_STATE.adminTeachers.map(teacher => `
-                    <tr class="${teacher.is_active ? "" : "teacher-admin-row-archived"}">
-                        <td>${escapeHtml(teacher.full_name)}</td>
-                        <td>${escapeHtml(teacher.email)}</td>
-                        <td>${teacher.active_classes} / ${teacher.archived_classes}</td>
+                ${TEACHER_STATE.adminTeacherAdding ? renderAdminTeacherAddRow() : ""}
+                ${TEACHER_STATE.adminTeachers.map(teacher => {
+                    const isEditing = String(TEACHER_STATE.adminTeacherEditingId) === String(teacher.id);
+
+                    return `
+                    <tr class="${teacher.is_active ? "" : "teacher-admin-row-archived"} ${isEditing ? "teacher-admin-row-editing" : ""}">
+                        <td>${renderAdminTeacherNameCell(teacher, isEditing)}</td>
+                        <td>${renderAdminTeacherEmailCell(teacher, isEditing)}</td>
+                        <td>${renderSchoolClassSummary(teacher.active_classes, teacher.active_class_students)}</td>
+                        <td>${renderSchoolClassSummary(teacher.archived_classes, teacher.archived_class_students)}</td>
                         <td>
-                            ${renderAdminTeacherAction(teacher)}
+                            ${renderAdminTeacherAction(teacher, isEditing)}
                         </td>
                     </tr>
-                `).join("")}
+                    `;
+                }).join("")}
             </tbody>
         </table>
     `;
 }
 
 
-function renderAdminTeacherAction(teacher) {
-    const editButton = `
-        <button
-            type="button"
-            class="teacher-admin-action"
-            onclick="editAdminTeacher(${teacher.id})"
-        >
-            Изменить
-        </button>
+function renderAdminTeacherAddRow() {
+    return `
+        <tr class="teacher-admin-row-editing">
+            <td>
+                <input
+                    id="admin_teacher_add_full_name"
+                    class="teacher-admin-inline-input"
+                    type="text"
+                    placeholder="ФИО"
+                >
+            </td>
+            <td>
+                <input
+                    id="admin_teacher_add_email"
+                    class="teacher-admin-inline-input"
+                    type="email"
+                    placeholder="email"
+                >
+            </td>
+            <td>${renderSchoolClassSummary(0, 0)}</td>
+            <td>${renderSchoolClassSummary(0, 0)}</td>
+            <td>
+                <div class="teacher-admin-actions">
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-save"
+                        onclick="saveAdminTeacherAdd()"
+                    >
+                        Сохранить
+                    </button>
+
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-cancel"
+                        onclick="cancelAdminTeacherAdd()"
+                    >
+                        Отмена
+                    </button>
+                </div>
+            </td>
+        </tr>
     `;
+}
+
+
+function renderAdminTeacherNameCell(teacher, isEditing) {
+    if (isEditing) {
+        return `
+            <input
+                id="admin_teacher_edit_full_name_${teacher.id}"
+                class="teacher-admin-inline-input"
+                type="text"
+                value="${escapeHtml(teacher.full_name || "")}"
+                placeholder="ФИО"
+            >
+        `;
+    }
+
+    return `
+        <div class="teacher-admin-teacher-cell">
+            <button
+                type="button"
+                class="teacher-admin-icon-button"
+                onclick="editAdminTeacher(${teacher.id})"
+                aria-label="Редактировать учителя"
+                title="Редактировать учителя"
+            >
+                &#9998;
+            </button>
+            <span class="teacher-admin-cell-text">${escapeHtml(teacher.full_name)}</span>
+        </div>
+    `;
+}
+
+
+function renderAdminTeacherEmailCell(teacher, isEditing) {
+    if (isEditing) {
+        return `
+            <input
+                id="admin_teacher_edit_email_${teacher.id}"
+                class="teacher-admin-inline-input"
+                type="email"
+                value="${escapeHtml(teacher.email || "")}"
+                placeholder="email"
+            >
+        `;
+    }
+
+    return `<span class="teacher-admin-cell-text">${escapeHtml(teacher.email)}</span>`;
+}
+
+
+function renderAdminTeacherAction(teacher, isEditing = false) {
+    if (isEditing) {
+        return `
+            <div class="teacher-admin-actions">
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-save"
+                    onclick="saveAdminTeacherEdit(${teacher.id})"
+                >
+                    Сохранить
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-cancel"
+                    onclick="cancelAdminTeacherEdit()"
+                >
+                    Отмена
+                </button>
+            </div>
+        `;
+    }
 
     if (teacher.is_active) {
         return `
             <div class="teacher-admin-actions">
-                ${editButton}
                 <button
                     type="button"
                     class="teacher-admin-action teacher-admin-action-archive"
@@ -462,7 +583,6 @@ function renderAdminTeacherAction(teacher) {
 
     return `
         <div class="teacher-admin-actions">
-            ${editButton}
             <button
                 type="button"
                 class="teacher-admin-action teacher-admin-action-restore"
@@ -475,6 +595,71 @@ function renderAdminTeacherAction(teacher) {
 }
 
 
+function startAdminTeacherAdd() {
+    TEACHER_STATE.adminTeacherAdding = true;
+    TEACHER_STATE.adminTeacherEditingId = null;
+
+    const result = document.getElementById("admin_teacher_result");
+
+    if (result) {
+        result.textContent = "";
+    }
+
+    renderAdminTeachers();
+}
+
+
+function cancelAdminTeacherAdd() {
+    TEACHER_STATE.adminTeacherAdding = false;
+    renderAdminTeachers();
+}
+
+
+async function saveAdminTeacherAdd() {
+    const result = document.getElementById("admin_teacher_result");
+    const fullName = document.getElementById("admin_teacher_add_full_name")?.value.trim() || "";
+    const email = document.getElementById("admin_teacher_add_email")?.value.trim().toLowerCase() || "";
+
+    if (!fullName || !email) {
+        result.textContent = "Заполни ФИО и email.";
+        return;
+    }
+
+    result.textContent = "Сохраняю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/teachers",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    teacher_id: null,
+                    full_name: fullName,
+                    email,
+                }),
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "teacher save failed");
+        }
+
+        TEACHER_STATE.adminTeacherAdding = false;
+        result.textContent = "Учитель добавлен.";
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Teacher save failed:", error);
+        result.textContent = error.message === "Teacher email already exists"
+            ? "Такой email уже есть."
+            : "Не получилось сохранить учителя.";
+    }
+}
+
+
 function editAdminTeacher(teacherId) {
     const teacher = TEACHER_STATE.adminTeachers.find(item => item.id === teacherId);
 
@@ -482,24 +667,14 @@ function editAdminTeacher(teacherId) {
         return;
     }
 
+    TEACHER_STATE.adminTeacherAdding = false;
     TEACHER_STATE.adminTeacherEditingId = teacher.id;
-    document.getElementById("admin_teacher_full_name").value = teacher.full_name || "";
-    document.getElementById("admin_teacher_email").value = teacher.email || "";
-
-    const submitButton = document.getElementById("admin_teacher_button");
-    const cancelButton = document.getElementById("admin_teacher_cancel");
-
-    if (submitButton) {
-        submitButton.textContent = "Сохранить";
-    }
-
-    if (cancelButton) {
-        cancelButton.hidden = false;
-    }
+    renderAdminTeachers();
 }
 
 
 function cancelAdminTeacherEdit() {
+    TEACHER_STATE.adminTeacherAdding = false;
     TEACHER_STATE.adminTeacherEditingId = null;
 
     const fullNameInput = document.getElementById("admin_teacher_full_name");
@@ -522,6 +697,53 @@ function cancelAdminTeacherEdit() {
     if (cancelButton) {
         cancelButton.hidden = true;
     }
+
+    renderAdminTeachers();
+}
+
+
+async function saveAdminTeacherEdit(teacherId) {
+    const result = document.getElementById("admin_teacher_result");
+    const fullName = document.getElementById(`admin_teacher_edit_full_name_${teacherId}`)?.value.trim() || "";
+    const email = document.getElementById(`admin_teacher_edit_email_${teacherId}`)?.value.trim().toLowerCase() || "";
+
+    if (!fullName || !email) {
+        result.textContent = "Заполни ФИО и email.";
+        return;
+    }
+
+    result.textContent = "Сохраняю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/teachers",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    teacher_id: teacherId,
+                    full_name: fullName,
+                    email,
+                }),
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "teacher save failed");
+        }
+
+        TEACHER_STATE.adminTeacherEditingId = null;
+        result.textContent = "Учитель обновлён.";
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Teacher save failed:", error);
+        result.textContent = error.message === "Teacher email already exists"
+            ? "Такой email уже есть."
+            : "Не получилось сохранить учителя.";
+    }
 }
 
 
@@ -530,7 +752,7 @@ async function upsertAdminTeacher(event) {
 
     const result = document.getElementById("admin_teacher_result");
     const payload = {
-        teacher_id: TEACHER_STATE.adminTeacherEditingId,
+        teacher_id: null,
         full_name: document.getElementById("admin_teacher_full_name").value.trim(),
         email: document.getElementById("admin_teacher_email").value.trim().toLowerCase(),
     };
@@ -653,7 +875,7 @@ function renderAdminSchools() {
         return;
     }
 
-    if (TEACHER_STATE.adminSchools.length === 0) {
+    if (TEACHER_STATE.adminSchools.length === 0 && !TEACHER_STATE.adminSchoolAdding) {
         table.innerHTML = "<div class=\"progress-empty\">Школ пока нет.</div>";
         return;
     }
@@ -663,43 +885,131 @@ function renderAdminSchools() {
             <thead>
                 <tr>
                     <th>Школа</th>
-                    <th>Классы</th>
-                    <th>Ученики</th>
+                    <th>Активные классы</th>
+                    <th>Классы в архиве</th>
                     <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
-                ${TEACHER_STATE.adminSchools.map(school => `
-                    <tr class="${school.is_active ? "" : "teacher-admin-row-archived"}">
-                        <td>${escapeHtml(school.name)}</td>
-                        <td>${school.active_classes} / ${school.archived_classes}</td>
-                        <td>${school.active_students}</td>
+                ${TEACHER_STATE.adminSchoolAdding ? renderAdminSchoolAddRow() : ""}
+                ${TEACHER_STATE.adminSchools.map(school => {
+                    const isEditing = String(TEACHER_STATE.adminSchoolEditingId) === String(school.id);
+
+                    return `
+                    <tr class="${school.is_active ? "" : "teacher-admin-row-archived"} ${isEditing ? "teacher-admin-row-editing" : ""}">
+                        <td>${renderAdminSchoolNameCell(school, isEditing)}</td>
+                        <td>${renderSchoolClassSummary(school.active_classes, school.active_class_students)}</td>
+                        <td>${renderSchoolClassSummary(school.archived_classes, school.archived_class_students)}</td>
                         <td>
-                            ${renderAdminSchoolAction(school)}
+                            ${renderAdminSchoolAction(school, isEditing)}
                         </td>
                     </tr>
-                `).join("")}
+                    `;
+                }).join("")}
             </tbody>
         </table>
     `;
 }
 
 
-function renderAdminSchoolAction(school) {
-    const editButton = `
-        <button
-            type="button"
-            class="teacher-admin-action"
-            onclick="editAdminSchool(${school.id})"
-        >
-            Изменить
-        </button>
+function renderAdminSchoolAddRow() {
+    return `
+        <tr class="teacher-admin-row-editing">
+            <td>
+                <input
+                    id="admin_school_add_name"
+                    class="teacher-admin-inline-input"
+                    type="text"
+                    placeholder="Название школы"
+                >
+            </td>
+            <td>${renderSchoolClassSummary(0, 0)}</td>
+            <td>${renderSchoolClassSummary(0, 0)}</td>
+            <td>
+                <div class="teacher-admin-actions">
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-save"
+                        onclick="saveAdminSchoolAdd()"
+                    >
+                        Сохранить
+                    </button>
+
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-cancel"
+                        onclick="cancelAdminSchoolEdit()"
+                    >
+                        Отмена
+                    </button>
+                </div>
+            </td>
+        </tr>
     `;
+}
+
+
+function renderSchoolClassSummary(classesCount, studentsCount) {
+    return `${classesCount || 0} (${studentsCount || 0})`;
+}
+
+
+function renderAdminSchoolNameCell(school, isEditing) {
+    if (isEditing) {
+        return `
+            <input
+                id="admin_school_edit_name_${school.id}"
+                class="teacher-admin-inline-input"
+                type="text"
+                value="${escapeHtml(school.name || "")}"
+                placeholder="Название школы"
+            >
+        `;
+    }
+
+    return `
+        <div class="teacher-admin-school-cell">
+            <button
+                type="button"
+                class="teacher-admin-icon-button"
+                onclick="editAdminSchool(${school.id})"
+                aria-label="Редактировать школу"
+                title="Редактировать школу"
+            >
+                &#9998;
+            </button>
+            <span class="teacher-admin-cell-text">${escapeHtml(school.name)}</span>
+        </div>
+    `;
+}
+
+
+function renderAdminSchoolAction(school, isEditing = false) {
+    if (isEditing) {
+        return `
+            <div class="teacher-admin-actions">
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-save"
+                    onclick="saveAdminSchoolEdit(${school.id})"
+                >
+                    Сохранить
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-cancel"
+                    onclick="cancelAdminSchoolEdit()"
+                >
+                    Отмена
+                </button>
+            </div>
+        `;
+    }
 
     if (school.is_active) {
         return `
             <div class="teacher-admin-actions">
-                ${editButton}
                 <button
                     type="button"
                     class="teacher-admin-action teacher-admin-action-archive"
@@ -713,7 +1023,6 @@ function renderAdminSchoolAction(school) {
 
     return `
         <div class="teacher-admin-actions">
-            ${editButton}
             <button
                 type="button"
                 class="teacher-admin-action teacher-admin-action-restore"
@@ -734,22 +1043,21 @@ function editAdminSchool(schoolId) {
     }
 
     TEACHER_STATE.adminSchoolEditingId = school.id;
-    document.getElementById("admin_school_name").value = school.name || "";
+    TEACHER_STATE.adminSchoolAdding = false;
+    renderAdminSchools();
+}
 
-    const submitButton = document.getElementById("admin_school_button");
-    const cancelButton = document.getElementById("admin_school_cancel");
 
-    if (submitButton) {
-        submitButton.textContent = "Сохранить";
-    }
-
-    if (cancelButton) {
-        cancelButton.hidden = false;
-    }
+function startAdminSchoolAdd() {
+    TEACHER_STATE.adminSchoolAdding = true;
+    TEACHER_STATE.adminSchoolEditingId = null;
+    document.getElementById("admin_school_result").textContent = "";
+    renderAdminSchools();
 }
 
 
 function cancelAdminSchoolEdit() {
+    TEACHER_STATE.adminSchoolAdding = false;
     TEACHER_STATE.adminSchoolEditingId = null;
 
     const nameInput = document.getElementById("admin_school_name");
@@ -767,6 +1075,94 @@ function cancelAdminSchoolEdit() {
     if (cancelButton) {
         cancelButton.hidden = true;
     }
+
+    renderAdminSchools();
+}
+
+
+async function saveAdminSchoolAdd() {
+    const result = document.getElementById("admin_school_result");
+    const name = document.getElementById("admin_school_add_name")?.value.trim() || "";
+
+    if (!name) {
+        result.textContent = "Напиши название школы.";
+        return;
+    }
+
+    result.textContent = "Сохраняю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/schools",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    school_id: null,
+                    name,
+                }),
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "school save failed");
+        }
+
+        TEACHER_STATE.adminSchoolAdding = false;
+        result.textContent = "Школа добавлена.";
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("School save failed:", error);
+        result.textContent = error.message === "School already exists"
+            ? "Такая школа уже есть."
+            : "Не получилось сохранить школу.";
+    }
+}
+
+
+async function saveAdminSchoolEdit(schoolId) {
+    const result = document.getElementById("admin_school_result");
+    const name = document.getElementById(`admin_school_edit_name_${schoolId}`)?.value.trim() || "";
+
+    if (!name) {
+        result.textContent = "Напиши название школы.";
+        return;
+    }
+
+    result.textContent = "Сохраняю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/schools",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    school_id: schoolId,
+                    name,
+                }),
+            }
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "school save failed");
+        }
+
+        TEACHER_STATE.adminSchoolEditingId = null;
+        result.textContent = "Школа обновлена.";
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("School save failed:", error);
+        result.textContent = error.message === "School already exists"
+            ? "Такая школа уже есть."
+            : "Не получилось сохранить школу.";
+    }
 }
 
 
@@ -775,7 +1171,7 @@ async function upsertAdminSchool(event) {
 
     const result = document.getElementById("admin_school_result");
     const payload = {
-        school_id: TEACHER_STATE.adminSchoolEditingId,
+        school_id: null,
         name: document.getElementById("admin_school_name").value.trim(),
     };
 
@@ -901,29 +1297,32 @@ function renderAdminClasses() {
                 </tr>
             </thead>
             <tbody>
-                ${filteredClasses.length === 0 ? `
+                ${TEACHER_STATE.classAdding ? renderAdminClassAddRow(isAdmin) : ""}
+                ${filteredClasses.length === 0 && !TEACHER_STATE.classAdding ? `
                     <tr>
                         <td colspan="${isAdmin ? 5 : 4}">Классов по выбранным фильтрам нет.</td>
                     </tr>
-                ` : filteredClasses.map(classItem => `
-                    <tr class="${classItem.is_active ? "" : "teacher-admin-row-archived"}">
-                        <td><span class="teacher-admin-cell-text">${escapeHtml(classItem.school)}</span></td>
+                ` : filteredClasses.map(classItem => {
+                    const isEditing = String(TEACHER_STATE.classEditingId) === String(classItem.id);
+
+                    return `
+                    <tr class="${classItem.is_active ? "" : "teacher-admin-row-archived"} ${isEditing ? "teacher-admin-row-editing" : ""}">
+                        <td>${renderAdminClassSchoolCell(classItem, isEditing)}</td>
                         <td>
                             <div class="teacher-admin-class-cell">
-                                <span class="teacher-admin-cell-text">
-                                    ${escapeHtml(classItem.class_name)}
-                                    <span class="teacher-admin-class-count">(${classItem.active_students})</span>
-                                </span>
-                                ${renderAdminClassJournalButton(classItem)}
+                                ${renderAdminClassEditButton(classItem)}
+                                ${renderAdminClassNameCell(classItem, isEditing)}
+                                ${isEditing ? "" : renderAdminClassJournalButton(classItem)}
                             </div>
                         </td>
-                        <td><span class="teacher-admin-cell-text">${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span></td>
+                        <td>${renderAdminClassTaskBaseCell(classItem, isEditing)}</td>
                         <td>
-                            ${renderAdminClassAction(classItem)}
+                            ${renderAdminClassAction(classItem, isEditing)}
                         </td>
-                        ${isAdmin ? `<td>${renderAdminClassTeacherControl(classItem)}</td>` : ""}
+                        ${isAdmin ? `<td>${renderAdminClassTeacherCell(classItem, isEditing)}</td>` : ""}
                     </tr>
-                `).join("")}
+                    `;
+                }).join("")}
             </tbody>
         </table>
     `;
@@ -939,6 +1338,118 @@ function getClassTableRows() {
         active_students: classItem.active_students ?? classItem.students_count ?? 0,
         is_active: classItem.is_active ?? 1,
     }));
+}
+
+
+function renderAdminClassAddRow(isAdmin) {
+    return `
+        <tr class="teacher-admin-row-editing">
+            <td>
+                <select
+                    id="admin_class_add_school"
+                    class="teacher-admin-inline-select"
+                >
+                    <option value="" selected>
+                        Школа
+                    </option>
+                    ${TEACHER_STATE.schools.map(school => `
+                        <option value="${escapeHtml(school.name)}">
+                            ${escapeHtml(school.name)}
+                        </option>
+                    `).join("")}
+                </select>
+            </td>
+            <td>
+                <div class="teacher-admin-class-name-edit">
+                    <select
+                        id="admin_class_add_grade"
+                        class="teacher-admin-inline-select"
+                    >
+                        <option value="" selected>
+                            Параллель
+                        </option>
+                        ${[7, 8, 9, 10, 11].map(grade => `
+                            <option value="${grade}">
+                                ${grade}
+                            </option>
+                        `).join("")}
+                    </select>
+
+                    <input
+                        id="admin_class_add_group"
+                        class="teacher-admin-inline-input"
+                        type="text"
+                        placeholder="А или 1"
+                    >
+                </div>
+            </td>
+            <td>
+                <select
+                    id="admin_class_add_task_base"
+                    class="teacher-admin-inline-select"
+                >
+                    <option value="" selected>
+                        База задач
+                    </option>
+                    ${renderTaskBaseOptions()}
+                </select>
+            </td>
+            <td>
+                <div class="teacher-admin-actions">
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-save"
+                        onclick="saveAdminClassAdd()"
+                    >
+                        Сохранить
+                    </button>
+
+                    <button
+                        type="button"
+                        class="teacher-admin-action teacher-admin-action-cancel"
+                        onclick="cancelAdminClassAdd()"
+                    >
+                        Отмена
+                    </button>
+                </div>
+            </td>
+            ${isAdmin ? `
+            <td>
+                <select
+                    id="admin_class_add_teacher"
+                    class="teacher-admin-inline-select"
+                >
+                    <option value="" selected>
+                        Учитель
+                    </option>
+                    ${TEACHER_STATE.adminTeachers
+                        .filter(teacher => teacher.is_active === 1)
+                        .map(teacher => `
+                            <option value="${teacher.id}">
+                                ${escapeHtml(teacher.full_name)}
+                            </option>
+                        `).join("")}
+                </select>
+            </td>
+            ` : ""}
+        </tr>
+    `;
+}
+
+
+function renderTaskBaseOptions(selectedTaskBase = "") {
+    const bases = [
+        ...new Set(TEACHER_STATE.tasks.map(task => task.class_id))
+    ].sort(compareClassNames);
+
+    return bases.map(taskBase => `
+        <option
+            value="${escapeHtml(taskBase)}"
+            ${taskBase === selectedTaskBase ? "selected" : ""}
+        >
+            ${escapeHtml(TEACHER_STATE.groupsById[taskBase] || taskBase)}
+        </option>
+    `).join("");
 }
 
 
@@ -1041,7 +1552,103 @@ function renderAdminClassTaskBaseFilterOptions() {
 }
 
 
-function renderAdminClassTeacherControl(classItem) {
+function renderAdminClassSchoolCell(classItem, isEditing) {
+    if (!isEditing) {
+        return `<span class="teacher-admin-cell-text">${escapeHtml(classItem.school)}</span>`;
+    }
+
+    return `
+        <select
+            id="admin_class_edit_school_${classItem.id}"
+            class="teacher-admin-inline-select"
+        >
+            ${TEACHER_STATE.schools.map(school => `
+                <option
+                    value="${escapeHtml(school.name)}"
+                    ${school.name === classItem.school ? "selected" : ""}
+                >
+                    ${escapeHtml(school.name)}
+                </option>
+            `).join("")}
+        </select>
+    `;
+}
+
+
+function renderAdminClassNameCell(classItem, isEditing) {
+    if (!isEditing) {
+        return `
+            <span class="teacher-admin-cell-text">
+                ${escapeHtml(classItem.class_name)}
+                <span class="teacher-admin-class-count">(${classItem.active_students})</span>
+            </span>
+        `;
+    }
+
+    return `
+        <div class="teacher-admin-class-name-edit">
+            <select
+                id="admin_class_edit_grade_${classItem.id}"
+                class="teacher-admin-inline-select"
+            >
+                ${[7, 8, 9, 10, 11].map(grade => `
+                    <option
+                        value="${grade}"
+                        ${Number(classItem.grade) === grade ? "selected" : ""}
+                    >
+                        ${grade}
+                    </option>
+                `).join("")}
+            </select>
+
+            <input
+                id="admin_class_edit_group_${classItem.id}"
+                class="teacher-admin-inline-input"
+                type="text"
+                value="${escapeHtml(classItem.class_group || "")}"
+                placeholder="А или 1"
+            >
+        </div>
+    `;
+}
+
+
+function renderAdminClassTaskBaseCell(classItem, isEditing) {
+    if (!isEditing) {
+        return `<span class="teacher-admin-cell-text">${escapeHtml(TEACHER_STATE.groupsById[classItem.task_class_id] || classItem.task_class_id)}</span>`;
+    }
+
+    const bases = [
+        ...new Set(TEACHER_STATE.tasks.map(task => task.class_id))
+    ].sort(compareClassNames);
+
+    return `
+        <select
+            id="admin_class_edit_task_base_${classItem.id}"
+            class="teacher-admin-inline-select"
+        >
+            ${bases.map(taskBase => `
+                <option
+                    value="${escapeHtml(taskBase)}"
+                    ${taskBase === classItem.task_class_id ? "selected" : ""}
+                >
+                    ${escapeHtml(TEACHER_STATE.groupsById[taskBase] || taskBase)}
+                </option>
+            `).join("")}
+        </select>
+    `;
+}
+
+
+function renderAdminClassTeacherCell(classItem, isEditing) {
+    if (!isEditing) {
+        return `
+            <span class="teacher-admin-cell-text">
+                ${escapeHtml(getAdminClassTeacherName(classItem))}
+            </span>
+        `;
+    }
+
     const currentTeacherExists = TEACHER_STATE.adminTeachers.some(teacher => (
         Number(teacher.id) === Number(classItem.teacher_id)
     ));
@@ -1059,8 +1666,8 @@ function renderAdminClassTeacherControl(classItem) {
 
     return `
         <select
+            id="admin_class_edit_teacher_${classItem.id}"
             class="teacher-admin-inline-select"
-            onchange="updateAdminClassTeacher(${classItem.id}, this.value)"
         >
             ${teachers.map(teacher => `
                 <option
@@ -1075,7 +1682,60 @@ function renderAdminClassTeacherControl(classItem) {
 }
 
 
-function renderAdminClassAction(classItem) {
+function getAdminClassTeacherName(classItem) {
+    const teacher = TEACHER_STATE.adminTeachers.find(item => (
+        Number(item.id) === Number(classItem.teacher_id)
+    ));
+
+    return teacher?.full_name
+        || classItem.teacher_name
+        || classItem.teacher_email
+        || "Учитель не указан";
+}
+
+
+function renderAdminClassEditButton(classItem) {
+    if (String(TEACHER_STATE.classEditingId) === String(classItem.id)) {
+        return "";
+    }
+
+    return `
+        <button
+            type="button"
+            class="teacher-admin-icon-button"
+            onclick="startAdminClassEdit(${classItem.id})"
+            aria-label="Редактировать класс"
+            title="Редактировать класс"
+        >
+            &#9998;
+        </button>
+    `;
+}
+
+
+function renderAdminClassAction(classItem, isEditing = false) {
+    if (isEditing) {
+        return `
+            <div class="teacher-admin-actions">
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-save"
+                    onclick="saveAdminClassEdit(${classItem.id})"
+                >
+                    Сохранить
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-cancel"
+                    onclick="cancelAdminClassEdit()"
+                >
+                    Отмена
+                </button>
+            </div>
+        `;
+    }
+
     if (classItem.is_active) {
         return `
             <div class="teacher-admin-actions">
@@ -1166,6 +1826,147 @@ function ensureTeacherClassAvailable(classItem) {
         is_active: classItem.is_active,
         students_count: classItem.active_students || 0,
     });
+}
+
+
+function startAdminClassEdit(classId) {
+    TEACHER_STATE.classEditingId = classId;
+    TEACHER_STATE.classAdding = false;
+    renderAdminClasses();
+}
+
+
+function startAdminClassAdd() {
+    TEACHER_STATE.classAdding = true;
+    TEACHER_STATE.classEditingId = null;
+    setAdminClassAddStatus("");
+    renderAdminClasses();
+}
+
+
+function cancelAdminClassAdd() {
+    TEACHER_STATE.classAdding = false;
+    setAdminClassAddStatus("");
+    renderAdminClasses();
+}
+
+
+function cancelAdminClassEdit() {
+    TEACHER_STATE.classEditingId = null;
+    renderAdminClasses();
+}
+
+
+function setAdminClassAddStatus(message, type = "info") {
+    const result = document.getElementById("admin_class_add_result");
+
+    if (!result) {
+        return;
+    }
+
+    result.textContent = message;
+    result.classList.toggle("teacher-admin-status-error", type === "error");
+}
+
+
+async function saveAdminClassAdd() {
+    const isAdmin = TEACHER_STATE.user?.role === "admin";
+    const school = document.getElementById("admin_class_add_school")?.value || "";
+    const grade = document.getElementById("admin_class_add_grade")?.value || "";
+    const classGroup = document.getElementById("admin_class_add_group")?.value.trim() || "";
+    const taskClassId = document.getElementById("admin_class_add_task_base")?.value || "";
+    const teacherId = document.getElementById("admin_class_add_teacher")?.value || "";
+
+    if (!school || !grade || !classGroup || !taskClassId || (isAdmin && !teacherId)) {
+        setAdminClassAddStatus("Заполни школу, класс, базу задач и учителя.", "error");
+        return;
+    }
+
+    setAdminClassAddStatus("Сохраняю...");
+
+    try {
+        const response = await teacherFetch(
+            `${isAdmin ? "/admin" : "/teacher"}/classes`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    school,
+                    grade: Number(grade),
+                    class_group: classGroup,
+                    task_class_id: taskClassId,
+                    teacher_id: isAdmin ? Number(teacherId) : null,
+                }),
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "class create failed");
+        }
+
+        TEACHER_STATE.classAdding = false;
+        setAdminClassAddStatus("");
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Class create failed:", error);
+        setAdminClassAddStatus(error.message === "Teacher is not available"
+            ? "Выбранный учитель недоступен."
+            : "Не получилось добавить класс.", "error");
+    }
+}
+
+
+async function saveAdminClassEdit(classId) {
+    const isAdmin = TEACHER_STATE.user?.role === "admin";
+    const school = document.getElementById(`admin_class_edit_school_${classId}`)?.value || "";
+    const grade = document.getElementById(`admin_class_edit_grade_${classId}`)?.value || "";
+    const classGroup = document.getElementById(`admin_class_edit_group_${classId}`)?.value.trim() || "";
+    const taskClassId = document.getElementById(`admin_class_edit_task_base_${classId}`)?.value || "";
+    const teacherId = document.getElementById(`admin_class_edit_teacher_${classId}`)?.value || "";
+
+    if (!school || !grade || !classGroup || !taskClassId || (isAdmin && !teacherId)) {
+        alert("Заполни школу, класс, базу задач и учителя.");
+        return;
+    }
+
+    try {
+        const response = await teacherFetch(
+            `${isAdmin ? "/admin" : "/teacher"}/classes/${classId}`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    school,
+                    grade: Number(grade),
+                    class_group: classGroup,
+                    task_class_id: taskClassId,
+                    teacher_id: isAdmin ? Number(teacherId) : null,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.detail || "class update failed");
+        }
+
+        TEACHER_STATE.classEditingId = null;
+        TEACHER_STATE.selectedFilters = null;
+        TEACHER_STATE.currentJournal = null;
+        await loadTeacherDashboard();
+    } catch (error) {
+        console.error("Class update failed:", error);
+        alert(error.message === "class_already_exists"
+            ? "Такой класс уже есть у выбранного учителя."
+            : error.message === "teacher_not_found"
+                ? "Выбранный учитель недоступен."
+                : "Не получилось сохранить класс.");
+    }
 }
 
 

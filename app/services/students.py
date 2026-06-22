@@ -315,7 +315,8 @@ def upsert_student_by_email(
                     class_group = ?,
                     task_class_id = ?,
                     full_name = ?,
-                    is_active = 1
+                    is_active = 1,
+                    hidden_by_class_archive = 0
                 WHERE id = ?
                 """,
                 (

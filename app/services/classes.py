@@ -1,5 +1,7 @@
 """Helpers for teacher class records."""
 
+import sqlite3
+
 from app.database import database_connection
 from app.database import ensure_class_row
 
@@ -129,11 +131,16 @@ def list_teacher_classes(teacher_id=None):
                 classes.task_class_id,
                 classes.is_active,
                 classes.created_at,
-                COALESCE(student_summary.students_count, 0) AS students_count
+                CASE
+                    WHEN classes.is_active = 1
+                    THEN COALESCE(student_summary.active_students, 0)
+                    ELSE COALESCE(classes.archived_students_count, 0)
+                END AS students_count
             FROM classes
             LEFT JOIN (
-                SELECT class_id, COUNT(*) AS students_count
+                SELECT class_id, COUNT(*) AS active_students
                 FROM students
+                WHERE is_active = 1
                 GROUP BY class_id
             ) AS student_summary
                 ON student_summary.class_id = classes.id
@@ -177,18 +184,30 @@ def deactivate_teacher_class(class_id, teacher_id=None):
         if row is None:
             return None
 
+        active_students = connection.execute(
+            """
+            SELECT COUNT(*) AS students_count
+            FROM students
+            WHERE class_id = ?
+              AND is_active = 1
+            """,
+            (class_id,),
+        ).fetchone()["students_count"]
+
         connection.execute(
             """
             UPDATE classes
-            SET is_active = 0
+            SET is_active = 0,
+                archived_students_count = ?
             WHERE id = ?
             """,
-            (class_id,),
+            (active_students, class_id),
         )
         connection.execute(
             """
             UPDATE students
-            SET is_active = 0
+            SET is_active = 0,
+                hidden_by_class_archive = 1
             WHERE class_id = ?
               AND is_active = 1
             """,
@@ -219,13 +238,18 @@ def list_admin_classes():
                 classes.task_class_id,
                 classes.is_active,
                 classes.created_at,
-                COALESCE(student_summary.students_count, 0) AS active_students
+                CASE
+                    WHEN classes.is_active = 1
+                    THEN COALESCE(student_summary.active_students, 0)
+                    ELSE COALESCE(classes.archived_students_count, 0)
+                END AS active_students
             FROM classes
             LEFT JOIN users
                 ON users.id = classes.teacher_id
             LEFT JOIN (
-                SELECT class_id, COUNT(*) AS students_count
+                SELECT class_id, COUNT(*) AS active_students
                 FROM students
+                WHERE is_active = 1
                 GROUP BY class_id
             ) AS student_summary
                 ON student_summary.class_id = classes.id
@@ -269,7 +293,8 @@ def restore_teacher_class(class_id, teacher_id=None):
         connection.execute(
             """
             UPDATE classes
-            SET is_active = 1
+            SET is_active = 1,
+                archived_students_count = NULL
             WHERE id = ?
             """,
             (class_id,),
@@ -277,8 +302,10 @@ def restore_teacher_class(class_id, teacher_id=None):
         connection.execute(
             """
             UPDATE students
-            SET is_active = 1
+            SET is_active = 1,
+                hidden_by_class_archive = 0
             WHERE class_id = ?
+              AND hidden_by_class_archive = 1
             """,
             (class_id,),
         )
@@ -286,6 +313,128 @@ def restore_teacher_class(class_id, teacher_id=None):
         return {
             "id": class_id,
             "is_active": 1,
+        }
+
+
+def update_teacher_class(
+    class_id,
+    school,
+    grade,
+    class_group,
+    task_class_id,
+    teacher_id=None,
+    scope_teacher_id=None,
+):
+    """Update class metadata and keep student snapshots in sync."""
+
+    school = school.strip()
+    class_group = (class_group or "").strip()
+    task_class_id = task_class_id.strip()
+    class_name = make_class_name(grade, class_group)
+
+    teacher_clause = ""
+    params = [class_id]
+
+    if scope_teacher_id is not None:
+        teacher_clause = "AND teacher_id = ?"
+        params.append(scope_teacher_id)
+
+    with database_connection() as connection:
+        row = connection.execute(
+            f"""
+            SELECT id, teacher_id
+            FROM classes
+            WHERE id = ?
+              {teacher_clause}
+            LIMIT 1
+            """,
+            params,
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        saved_teacher_id = row["teacher_id"]
+
+        if teacher_id is not None and int(teacher_id) != int(saved_teacher_id):
+            teacher = connection.execute(
+                """
+                SELECT id
+                FROM users
+                WHERE id = ?
+                  AND role = 'teacher'
+                  AND is_active = 1
+                LIMIT 1
+                """,
+                (teacher_id,),
+            ).fetchone()
+
+            if teacher is None:
+                return {
+                    "blocked": True,
+                    "detail": "teacher_not_found",
+                }
+
+            saved_teacher_id = teacher_id
+
+        try:
+            connection.execute(
+                """
+                UPDATE classes
+                SET teacher_id = ?,
+                    school = ?,
+                    grade = ?,
+                    class_group = ?,
+                    class_name = ?,
+                    task_class_id = ?
+                WHERE id = ?
+                """,
+                (
+                    saved_teacher_id,
+                    school,
+                    grade,
+                    class_group,
+                    class_name,
+                    task_class_id,
+                    class_id,
+                ),
+            )
+        except sqlite3.IntegrityError:
+            return {
+                "blocked": True,
+                "detail": "class_already_exists",
+            }
+
+        connection.execute(
+            """
+            UPDATE students
+            SET teacher_id = ?,
+                school = ?,
+                grade = ?,
+                class_group = ?,
+                class_name = ?,
+                task_class_id = ?
+            WHERE class_id = ?
+            """,
+            (
+                saved_teacher_id,
+                school,
+                grade,
+                class_group,
+                class_name,
+                task_class_id,
+                class_id,
+            ),
+        )
+
+        return {
+            "id": class_id,
+            "teacher_id": saved_teacher_id,
+            "school": school,
+            "grade": grade,
+            "class_group": class_group,
+            "class_name": class_name,
+            "task_class_id": task_class_id,
         }
 
 

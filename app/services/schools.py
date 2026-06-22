@@ -41,24 +41,39 @@ def list_admin_schools():
                 schools.created_at,
                 COALESCE(class_summary.active_classes, 0) AS active_classes,
                 COALESCE(class_summary.archived_classes, 0) AS archived_classes,
-                COALESCE(student_summary.active_students, 0) AS active_students
+                COALESCE(class_summary.active_class_students, 0) AS active_class_students,
+                COALESCE(class_summary.archived_class_students, 0) AS archived_class_students
             FROM schools
             LEFT JOIN (
                 SELECT
-                    school,
-                    SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active_classes,
-                    SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS archived_classes
+                    classes.school,
+                    SUM(CASE WHEN classes.is_active = 1 THEN 1 ELSE 0 END) AS active_classes,
+                    SUM(CASE WHEN classes.is_active = 0 THEN 1 ELSE 0 END) AS archived_classes,
+                    SUM(
+                        CASE
+                            WHEN classes.is_active = 1
+                            THEN COALESCE(student_summary.active_students, 0)
+                            ELSE 0
+                        END
+                    ) AS active_class_students,
+                    SUM(
+                        CASE
+                            WHEN classes.is_active = 0
+                            THEN COALESCE(classes.archived_students_count, 0)
+                            ELSE 0
+                        END
+                    ) AS archived_class_students
                 FROM classes
-                GROUP BY school
+                LEFT JOIN (
+                    SELECT class_id, COUNT(*) AS active_students
+                    FROM students
+                    WHERE is_active = 1
+                    GROUP BY class_id
+                ) AS student_summary
+                    ON student_summary.class_id = classes.id
+                GROUP BY classes.school
             ) AS class_summary
                 ON class_summary.school = schools.name
-            LEFT JOIN (
-                SELECT school, COUNT(*) AS active_students
-                FROM students
-                WHERE is_active = 1
-                GROUP BY school
-            ) AS student_summary
-                ON student_summary.school = schools.name
             ORDER BY schools.name
             """
         ).fetchall()
