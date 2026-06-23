@@ -19,6 +19,8 @@
     adminSchoolEditingId: null,
     classAdding: false,
     classEditingId: null,
+    classAddCsvFile: null,
+    classAddCsvError: "",
     activeAdminView: "classes",
     manualProgressTarget: null,
     currentJournal: null,
@@ -97,6 +99,8 @@ function resetTeacherWorkspaceUi() {
     TEACHER_STATE.adminSchoolEditingId = null;
     TEACHER_STATE.classAdding = false;
     TEACHER_STATE.classEditingId = null;
+    TEACHER_STATE.classAddCsvFile = null;
+    TEACHER_STATE.classAddCsvError = "";
 
     const adminCreateClassPanel = document.getElementById("admin_create_class_panel");
 
@@ -1395,7 +1399,23 @@ function renderAdminClassAddRow(isAdmin) {
                 </select>
             </td>
             <td>
-                <div class="teacher-admin-actions">
+                <div class="teacher-admin-actions teacher-admin-actions-add-class">
+                    <input
+                        id="admin_class_add_csv_file"
+                        class="teacher-hidden-file-input"
+                        type="file"
+                        accept=".csv,text/csv"
+                        onchange="handleAdminClassAddCsvChange(this)"
+                    >
+
+                    <button
+                        type="button"
+                        class="teacher-admin-action"
+                        onclick="document.getElementById('admin_class_add_csv_file').click()"
+                    >
+                        Прикрепить csv
+                    </button>
+
                     <button
                         type="button"
                         class="teacher-admin-action teacher-admin-action-save"
@@ -1839,6 +1859,8 @@ function startAdminClassEdit(classId) {
 function startAdminClassAdd() {
     TEACHER_STATE.classAdding = true;
     TEACHER_STATE.classEditingId = null;
+    TEACHER_STATE.classAddCsvFile = null;
+    TEACHER_STATE.classAddCsvError = "";
     setAdminClassAddStatus("");
     renderAdminClasses();
 }
@@ -1846,6 +1868,8 @@ function startAdminClassAdd() {
 
 function cancelAdminClassAdd() {
     TEACHER_STATE.classAdding = false;
+    TEACHER_STATE.classAddCsvFile = null;
+    TEACHER_STATE.classAddCsvError = "";
     setAdminClassAddStatus("");
     renderAdminClasses();
 }
@@ -1854,6 +1878,29 @@ function cancelAdminClassAdd() {
 function cancelAdminClassEdit() {
     TEACHER_STATE.classEditingId = null;
     renderAdminClasses();
+}
+
+
+async function handleAdminClassAddCsvChange(input) {
+    const file = input.files?.[0] || null;
+
+    TEACHER_STATE.classAddCsvFile = null;
+    TEACHER_STATE.classAddCsvError = "";
+
+    if (!file) {
+        setAdminClassAddStatus("");
+        return;
+    }
+
+    try {
+        await validateStudentCsvFile(file);
+        TEACHER_STATE.classAddCsvFile = file;
+        setAdminClassAddStatus(`Файл прикреплён: ${file.name}`);
+    } catch (error) {
+        TEACHER_STATE.classAddCsvError = error.message || "CSV не соответствует шаблону.";
+        input.value = "";
+        setAdminClassAddStatus(TEACHER_STATE.classAddCsvError, "error");
+    }
 }
 
 
@@ -1882,6 +1929,23 @@ async function saveAdminClassAdd() {
         return;
     }
 
+    if (TEACHER_STATE.classAddCsvError) {
+        setAdminClassAddStatus(TEACHER_STATE.classAddCsvError, "error");
+        return;
+    }
+
+    if (!TEACHER_STATE.classAddCsvFile) {
+        const confirmed = await showTeacherConfirm({
+            title: "Сохранить без CSV?",
+            message: "Вы уверены, что не хотите прикрепить список учеников? В дальнейшем добавлять учеников можно будет только по одному.",
+            acceptText: "Сохранить",
+        });
+
+        if (!confirmed) {
+            return;
+        }
+    }
+
     setAdminClassAddStatus("Сохраняю...");
 
     try {
@@ -1907,15 +1971,66 @@ async function saveAdminClassAdd() {
             throw new Error(data.detail || "class create failed");
         }
 
+        if (TEACHER_STATE.classAddCsvFile) {
+            await importClassAddCsv({
+                school,
+                grade,
+                classGroup,
+                taskClassId,
+                teacherId,
+                isAdmin,
+                file: TEACHER_STATE.classAddCsvFile,
+            });
+        }
+
         TEACHER_STATE.classAdding = false;
+        TEACHER_STATE.classAddCsvFile = null;
+        TEACHER_STATE.classAddCsvError = "";
         setAdminClassAddStatus("");
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Class create failed:", error);
         setAdminClassAddStatus(error.message === "Teacher is not available"
             ? "Выбранный учитель недоступен."
-            : "Не получилось добавить класс.", "error");
+            : error.message === "csv_import_errors"
+                ? "CSV содержит ошибки. Исправь файл и прикрепи его заново."
+                : "Не получилось добавить класс.", "error");
     }
+}
+
+
+async function importClassAddCsv({ school, grade, classGroup, taskClassId, teacherId, isAdmin, file }) {
+    const formData = new FormData();
+
+    formData.append("school", school);
+    formData.append("grade", grade);
+    formData.append("class_group", classGroup);
+    formData.append("task_class_id", taskClassId);
+    formData.append("file", file);
+
+    if (isAdmin) {
+        formData.append("teacher_id", teacherId);
+    }
+
+    const response = await teacherFetch(
+        "/teacher/import-students",
+        {
+            method: "POST",
+            body: formData,
+        }
+    );
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.detail || "csv_import_failed");
+    }
+
+    if (Array.isArray(data.errors) && data.errors.length > 0) {
+        console.warn("Import errors:", data.errors);
+        throw new Error("csv_import_errors");
+    }
+
+    return data;
 }
 
 
@@ -2228,6 +2343,97 @@ function downloadStudentCsvTemplate() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+}
+
+
+async function validateStudentCsvFile(file) {
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+        throw new Error("Прикрепи файл в формате CSV.");
+    }
+
+    const text = (await file.text()).replace(/^\uFEFF/, "");
+    const rows = parseCsvRows(text);
+
+    if (rows.length === 0) {
+        throw new Error("CSV пустой. Скачай шаблон и заполни его.");
+    }
+
+    const headers = rows[0].map(value => value.trim().toLowerCase());
+    const fullNameIndex = headers.indexOf("full_name");
+    const emailIndex = headers.indexOf("email");
+
+    if (fullNameIndex === -1 || emailIndex === -1) {
+        throw new Error("CSV должен содержать столбцы full_name и email.");
+    }
+
+    const dataRows = rows.slice(1).filter(row => row.some(value => value.trim()));
+
+    if (dataRows.length === 0) {
+        throw new Error("CSV не содержит учеников.");
+    }
+
+    const invalidRow = dataRows.findIndex(row => {
+        const fullName = (row[fullNameIndex] || "").trim();
+        const email = (row[emailIndex] || "").trim();
+
+        return !fullName || !email || !email.includes("@");
+    });
+
+    if (invalidRow !== -1) {
+        throw new Error(`Ошибка в строке ${invalidRow + 2}: нужны ФИО и корректный email.`);
+    }
+}
+
+
+function parseCsvRows(text) {
+    const rows = [];
+    let row = [];
+    let value = "";
+    let insideQuotes = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const nextChar = text[index + 1];
+
+        if (insideQuotes && char === "\"" && nextChar === "\"") {
+            value += "\"";
+            index += 1;
+            continue;
+        }
+
+        if (char === "\"") {
+            insideQuotes = !insideQuotes;
+            continue;
+        }
+
+        if (!insideQuotes && char === ",") {
+            row.push(value);
+            value = "";
+            continue;
+        }
+
+        if (!insideQuotes && (char === "\n" || char === "\r")) {
+            row.push(value);
+            rows.push(row);
+            row = [];
+            value = "";
+
+            if (char === "\r" && nextChar === "\n") {
+                index += 1;
+            }
+
+            continue;
+        }
+
+        value += char;
+    }
+
+    if (value || row.length > 0) {
+        row.push(value);
+        rows.push(row);
+    }
+
+    return rows.filter(csvRow => csvRow.some(cell => cell.trim()));
 }
 
 
