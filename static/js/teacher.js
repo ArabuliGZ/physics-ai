@@ -36,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function initTeacherSession() {
+    ensureTeacherShell();
+
     const params = new URLSearchParams(window.location.search);
 
     if (params.get("logout") === "1") {
@@ -63,6 +65,94 @@ function initTeacherSession() {
     if (TEACHER_STATE.user) {
         loadTeacherDashboard();
     }
+}
+
+
+function ensureTeacherShell() {
+    ensureTeacherTopbarActions();
+    ensureTeacherMessageDialog();
+}
+
+
+function ensureTeacherTopbarActions() {
+    const actions = document.querySelector(".teacher-topbar-actions");
+    const logoutButton = actions?.querySelector(".teacher-logout-button");
+
+    if (!actions || !logoutButton) {
+        return;
+    }
+
+    if (!actions.querySelector("[data-teacher-password-action]")) {
+        const passwordButton = document.createElement("button");
+
+        passwordButton.type = "button";
+        passwordButton.className = "teacher-secondary-button";
+        passwordButton.dataset.teacherPasswordAction = "true";
+        passwordButton.textContent = "Сменить пароль";
+        passwordButton.addEventListener("click", openTeacherPasswordDialog);
+        actions.insertBefore(passwordButton, logoutButton);
+    }
+
+    if (!actions.querySelector("[data-demo-password-reset-action]")) {
+        const resetButton = document.createElement("button");
+
+        resetButton.type = "button";
+        resetButton.className = "teacher-secondary-button";
+        resetButton.dataset.adminOnly = "true";
+        resetButton.dataset.demoPasswordResetAction = "true";
+        resetButton.hidden = true;
+        resetButton.textContent = "Сбросить demo-пароли";
+        resetButton.addEventListener("click", resetDemoPasswords);
+        actions.insertBefore(resetButton, logoutButton);
+    }
+}
+
+
+function ensureTeacherMessageDialog() {
+    if (document.getElementById("teacher_message_dialog")) {
+        return;
+    }
+
+    const dialog = document.createElement("div");
+
+    dialog.id = "teacher_message_dialog";
+    dialog.className = "teacher-dialog";
+    dialog.hidden = true;
+    dialog.innerHTML = `
+        <div
+            class="teacher-dialog-backdrop"
+            onclick="closeTeacherMessageDialog()"
+        ></div>
+
+        <section class="teacher-dialog-panel">
+            <div class="teacher-dialog-header">
+                <h2 id="teacher_message_title">Сообщение</h2>
+
+                <button
+                    type="button"
+                    class="teacher-dialog-close"
+                    onclick="closeTeacherMessageDialog()"
+                    aria-label="Закрыть"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <p id="teacher_message_text"></p>
+
+            <div class="teacher-dialog-actions teacher-confirm-actions">
+                <button
+                    id="teacher_message_accept"
+                    type="button"
+                    class="teacher-secondary-button teacher-confirm-accept"
+                    onclick="closeTeacherMessageDialog()"
+                >
+                    Понятно
+                </button>
+            </div>
+        </section>
+    `;
+    document.body.appendChild(dialog);
 }
 
 
@@ -426,12 +516,16 @@ async function resetDemoPasswords() {
             throw new Error(data.detail || "demo password reset failed");
         }
 
-        alert(
-            `Готово. Сброшено: учителей/админов ${data.users_updated || 0}, учеников ${data.students_updated || 0}.`
-        );
+        showTeacherMessage({
+            title: "Готово",
+            message: `Сброшено: учителей/админов ${data.users_updated || 0}, учеников ${data.students_updated || 0}.`,
+        });
     } catch (error) {
         console.error("Demo password reset failed:", error);
-        alert("Не получилось сбросить тестовые пароли.");
+        showTeacherMessage({
+            title: "Не получилось",
+            message: "Не получилось сбросить тестовые пароли.",
+        });
     }
 }
 
@@ -2208,7 +2302,10 @@ async function saveAdminClassEdit(classId) {
     const teacherId = document.getElementById(`admin_class_edit_teacher_${classId}`)?.value || "";
 
     if (!school || !grade || !classGroup || !taskClassId || (isAdmin && !teacherId)) {
-        alert("Заполни школу, класс, базу задач и учителя.");
+        showTeacherMessage({
+            title: "Заполни поля",
+            message: "Заполни школу, класс, базу задач и учителя.",
+        });
         return;
     }
 
@@ -2241,11 +2338,14 @@ async function saveAdminClassEdit(classId) {
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Class update failed:", error);
-        alert(error.message === "class_already_exists"
-            ? "Такой класс уже есть у выбранного учителя."
-            : error.message === "teacher_not_found"
-                ? "Выбранный учитель недоступен."
-                : "Не получилось сохранить класс.");
+        showTeacherMessage({
+            title: "Не получилось",
+            message: error.message === "class_already_exists"
+                ? "Такой класс уже есть у выбранного учителя."
+                : error.message === "teacher_not_found"
+                    ? "Выбранный учитель недоступен."
+                    : "Не получилось сохранить класс.",
+        });
     }
 }
 
@@ -2273,7 +2373,10 @@ async function updateAdminClassTeacher(classId, teacherId) {
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Class teacher update failed:", error);
-        alert("Не получилось назначить учителя классу.");
+        showTeacherMessage({
+            title: "Не получилось",
+            message: "Не получилось назначить учителя классу.",
+        });
         renderAdminClasses();
     }
 }
@@ -2436,11 +2539,14 @@ async function runAdminAction(url, errorMessage) {
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Admin action failed:", error);
-        alert(error.message === "School has active classes"
-            ? "Сначала архивируй активные классы этой школы."
-            : error.message === "Teacher has active classes"
-                ? "Сначала архивируй или передай активные классы этого учителя."
-            : errorMessage);
+        showTeacherMessage({
+            title: "Не получилось",
+            message: error.message === "School has active classes"
+                ? "Сначала архивируй активные классы этой школы."
+                : error.message === "Teacher has active classes"
+                    ? "Сначала архивируй или передай активные классы этого учителя."
+                    : errorMessage,
+        });
     }
 }
 
@@ -3097,7 +3203,10 @@ async function downloadTeacherJournalCsv() {
         URL.revokeObjectURL(url);
     } catch (error) {
         console.error("Teacher journal export failed:", error);
-        alert("Не получилось скачать CSV.");
+        showTeacherMessage({
+            title: "Не получилось",
+            message: "Не получилось скачать CSV.",
+        });
     } finally {
         button.disabled = false;
     }
@@ -3495,6 +3604,21 @@ function closeTeacherConfirmDialog(confirmed) {
     if (resolver) {
         resolver(Boolean(confirmed));
     }
+}
+
+
+function showTeacherMessage({ title = "Сообщение", message, acceptText = "Понятно" }) {
+    const dialog = document.getElementById("teacher_message_dialog");
+
+    document.getElementById("teacher_message_title").textContent = title;
+    document.getElementById("teacher_message_text").textContent = message;
+    document.getElementById("teacher_message_accept").textContent = acceptText;
+    dialog.hidden = false;
+}
+
+
+function closeTeacherMessageDialog() {
+    document.getElementById("teacher_message_dialog").hidden = true;
 }
 
 

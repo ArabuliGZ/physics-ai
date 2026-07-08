@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Журнал учителя</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -224,6 +227,7 @@
                 <button
                     type="button"
                     class="teacher-secondary-button"
+                    data-teacher-password-action="true"
                     onclick="openTeacherPasswordDialog()"
                 >
                     Сменить пароль
@@ -233,6 +237,7 @@
                     type="button"
                     class="teacher-secondary-button"
                     data-admin-only="true"
+                    data-demo-password-reset-action="true"
                     onclick="resetDemoPasswords()"
                     hidden
                 >
@@ -682,6 +687,45 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=teacher-password-reset-1"></script>
+    <div
+        id="teacher_message_dialog"
+        class="teacher-dialog"
+        hidden
+    >
+        <div
+            class="teacher-dialog-backdrop"
+            onclick="closeTeacherMessageDialog()"
+        ></div>
+
+        <section class="teacher-dialog-panel">
+            <div class="teacher-dialog-header">
+                <h2 id="teacher_message_title">Сообщение</h2>
+
+                <button
+                    type="button"
+                    class="teacher-dialog-close"
+                    onclick="closeTeacherMessageDialog()"
+                    aria-label="Закрыть"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <p id="teacher_message_text"></p>
+
+            <div class="teacher-dialog-actions teacher-confirm-actions">
+                <button
+                    id="teacher_message_accept"
+                    type="button"
+                    class="teacher-secondary-button teacher-confirm-accept"
+                    onclick="closeTeacherMessageDialog()"
+                >
+                    Понятно
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/js/teacher.js?v=teacher-topbar-20260709"></script>
 </body>
 </html>
