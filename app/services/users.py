@@ -350,3 +350,38 @@ def restore_teacher(teacher_id):
             "id": teacher_id,
             "is_active": 1,
         }
+
+
+def reset_teacher_password(teacher_id):
+    """Reset a teacher password to the shared temporary value."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE id = ?
+              AND role = 'teacher'
+            LIMIT 1
+            """,
+            (teacher_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE users
+            SET password_hash = ?,
+                must_change_password = 1
+            WHERE id = ?
+              AND role = 'teacher'
+            """,
+            (hash_password(DEFAULT_TEST_PASSWORD), teacher_id),
+        )
+
+        return {
+            "ok": True,
+            "temporary_password": DEFAULT_TEST_PASSWORD,
+        }

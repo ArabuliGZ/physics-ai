@@ -76,6 +76,44 @@ def seed_demo_data():
     }
 
 
+def reset_demo_passwords():
+    """Reset public demo accounts to the shared temporary password."""
+
+    password_hash = hash_password(DEFAULT_TEST_PASSWORD)
+    demo_user_emails = ("teacher@test.ru", "admin@test.ru")
+    demo_student_emails = [
+        demo_email(grade, index)
+        for grade in GRADES
+        for index in range(1, STUDENTS_PER_GRADE + 1)
+    ]
+
+    with database_connection() as connection:
+        users_updated = connection.execute(
+            f"""
+            UPDATE users
+            SET password_hash = ?,
+                must_change_password = 0
+            WHERE lower(email) IN ({",".join("?" for _ in demo_user_emails)})
+            """,
+            (password_hash, *demo_user_emails),
+        ).rowcount
+
+        students_updated = connection.execute(
+            f"""
+            UPDATE students
+            SET password_hash = ?,
+                must_change_password = 0
+            WHERE lower(email) IN ({",".join("?" for _ in demo_student_emails)})
+            """,
+            (password_hash, *demo_student_emails),
+        ).rowcount
+
+    return {
+        "users_updated": users_updated,
+        "students_updated": students_updated,
+    }
+
+
 def group_tasks_by_class():
     """Group task metadata by class id."""
 
@@ -108,7 +146,7 @@ def ensure_demo_user(connection, email, role, full_name):
         INSERT INTO users (email, password_hash, must_change_password, role, full_name, is_active)
         VALUES (?, ?, 0, ?, ?, 1)
         ON CONFLICT(email) DO UPDATE SET
-            password_hash = COALESCE(users.password_hash, excluded.password_hash),
+            password_hash = excluded.password_hash,
             must_change_password = 0,
             role = excluded.role,
             full_name = excluded.full_name,
@@ -196,6 +234,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
         """
         UPDATE students
         SET teacher_id = ?,
+            password_hash = ?,
             must_change_password = 0,
             school = ?,
             class_name = ?,
@@ -208,6 +247,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
         """,
         (
             teacher_id,
+            password_hash,
             DEMO_SCHOOL,
             class_name,
             grade,

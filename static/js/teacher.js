@@ -26,6 +26,7 @@
     currentJournal: null,
     activeView: "classes",
     confirmResolver: null,
+    passwordDialogOpen: false,
 };
 
 
@@ -101,15 +102,52 @@ function mustChangePassword(value) {
 
 function renderTeacherPasswordPrompt() {
     const passwordModal = document.getElementById("teacher_password_modal");
+    const cancelButton = document.getElementById("teacher_password_cancel");
 
     if (!passwordModal) {
         return;
     }
 
-    passwordModal.hidden = !(
+    const isRequired = (
         TEACHER_STATE.user
         && mustChangePassword(TEACHER_STATE.user.must_change_password)
     );
+    const isOpen = Boolean(TEACHER_STATE.user && TEACHER_STATE.passwordDialogOpen);
+
+    passwordModal.hidden = !(isRequired || isOpen);
+
+    if (cancelButton) {
+        cancelButton.hidden = isRequired;
+    }
+}
+
+
+function openTeacherPasswordDialog() {
+    if (!TEACHER_STATE.user) {
+        return;
+    }
+
+    TEACHER_STATE.passwordDialogOpen = true;
+    renderTeacherPasswordPrompt();
+}
+
+
+function closeTeacherPasswordDialog() {
+    if (mustChangePassword(TEACHER_STATE.user?.must_change_password)) {
+        return;
+    }
+
+    TEACHER_STATE.passwordDialogOpen = false;
+    clearTeacherPasswordForm();
+    renderTeacherPasswordPrompt();
+}
+
+
+function clearTeacherPasswordForm() {
+    document.getElementById("teacher_current_password").value = "";
+    document.getElementById("teacher_new_password").value = "";
+    document.getElementById("teacher_repeat_password").value = "";
+    document.getElementById("teacher_password_error").textContent = "";
 }
 
 
@@ -351,10 +389,9 @@ async function handleTeacherPasswordChange(event) {
         }
 
         TEACHER_STATE.user.must_change_password = 0;
+        TEACHER_STATE.passwordDialogOpen = false;
         localStorage.setItem("physics_ai_teacher", JSON.stringify(TEACHER_STATE.user));
-        document.getElementById("teacher_current_password").value = "";
-        document.getElementById("teacher_new_password").value = "";
-        document.getElementById("teacher_repeat_password").value = "";
+        clearTeacherPasswordForm();
         renderTeacherSession();
     } catch (error) {
         console.error("Teacher password change failed:", error);
@@ -363,6 +400,38 @@ async function handleTeacherPasswordChange(event) {
             : "Не получилось сменить пароль.";
     } finally {
         button.disabled = false;
+    }
+}
+
+
+async function resetDemoPasswords() {
+    const confirmed = await showTeacherConfirm({
+        title: "Сброс тестовых паролей",
+        message: "Вернуть пароль test для teacher@test.ru, admin@test.ru и demo-учеников?",
+        acceptText: "Сбросить",
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await teacherFetch(
+            "/admin/demo-passwords/reset",
+            { method: "POST" }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "demo password reset failed");
+        }
+
+        alert(
+            `Готово. Сброшено: учителей/админов ${data.users_updated || 0}, учеников ${data.students_updated || 0}.`
+        );
+    } catch (error) {
+        console.error("Demo password reset failed:", error);
+        alert("Не получилось сбросить тестовые пароли.");
     }
 }
 
@@ -393,6 +462,7 @@ function logoutTeacher() {
     TEACHER_STATE.students = [];
     TEACHER_STATE.selectedFilters = null;
     TEACHER_STATE.currentJournal = null;
+    TEACHER_STATE.passwordDialogOpen = false;
     resetTeacherWorkspaceUi();
     localStorage.removeItem("physics_ai_teacher");
     renderTeacherSession();
@@ -610,6 +680,15 @@ function renderAdminTeacherNameCell(teacher, isEditing) {
                 title="Редактировать учителя"
             >
                 &#9998;
+            </button>
+            <button
+                type="button"
+                class="teacher-admin-icon-button teacher-admin-reset-password"
+                onclick="resetAdminTeacherPassword(${teacher.id}, '${escapeJs(teacher.full_name)}')"
+                aria-label="Сбросить пароль учителя"
+                title="Сбросить пароль учителя"
+            >
+                &#128273;
             </button>
             <span class="teacher-admin-cell-text">${escapeHtml(teacher.full_name)}</span>
         </div>
@@ -2232,6 +2311,46 @@ async function restoreAdminTeacher(teacherId) {
 }
 
 
+async function resetAdminTeacherPassword(teacherId, teacherName) {
+    const confirmed = await showTeacherConfirm({
+        title: "Сбросить пароль",
+        message: `Сбросить пароль учителя ${teacherName} на test? При входе он должен будет задать новый пароль.`,
+        acceptText: "Сбросить",
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await teacherFetch(
+            `/admin/teachers/${teacherId}/reset-password`,
+            {
+                method: "POST",
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "teacher password reset failed");
+        }
+
+        const result = document.getElementById("admin_teacher_result");
+
+        if (result) {
+            result.textContent = `Пароль учителя сброшен на ${data.temporary_password || "test"}.`;
+        }
+    } catch (error) {
+        console.error("Teacher password reset failed:", error);
+        const result = document.getElementById("admin_teacher_result");
+
+        if (result) {
+            result.textContent = "Не получилось сбросить пароль учителя.";
+        }
+    }
+}
+
+
 async function deactivateAdminSchool(schoolId) {
     const school = TEACHER_STATE.adminSchools.find(item => item.id === schoolId);
 
@@ -3069,7 +3188,16 @@ function renderJournalTable(journal) {
                                     <strong>${escapeHtml(student.full_name)}</strong>
                                     <button
                                         type="button"
-                                        class="teacher-remove-student"
+                                        class="teacher-student-icon-button teacher-reset-student-password"
+                                        onclick="resetTeacherStudentPassword(${student.id}, '${escapeJs(student.full_name)}')"
+                                        aria-label="Сбросить пароль ученика"
+                                        title="Сбросить пароль ученика"
+                                    >
+                                        &#128273;
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="teacher-student-icon-button teacher-remove-student"
                                         onclick="deactivateTeacherStudent(${student.id})"
                                         aria-label="Убрать ученика из журнала"
                                         title="Убрать ученика из журнала"
@@ -3093,6 +3221,40 @@ function renderJournalTable(journal) {
             </tbody>
         </table>
     `;
+}
+
+
+async function resetTeacherStudentPassword(studentId, studentName) {
+    const confirmed = await showTeacherConfirm({
+        title: "Сбросить пароль",
+        message: `Сбросить пароль ученика ${studentName} на test? При входе он должен будет задать новый пароль.`,
+        acceptText: "Сбросить",
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await teacherFetch(
+            `/teacher/students/${studentId}/reset-password`,
+            {
+                method: "POST",
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "student password reset failed");
+        }
+
+        document.getElementById("teacher_single_result").textContent =
+            `Пароль сброшен на ${data.temporary_password || "test"}.`;
+    } catch (error) {
+        console.error("Student password reset failed:", error);
+        document.getElementById("teacher_single_result").textContent =
+            "Не получилось сбросить пароль.";
+    }
 }
 
 
@@ -3555,5 +3717,14 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll("\"", "&quot;")
         .replaceAll("'", "&#039;");
+}
+
+
+function escapeJs(value) {
+    return String(value ?? "")
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll("\n", "\\n")
+        .replaceAll("\r", "\\r");
 }
 

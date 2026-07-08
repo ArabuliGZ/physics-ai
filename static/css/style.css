@@ -187,7 +187,8 @@
 
         .teacher-entry a,
         .teacher-link,
-        .teacher-secondary-button {
+        .teacher-secondary-button,
+        .student-password-button {
 
             display: inline-flex;
 
@@ -333,6 +334,20 @@
             background: #fee2e2;
         }
 
+        .password-cancel-button {
+
+            background: #f9fafb;
+
+            color: #374151;
+
+            border: 1px solid #e5e7eb;
+        }
+
+        .password-cancel-button:hover {
+
+            background: #f3f4f6;
+        }
+
         .student-modal {
 
             position: fixed;
@@ -474,9 +489,9 @@
 
         .password-change-card {
 
-            height: 320px;
+            height: 372px;
 
-            grid-template-rows: 28px 42px 42px 42px 38px 34px;
+            grid-template-rows: 28px 42px 42px 42px 38px 38px 34px;
         }
 
         .student-teacher-link:hover {
@@ -1895,6 +1910,10 @@
     background: #fff1df;
 }
 
+.teacher-admin-reset-password:hover {
+    color: #92400e;
+}
+
 .teacher-admin-class-name-edit {
     display: grid;
     grid-template-columns: minmax(58px, 0.6fr) minmax(52px, 1fr);
@@ -2194,7 +2213,12 @@
     gap: 10px;
 }
 
-.teacher-remove-student {
+.teacher-student-cell strong {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.teacher-student-icon-button {
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
@@ -2210,13 +2234,25 @@
     opacity: 0.35;
 }
 
-.teacher-remove-student:hover {
-    color: #b91c1c;
-    background: #fee2e2;
+.teacher-reset-student-password {
+    font-size: 13px;
+}
+
+.teacher-student-icon-button:hover {
     opacity: 1;
 }
 
-.teacher-journal tbody tr:hover .teacher-remove-student {
+.teacher-reset-student-password:hover {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.teacher-remove-student:hover {
+    color: #b91c1c;
+    background: #fee2e2;
+}
+
+.teacher-journal tbody tr:hover .teacher-student-icon-button {
     opacity: 0.9;
 }
 

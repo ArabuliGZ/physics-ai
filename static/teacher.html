@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=password-change-2">
+    <link rel="stylesheet" href="/static/css/style.css?v=teacher-password-reset-1">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -119,6 +119,15 @@
                 Сохранить
             </button>
 
+            <button
+                id="teacher_password_cancel"
+                type="button"
+                class="password-cancel-button"
+                onclick="closeTeacherPasswordDialog()"
+            >
+                Отмена
+            </button>
+
             <div
                 id="teacher_password_error"
                 class="student-error"
@@ -211,6 +220,24 @@
                     id="teacher_user_name"
                     class="app-user-pill teacher-user-pill"
                 ></div>
+
+                <button
+                    type="button"
+                    class="teacher-secondary-button"
+                    onclick="openTeacherPasswordDialog()"
+                >
+                    Сменить пароль
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-secondary-button"
+                    data-admin-only="true"
+                    onclick="resetDemoPasswords()"
+                    hidden
+                >
+                    &#1057;&#1073;&#1088;&#1086;&#1089;&#1080;&#1090;&#1100; demo-&#1087;&#1072;&#1088;&#1086;&#1083;&#1080;
+                </button>
 
                 <button
                     type="button"
@@ -655,6 +682,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=single-student-class-fix-4"></script>
+    <script src="/static/js/teacher.js?v=teacher-password-reset-1"></script>
 </body>
 </html>

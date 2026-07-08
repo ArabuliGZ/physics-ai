@@ -280,6 +280,37 @@ def change_student_password(student_id, current_password, new_password):
         return {"ok": True}
 
 
+def reset_student_password(student_id):
+    """Reset a student password to the shared temporary password."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM students
+            WHERE id = ?
+              AND is_active = 1
+            LIMIT 1
+            """,
+            (student_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE students
+            SET password_hash = ?,
+                must_change_password = 1
+            WHERE id = ?
+            """,
+            (hash_password(DEFAULT_TEST_PASSWORD), student_id),
+        )
+
+        return {"ok": True, "temporary_password": DEFAULT_TEST_PASSWORD}
+
+
 def upsert_student_by_email(
     email,
     full_name,

@@ -5,6 +5,7 @@
 
 function clearSavedStudent() {
     STATE.student.current = null;
+    STATE.student.passwordDialogOpen = false;
 }
 
 
@@ -57,15 +58,52 @@ function mustChangePassword(value) {
 
 function renderStudentPasswordPrompt() {
     const passwordModal = document.getElementById("student_password_modal");
+    const cancelButton = document.getElementById("student_password_cancel");
 
     if (!passwordModal) {
         return;
     }
 
-    passwordModal.hidden = !(
+    const isRequired = (
         STATE.student.current
         && mustChangePassword(STATE.student.current.must_change_password)
     );
+    const isOpen = Boolean(STATE.student.current && STATE.student.passwordDialogOpen);
+
+    passwordModal.hidden = !(isRequired || isOpen);
+
+    if (cancelButton) {
+        cancelButton.hidden = isRequired;
+    }
+}
+
+
+function openStudentPasswordDialog() {
+    if (!STATE.student.current) {
+        return;
+    }
+
+    STATE.student.passwordDialogOpen = true;
+    renderStudentPasswordPrompt();
+}
+
+
+function closeStudentPasswordDialog() {
+    if (mustChangePassword(STATE.student.current?.must_change_password)) {
+        return;
+    }
+
+    STATE.student.passwordDialogOpen = false;
+    clearStudentPasswordForm();
+    renderStudentPasswordPrompt();
+}
+
+
+function clearStudentPasswordForm() {
+    document.getElementById("student_current_password").value = "";
+    document.getElementById("student_new_password").value = "";
+    document.getElementById("student_repeat_password").value = "";
+    document.getElementById("student_password_error").textContent = "";
 }
 
 
@@ -208,9 +246,8 @@ async function handleStudentPasswordChange(event) {
         }
 
         STATE.student.current.must_change_password = 0;
-        document.getElementById("student_current_password").value = "";
-        document.getElementById("student_new_password").value = "";
-        document.getElementById("student_repeat_password").value = "";
+        STATE.student.passwordDialogOpen = false;
+        clearStudentPasswordForm();
         renderStudentSession();
     } catch (error) {
         console.error("Student password change failed:", error);

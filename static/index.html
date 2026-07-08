@@ -32,7 +32,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/style.css?v=password-change-2"
+        href="/static/css/style.css?v=student-password-reset-1"
     />
 
 
@@ -106,6 +106,14 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
         <div class="app-topbar-actions">
             <span id="student_name" class="app-user-pill"></span>
+
+            <button
+                type="button"
+                class="student-password-button"
+                onclick="openStudentPasswordDialog()"
+            >
+                Сменить пароль
+            </button>
 
             <button
                 type="button"
@@ -204,6 +212,15 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
                 type="submit"
             >
                 Сохранить
+            </button>
+
+            <button
+                id="student_password_cancel"
+                type="button"
+                class="password-cancel-button"
+                onclick="closeStudentPasswordDialog()"
+            >
+                Отмена
             </button>
 
             <div
@@ -418,7 +435,7 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
 <script src="/static/js/chat.js?v=password-change-2"></script>
 
-<script src="/static/js/students.js?v=password-change-2"></script>
+<script src="/static/js/students.js?v=manual-password-change-2"></script>
 
 <script src="/static/js/main.js"></script>
 

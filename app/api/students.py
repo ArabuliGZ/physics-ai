@@ -22,6 +22,7 @@ from app.schemas import ChangePasswordRequest
 from app.schemas import ClassUpdateRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
+from app.demo_seed import reset_demo_passwords
 from app.services.classes import deactivate_teacher_class
 from app.services.classes import ensure_teacher_class
 from app.services.classes import get_teacher_class
@@ -57,6 +58,7 @@ from app.services.students import find_student_by_email
 from app.services.students import get_student
 from app.services.students import list_students
 from app.services.students import list_students_with_summary
+from app.services.students import reset_student_password
 from app.services.students import upsert_student_by_email
 from app.services.task_store import TASKS
 from app.services.users import authenticate_user
@@ -65,6 +67,7 @@ from app.services.users import deactivate_teacher
 from app.services.users import find_user_by_email
 from app.services.users import get_active_teacher
 from app.services.users import list_admin_teachers
+from app.services.users import reset_teacher_password
 from app.services.users import restore_teacher
 from app.services.users import upsert_teacher
 
@@ -797,6 +800,28 @@ def restore_admin_teacher(teacher_id: int, current_user=Depends(require_admin_us
     return result
 
 
+@router.post("/admin/teachers/{teacher_id}/reset-password")
+def reset_admin_teacher_password(teacher_id: int, current_user=Depends(require_admin_user)):
+    """Reset a teacher password to the shared temporary password."""
+
+    result = reset_teacher_password(teacher_id)
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Teacher not found"
+        )
+
+    return result
+
+
+@router.post("/admin/demo-passwords/reset")
+def reset_admin_demo_passwords(current_user=Depends(require_admin_user)):
+    """Reset public demo accounts to the shared temporary password."""
+
+    return reset_demo_passwords()
+
+
 @router.post("/teacher/import-students")
 async def import_teacher_students(
     school: str = Form(...),
@@ -1010,6 +1035,39 @@ def deactivate_teacher_student(
     """Hide one student from teacher journals without deleting history."""
 
     result = deactivate_student(student_id, teacher_scope_id(current_user))
+
+    if result is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Active student not found"
+        )
+
+    return result
+
+
+@router.post("/teacher/students/{student_id}/reset-password")
+def reset_teacher_student_password(
+    student_id: int,
+    current_user=Depends(require_teacher_user),
+):
+    """Reset one student password to the shared temporary password."""
+
+    student = get_student(student_id)
+    scope_id = teacher_scope_id(current_user)
+
+    if student is None or student["is_active"] != 1:
+        raise HTTPException(
+            status_code=404,
+            detail="Active student not found"
+        )
+
+    if scope_id is not None and student["teacher_id"] != scope_id:
+        raise HTTPException(
+            status_code=403,
+            detail="This student is not assigned to the selected teacher"
+        )
+
+    result = reset_student_password(student_id)
 
     if result is None:
         raise HTTPException(
