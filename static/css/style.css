@@ -472,6 +472,13 @@
             margin-bottom: 0;
         }
 
+        .password-change-card {
+
+            height: 320px;
+
+            grid-template-rows: 28px 42px 42px 42px 38px 34px;
+        }
+
         .student-teacher-link:hover {
 
             background: #f3f4f6;

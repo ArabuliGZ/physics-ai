@@ -79,6 +79,7 @@ function renderTeacherSession() {
         ].join(" · ");
         renderAdminAccess();
         switchTeacherView("classes");
+        renderTeacherPasswordPrompt();
 
         return;
     }
@@ -87,6 +88,28 @@ function renderTeacherSession() {
     app.hidden = true;
     userName.textContent = "";
     renderAdminAccess();
+    renderTeacherPasswordPrompt();
+}
+
+
+function mustChangePassword(value) {
+    return value === true
+        || Number(value) === 1
+        || String(value).toLowerCase() === "true";
+}
+
+
+function renderTeacherPasswordPrompt() {
+    const passwordModal = document.getElementById("teacher_password_modal");
+
+    if (!passwordModal) {
+        return;
+    }
+
+    passwordModal.hidden = !(
+        TEACHER_STATE.user
+        && mustChangePassword(TEACHER_STATE.user.must_change_password)
+    );
 }
 
 
@@ -275,6 +298,69 @@ async function handleTeacherLogin(event) {
     } catch (error) {
         console.error("Teacher login failed:", error);
         errorBox.textContent = `Не получилось войти: ${error.message}`;
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
+async function handleTeacherPasswordChange(event) {
+    event.preventDefault();
+
+    const button = document.getElementById("teacher_password_button");
+    const errorBox = document.getElementById("teacher_password_error");
+    const payload = {
+        current_password: document.getElementById("teacher_current_password").value,
+        new_password: document.getElementById("teacher_new_password").value,
+        repeat_password: document.getElementById("teacher_repeat_password").value,
+    };
+
+    if (!payload.current_password || !payload.new_password || !payload.repeat_password) {
+        errorBox.textContent = "Заполни все поля.";
+        return;
+    }
+
+    if (payload.new_password !== payload.repeat_password) {
+        errorBox.textContent = "Новые пароли не совпадают.";
+        return;
+    }
+
+    if (payload.new_password.length < 6) {
+        errorBox.textContent = "Пароль должен быть не короче 6 символов.";
+        return;
+    }
+
+    button.disabled = true;
+    errorBox.textContent = "";
+
+    try {
+        const response = await teacherFetch(
+            "/auth/change-password",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "password change failed");
+        }
+
+        TEACHER_STATE.user.must_change_password = 0;
+        localStorage.setItem("physics_ai_teacher", JSON.stringify(TEACHER_STATE.user));
+        document.getElementById("teacher_current_password").value = "";
+        document.getElementById("teacher_new_password").value = "";
+        document.getElementById("teacher_repeat_password").value = "";
+        renderTeacherSession();
+    } catch (error) {
+        console.error("Teacher password change failed:", error);
+        errorBox.textContent = error.message === "invalid_current_password"
+            ? "Текущий пароль введён неверно."
+            : "Не получилось сменить пароль.";
     } finally {
         button.disabled = false;
     }

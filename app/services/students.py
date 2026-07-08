@@ -90,13 +90,14 @@ def create_student(
                 teacher_id,
                 email,
                 password_hash,
+                must_change_password,
                 class_name,
                 grade,
                 class_group,
                 task_class_id,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
             """,
             (
                 school,
@@ -119,7 +120,7 @@ def create_student(
         row = connection.execute(
             """
             SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
-                   task_class_id, is_active, full_name, created_at
+                   task_class_id, is_active, must_change_password, full_name, created_at
             FROM students
             WHERE id = ?
             """,
@@ -142,7 +143,7 @@ def find_student(school, class_name, full_name, grade=None, class_group=None):
         row = connection.execute(
             """
             SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
-                   task_class_id, is_active, full_name, created_at
+                   task_class_id, is_active, must_change_password, full_name, created_at
             FROM students
             WHERE school = ?
               AND grade = ?
@@ -205,7 +206,7 @@ def find_student_by_email(email, include_inactive=False):
         row = connection.execute(
             f"""
             SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
-                   task_class_id, is_active, full_name, created_at
+                   task_class_id, is_active, must_change_password, full_name, created_at
             FROM students
             WHERE lower(email) = ?
               {active_clause}
@@ -227,7 +228,7 @@ def authenticate_student(email, password):
         row = connection.execute(
             """
             SELECT id, class_id, teacher_id, email, password_hash, school, class_name,
-                   grade, class_group, task_class_id, is_active, full_name, created_at
+                   grade, class_group, task_class_id, is_active, must_change_password, full_name, created_at
             FROM students
             WHERE lower(email) = ?
               AND is_active = 1
@@ -243,6 +244,40 @@ def authenticate_student(email, password):
         result = row_to_dict(row)
         result.pop("password_hash", None)
         return result
+
+
+def change_student_password(student_id, current_password, new_password):
+    """Change a student password after checking the current password."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, password_hash
+            FROM students
+            WHERE id = ?
+              AND is_active = 1
+            LIMIT 1
+            """,
+            (student_id,),
+        ).fetchone()
+
+        if row is None or not verify_password(current_password, row["password_hash"]):
+            return {
+                "ok": False,
+                "detail": "invalid_current_password",
+            }
+
+        connection.execute(
+            """
+            UPDATE students
+            SET password_hash = ?,
+                must_change_password = 0
+            WHERE id = ?
+            """,
+            (hash_password(new_password), student_id),
+        )
+
+        return {"ok": True}
 
 
 def upsert_student_by_email(
@@ -275,6 +310,7 @@ def upsert_student_by_email(
                 INSERT INTO students (
                     email,
                     password_hash,
+                    must_change_password,
                     class_id,
                     teacher_id,
                     school,
@@ -284,7 +320,7 @@ def upsert_student_by_email(
                     task_class_id,
                     full_name
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized_email,
@@ -339,7 +375,7 @@ def upsert_student_by_email(
         row = connection.execute(
             """
             SELECT id, class_id, teacher_id, email, school, class_name, grade, class_group,
-                   task_class_id, is_active, full_name, created_at
+                   task_class_id, is_active, must_change_password, full_name, created_at
             FROM students
             WHERE id = ?
             """,

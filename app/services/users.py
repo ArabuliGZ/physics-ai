@@ -27,7 +27,7 @@ def find_user_by_email(email):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, email, role, full_name, is_active, created_at
+            SELECT id, email, role, full_name, is_active, must_change_password, created_at
             FROM users
             WHERE lower(email) = ?
               AND is_active = 1
@@ -46,7 +46,7 @@ def authenticate_user(email, password):
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, email, password_hash, role, full_name, is_active, created_at
+            SELECT id, email, password_hash, must_change_password, role, full_name, is_active, created_at
             FROM users
             WHERE lower(email) = ?
               AND is_active = 1
@@ -64,13 +64,47 @@ def authenticate_user(email, password):
         return result
 
 
+def change_user_password(user_id, current_password, new_password):
+    """Change a teacher/admin password after checking the current password."""
+
+    with database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, password_hash
+            FROM users
+            WHERE id = ?
+              AND is_active = 1
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+
+        if row is None or not verify_password(current_password, row["password_hash"]):
+            return {
+                "ok": False,
+                "detail": "invalid_current_password",
+            }
+
+        connection.execute(
+            """
+            UPDATE users
+            SET password_hash = ?,
+                must_change_password = 0
+            WHERE id = ?
+            """,
+            (hash_password(new_password), user_id),
+        )
+
+        return {"ok": True}
+
+
 def get_active_teacher(teacher_id):
     """Return an active teacher by id."""
 
     with database_connection() as connection:
         row = connection.execute(
             """
-            SELECT id, email, role, full_name, is_active, created_at
+            SELECT id, email, role, full_name, is_active, must_change_password, created_at
             FROM users
             WHERE id = ?
               AND role = 'teacher'
@@ -204,8 +238,8 @@ def upsert_teacher(email, full_name, teacher_id=None):
             if existing is None:
                 cursor = connection.execute(
                     """
-                    INSERT INTO users (email, password_hash, role, full_name, is_active)
-                    VALUES (?, ?, 'teacher', ?, 1)
+                    INSERT INTO users (email, password_hash, must_change_password, role, full_name, is_active)
+                    VALUES (?, ?, 1, 'teacher', ?, 1)
                     """,
                     (normalized_email, hash_password(DEFAULT_TEST_PASSWORD), full_name),
                 )
@@ -227,7 +261,7 @@ def upsert_teacher(email, full_name, teacher_id=None):
 
         row = connection.execute(
             """
-            SELECT id, email, role, full_name, is_active, created_at
+            SELECT id, email, role, full_name, is_active, must_change_password, created_at
             FROM users
             WHERE id = ?
             """,

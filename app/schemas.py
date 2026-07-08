@@ -58,6 +58,14 @@ class UserLoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    """Request body for changing a temporary or regular password."""
+
+    current_password: str
+    new_password: str
+    repeat_password: str
+
+
 class AdminTeacherRequest(BaseModel):
     """Request body for creating or updating a teacher."""
 

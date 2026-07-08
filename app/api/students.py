@@ -18,6 +18,7 @@ from app.schemas import StudentLoginRequest
 from app.schemas import AdminClassTeacherRequest
 from app.schemas import AdminSchoolRequest
 from app.schemas import AdminTeacherRequest
+from app.schemas import ChangePasswordRequest
 from app.schemas import ClassUpdateRequest
 from app.schemas import TeacherProgressOverrideRequest
 from app.schemas import UserLoginRequest
@@ -49,6 +50,7 @@ from app.services.sessions import find_student_by_session_token
 from app.services.sessions import find_user_by_session_token
 from app.services.students import allowed_task_class_id
 from app.services.students import authenticate_student
+from app.services.students import change_student_password
 from app.services.students import create_student
 from app.services.students import deactivate_student
 from app.services.students import find_student_by_email
@@ -57,8 +59,9 @@ from app.services.students import list_students
 from app.services.students import list_students_with_summary
 from app.services.students import upsert_student_by_email
 from app.services.task_store import TASKS
-from app.services.users import deactivate_teacher
 from app.services.users import authenticate_user
+from app.services.users import change_user_password
+from app.services.users import deactivate_teacher
 from app.services.users import find_user_by_email
 from app.services.users import get_active_teacher
 from app.services.users import list_admin_teachers
@@ -168,6 +171,43 @@ def require_student_or_legacy(
     return student
 
 
+def current_student_from_token(authorization):
+    """Return the currently logged-in student from a bearer token."""
+
+    token = bearer_token(authorization)
+    student = find_student_by_session_token(token) if token else None
+
+    if student is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Student login is required"
+        )
+
+    return student
+
+
+def validate_new_password(data):
+    """Validate a password change request before touching the database."""
+
+    if not data.current_password or not data.new_password or not data.repeat_password:
+        raise HTTPException(
+            status_code=400,
+            detail="all password fields are required"
+        )
+
+    if data.new_password != data.repeat_password:
+        raise HTTPException(
+            status_code=400,
+            detail="passwords_do_not_match"
+        )
+
+    if len(data.new_password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="password_too_short"
+        )
+
+
 @router.post("/auth/login")
 def login_user(data: UserLoginRequest):
     """Login a role-based user by email and password."""
@@ -200,6 +240,29 @@ def logout_user(
     """Logout the current teacher/admin session token."""
 
     delete_user_session(bearer_token(authorization))
+    return {"ok": True}
+
+
+@router.post("/auth/change-password")
+def change_logged_in_user_password(
+    data: ChangePasswordRequest,
+    current_user=Depends(require_teacher_user),
+):
+    """Change the current teacher/admin password."""
+
+    validate_new_password(data)
+    result = change_user_password(
+        current_user["id"],
+        data.current_password,
+        data.new_password,
+    )
+
+    if not result["ok"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["detail"],
+        )
+
     return {"ok": True}
 
 
@@ -263,6 +326,30 @@ def logout_student(
     """Logout the current student session token."""
 
     delete_student_session(bearer_token(authorization))
+    return {"ok": True}
+
+
+@router.post("/students/change-password")
+def change_logged_in_student_password(
+    data: ChangePasswordRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+):
+    """Change the current student password."""
+
+    validate_new_password(data)
+    student = current_student_from_token(authorization)
+    result = change_student_password(
+        student["id"],
+        data.current_password,
+        data.new_password,
+    )
+
+    if not result["ok"]:
+        raise HTTPException(
+            status_code=400,
+            detail=result["detail"],
+        )
+
     return {"ok": True}
 
 

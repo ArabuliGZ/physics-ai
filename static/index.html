@@ -32,7 +32,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/style.css?v=soft-orange-bubble-1"
+        href="/static/css/style.css?v=password-change-2"
     />
 
 
@@ -162,6 +162,52 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
 
             <div
                 id="student_login_error"
+                class="student-error"
+            ></div>
+        </form>
+    </div>
+
+    <div
+        id="student_password_modal"
+        class="student-modal"
+        hidden
+    >
+        <form
+            class="student-card password-change-card"
+            onsubmit="handleStudentPasswordChange(event)"
+        >
+            <h2>Смена пароля</h2>
+
+            <input
+                id="student_current_password"
+                type="password"
+                placeholder="Текущий пароль"
+                autocomplete="current-password"
+            >
+
+            <input
+                id="student_new_password"
+                type="password"
+                placeholder="Новый пароль"
+                autocomplete="new-password"
+            >
+
+            <input
+                id="student_repeat_password"
+                type="password"
+                placeholder="Повтори новый пароль"
+                autocomplete="new-password"
+            >
+
+            <button
+                id="student_password_button"
+                type="submit"
+            >
+                Сохранить
+            </button>
+
+            <div
+                id="student_password_error"
                 class="student-error"
             ></div>
         </form>
@@ -364,15 +410,15 @@ src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
         ></div>
     </div>
 
-<script src="/static/js/state.js?v=student-progress-stable-1"></script>
+<script src="/static/js/state.js?v=password-change-2"></script>
 
 <script src="/static/js/ui.js?v=student-bugfixes-1"></script>
 
-<script src="/static/js/tasks.js?v=student-progress-stable-1"></script>
+<script src="/static/js/tasks.js?v=password-change-2"></script>
 
-<script src="/static/js/chat.js?v=student-progress-stable-1"></script>
+<script src="/static/js/chat.js?v=password-change-2"></script>
 
-<script src="/static/js/students.js?v=student-progress-stable-1"></script>
+<script src="/static/js/students.js?v=password-change-2"></script>
 
 <script src="/static/js/main.js"></script>
 

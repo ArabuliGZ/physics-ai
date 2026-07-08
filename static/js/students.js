@@ -36,6 +36,7 @@ function renderStudentSession() {
 
         bar.hidden = false;
         modal.hidden = true;
+        renderStudentPasswordPrompt();
 
         return;
     }
@@ -43,6 +44,28 @@ function renderStudentSession() {
     name.textContent = "";
     bar.hidden = true;
     modal.hidden = false;
+    renderStudentPasswordPrompt();
+}
+
+
+function mustChangePassword(value) {
+    return value === true
+        || Number(value) === 1
+        || String(value).toLowerCase() === "true";
+}
+
+
+function renderStudentPasswordPrompt() {
+    const passwordModal = document.getElementById("student_password_modal");
+
+    if (!passwordModal) {
+        return;
+    }
+
+    passwordModal.hidden = !(
+        STATE.student.current
+        && mustChangePassword(STATE.student.current.must_change_password)
+    );
 }
 
 
@@ -131,6 +154,69 @@ async function handleStudentLogin(event) {
     } catch (error) {
         console.error("Student login failed:", error);
         errorBox.textContent = "Неверный email или пароль.";
+    } finally {
+        button.disabled = false;
+    }
+}
+
+
+async function handleStudentPasswordChange(event) {
+    event.preventDefault();
+
+    const button = document.getElementById("student_password_button");
+    const errorBox = document.getElementById("student_password_error");
+    const payload = {
+        current_password: document.getElementById("student_current_password").value,
+        new_password: document.getElementById("student_new_password").value,
+        repeat_password: document.getElementById("student_repeat_password").value,
+    };
+
+    if (!payload.current_password || !payload.new_password || !payload.repeat_password) {
+        errorBox.textContent = "Заполни все поля.";
+        return;
+    }
+
+    if (payload.new_password !== payload.repeat_password) {
+        errorBox.textContent = "Новые пароли не совпадают.";
+        return;
+    }
+
+    if (payload.new_password.length < 6) {
+        errorBox.textContent = "Пароль должен быть не короче 6 символов.";
+        return;
+    }
+
+    button.disabled = true;
+    errorBox.textContent = "";
+
+    try {
+        const response = await studentFetch(
+            "/students/change-password",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "password change failed");
+        }
+
+        STATE.student.current.must_change_password = 0;
+        document.getElementById("student_current_password").value = "";
+        document.getElementById("student_new_password").value = "";
+        document.getElementById("student_repeat_password").value = "";
+        renderStudentSession();
+    } catch (error) {
+        console.error("Student password change failed:", error);
+        errorBox.textContent = error.message === "invalid_current_password"
+            ? "Текущий пароль введён неверно."
+            : "Не получилось сменить пароль.";
     } finally {
         button.disabled = false;
     }

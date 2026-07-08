@@ -49,6 +49,7 @@ def init_database():
                 teacher_id INTEGER,
                 email TEXT,
                 password_hash TEXT,
+                must_change_password INTEGER NOT NULL DEFAULT 1,
                 school TEXT NOT NULL,
                 class_name TEXT NOT NULL,
                 grade INTEGER,
@@ -57,6 +58,7 @@ def init_database():
                 is_active INTEGER NOT NULL DEFAULT 1,
                 hidden_by_class_archive INTEGER NOT NULL DEFAULT 0,
                 full_name TEXT NOT NULL,
+                last_login_at TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (class_id) REFERENCES classes (id),
                 FOREIGN KEY (teacher_id) REFERENCES users (id)
@@ -66,9 +68,11 @@ def init_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL UNIQUE,
                 password_hash TEXT,
+                must_change_password INTEGER NOT NULL DEFAULT 1,
                 role TEXT NOT NULL CHECK (role IN ('admin', 'teacher')),
                 full_name TEXT NOT NULL,
                 is_active INTEGER NOT NULL DEFAULT 1,
+                last_login_at TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -98,6 +102,7 @@ def init_database():
                 token TEXT PRIMARY KEY,
                 user_id INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             );
 
@@ -105,6 +110,7 @@ def init_database():
                 token TEXT PRIMARY KEY,
                 student_id INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TEXT,
                 FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE
             );
 
@@ -140,6 +146,9 @@ def init_database():
         )
 
         ensure_password_columns(connection)
+        ensure_login_metadata_columns(connection)
+        ensure_must_change_password_columns(connection)
+        ensure_session_expiry_columns(connection)
         ensure_user_rows(connection)
         backfill_password_hashes(connection)
         ensure_student_class_columns(connection)
@@ -164,10 +173,11 @@ def ensure_user_rows(connection):
     for email, role, full_name in users:
         connection.execute(
             """
-            INSERT INTO users (email, password_hash, role, full_name, is_active)
-            VALUES (?, ?, ?, ?, 1)
+            INSERT INTO users (email, password_hash, must_change_password, role, full_name, is_active)
+            VALUES (?, ?, 0, ?, ?, 1)
             ON CONFLICT(email) DO UPDATE SET
                 password_hash = COALESCE(users.password_hash, excluded.password_hash),
+                must_change_password = 0,
                 role = excluded.role,
                 full_name = excluded.full_name,
                 is_active = 1
@@ -187,6 +197,69 @@ def ensure_password_columns(connection):
 
     if "password_hash" not in student_columns:
         connection.execute("ALTER TABLE students ADD COLUMN password_hash TEXT")
+
+
+def ensure_login_metadata_columns(connection):
+    """Add last-login metadata to existing local databases."""
+
+    user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+    student_columns = {row["name"] for row in connection.execute("PRAGMA table_info(students)")}
+
+    if "last_login_at" not in user_columns:
+        connection.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT")
+
+    if "last_login_at" not in student_columns:
+        connection.execute("ALTER TABLE students ADD COLUMN last_login_at TEXT")
+
+
+def ensure_must_change_password_columns(connection):
+    """Add temporary-password flags to existing local databases."""
+
+    user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+    student_columns = {row["name"] for row in connection.execute("PRAGMA table_info(students)")}
+
+    if "must_change_password" not in user_columns:
+        connection.execute(
+            "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0"
+        )
+
+    if "must_change_password" not in student_columns:
+        connection.execute(
+            "ALTER TABLE students ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0"
+        )
+
+
+def ensure_session_expiry_columns(connection):
+    """Add expiration timestamps to existing session tables."""
+
+    user_session_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(user_sessions)").fetchall()
+    }
+    student_session_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(student_sessions)").fetchall()
+    }
+
+    if "expires_at" not in user_session_columns:
+        connection.execute("ALTER TABLE user_sessions ADD COLUMN expires_at TEXT")
+        connection.execute(
+            """
+            UPDATE user_sessions
+            SET expires_at = datetime(COALESCE(created_at, CURRENT_TIMESTAMP), '+30 days')
+            WHERE expires_at IS NULL
+            """
+        )
+
+    if "expires_at" not in student_session_columns:
+        connection.execute("ALTER TABLE student_sessions ADD COLUMN expires_at TEXT")
+        connection.execute(
+            """
+            UPDATE student_sessions
+            SET expires_at = datetime(COALESCE(created_at, CURRENT_TIMESTAMP), '+30 days')
+            WHERE expires_at IS NULL
+            """
+        )
 
 
 def backfill_password_hashes(connection):

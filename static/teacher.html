@@ -16,7 +16,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=journal-select-arrows-1">
+    <link rel="stylesheet" href="/static/css/style.css?v=password-change-2">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -75,6 +75,52 @@
 
             <div
                 id="teacher_login_error"
+                class="student-error"
+            ></div>
+        </form>
+    </div>
+
+    <div
+        id="teacher_password_modal"
+        class="student-modal"
+        hidden
+    >
+        <form
+            class="student-card password-change-card"
+            onsubmit="handleTeacherPasswordChange(event)"
+        >
+            <h2>Смена пароля</h2>
+
+            <input
+                id="teacher_current_password"
+                type="password"
+                placeholder="Текущий пароль"
+                autocomplete="current-password"
+            >
+
+            <input
+                id="teacher_new_password"
+                type="password"
+                placeholder="Новый пароль"
+                autocomplete="new-password"
+            >
+
+            <input
+                id="teacher_repeat_password"
+                type="password"
+                placeholder="Повтори новый пароль"
+                autocomplete="new-password"
+            >
+
+            <button
+                id="teacher_password_button"
+                type="submit"
+            >
+                Сохранить
+            </button>
+
+            <div
+                id="teacher_password_error"
                 class="student-error"
             ></div>
         </form>
@@ -609,6 +655,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=journal-select-arrows-1"></script>
+    <script src="/static/js/teacher.js?v=password-change-2"></script>
 </body>
 </html>

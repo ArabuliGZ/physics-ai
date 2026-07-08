@@ -105,10 +105,11 @@ def ensure_demo_user(connection, email, role, full_name):
 
     connection.execute(
         """
-        INSERT INTO users (email, password_hash, role, full_name, is_active)
-        VALUES (?, ?, ?, ?, 1)
+        INSERT INTO users (email, password_hash, must_change_password, role, full_name, is_active)
+        VALUES (?, ?, 0, ?, ?, 1)
         ON CONFLICT(email) DO UPDATE SET
             password_hash = COALESCE(users.password_hash, excluded.password_hash),
+            must_change_password = 0,
             role = excluded.role,
             full_name = excluded.full_name,
             is_active = 1
@@ -164,6 +165,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
             INSERT INTO students (
                 email,
                 password_hash,
+                must_change_password,
                 teacher_id,
                 school,
                 class_name,
@@ -173,7 +175,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
                 is_active,
                 full_name
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+            VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, 1, ?)
             """,
             (
                 email,
@@ -194,6 +196,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
         """
         UPDATE students
         SET teacher_id = ?,
+            must_change_password = 0,
             school = ?,
             class_name = ?,
             grade = ?,
