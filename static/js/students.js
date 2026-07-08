@@ -1,11 +1,13 @@
 ﻿function saveStudent(student) {
     STATE.student.current = student;
+    localStorage.setItem("physics_ai_student", JSON.stringify(student));
 }
 
 
 function clearSavedStudent() {
     STATE.student.current = null;
     STATE.student.passwordDialogOpen = false;
+    localStorage.removeItem("physics_ai_student");
 }
 
 
@@ -143,8 +145,22 @@ function resetStudentWorkspace() {
 
 
 function initStudentSession() {
-    localStorage.removeItem("physics_ai_student");
-    clearSavedStudent();
+    const savedStudent = localStorage.getItem("physics_ai_student");
+
+    if (savedStudent) {
+        try {
+            STATE.student.current = JSON.parse(savedStudent);
+
+            if (!STATE.student.current?.id || !STATE.student.current?.session_token) {
+                throw new Error("invalid saved student");
+            }
+        } catch {
+            clearSavedStudent();
+        }
+    } else {
+        clearSavedStudent();
+    }
+
     renderStudentSession();
 }
 
@@ -247,6 +263,7 @@ async function handleStudentPasswordChange(event) {
 
         STATE.student.current.must_change_password = 0;
         STATE.student.passwordDialogOpen = false;
+        saveStudent(STATE.student.current);
         clearStudentPasswordForm();
         renderStudentSession();
     } catch (error) {
