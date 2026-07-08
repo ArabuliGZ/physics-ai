@@ -366,7 +366,7 @@ async function showSelectedTask() {
 }
 
 
-async function updateProgressTable() {
+async function updateProgressTable(options = {}) {
     const table = document.getElementById("progress_table");
     const summary = document.getElementById("progress_summary");
 
@@ -377,6 +377,7 @@ async function updateProgressTable() {
     if (!STATE.student.current) {
         table.innerHTML = "<div class=\"progress-empty\">Войди, чтобы видеть прогресс.</div>";
         summary.textContent = "";
+        STATE.progress.renderedClassId = null;
         return;
     }
 
@@ -384,6 +385,12 @@ async function updateProgressTable() {
     if (!group) {
         table.innerHTML = "";
         summary.textContent = "";
+        STATE.progress.renderedClassId = null;
+        return;
+    }
+
+    if (!options.force && STATE.progress.renderedClassId === group) {
+        updateCurrentProgressCell();
         return;
     }
 
@@ -419,8 +426,10 @@ async function updateProgressTable() {
                 ${renderProgressGroups(rows)}
             </div>
         `;
+        STATE.progress.renderedClassId = group;
     } catch {
         table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить прогресс.</div>";
+        STATE.progress.renderedClassId = null;
     }
 }
 

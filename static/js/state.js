@@ -31,5 +31,9 @@ const STATE = {
     upload: {
         attachedFile: null,
         solutionImage: null
+    },
+
+    progress: {
+        renderedClassId: null
     }
 };

@@ -209,7 +209,7 @@ async function checkSolution() {
         }
 
         if (typeof updateProgressTable === "function") {
-            await updateProgressTable();
+            await updateProgressTable({ force: true });
         }
 
     } catch (error) {

@@ -52,6 +52,7 @@ function resetStudentWorkspace() {
 
     STATE.upload.attachedFile = null;
     STATE.upload.solutionImage = null;
+    STATE.progress.renderedClassId = null;
 
     STATE.selected.classId = null;
     STATE.selected.chapter = null;
