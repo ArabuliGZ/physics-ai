@@ -35,8 +35,9 @@ class CheckRequest(BaseModel):
 class StudentCreateRequest(BaseModel):
     """Request body for creating a student profile."""
 
+    teacher_class_id: int | None = None
     email: str | None = None
-    school: str
+    school: str | None = None
     class_name: str | None = None
     grade: int | None = None
     class_group: str | None = None

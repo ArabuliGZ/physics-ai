@@ -2611,20 +2611,27 @@ async function addSingleTeacherStudent(event) {
         return;
     }
 
-    const selectedClass = getSelectedTeacherClass();
+    const teacherClassId = (
+        getSelectedTeacherClass()?.id ||
+        TEACHER_STATE.selectedFilters?.teacherClassId ||
+        TEACHER_STATE.currentJournal?.teacherClassId ||
+        null
+    );
+    const selectedClass = getSelectedTeacherClass() || findTeacherClassById(teacherClassId);
 
-    if (!selectedClass) {
+    if (!teacherClassId) {
         result.textContent = "Сначала открой нужный журнал класса.";
         return;
     }
 
     const payload = {
+        teacher_class_id: teacherClassId,
         full_name: document.getElementById("teacher_single_full_name").value.trim(),
         email: document.getElementById("teacher_single_email").value.trim(),
-        school: selectedClass.school,
-        grade: selectedClass.grade,
-        class_group: selectedClass.class_group,
-        task_class_id: selectedClass.task_class_id,
+        school: selectedClass?.school,
+        grade: selectedClass?.grade,
+        class_group: selectedClass?.class_group,
+        task_class_id: selectedClass?.task_class_id,
     };
 
     if (!payload.full_name || !payload.email) {
@@ -2663,7 +2670,7 @@ async function addSingleTeacherStudent(event) {
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Single student save failed:", error);
-        result.textContent = "Не получилось добавить ученика.";
+        result.textContent = error.message || "Не получилось добавить ученика.";
     } finally {
         button.disabled = false;
     }
@@ -2774,7 +2781,7 @@ function getSelectedTeacherClass() {
     const classKey = document.getElementById("teacher_student_class_select").value;
 
     if (hasTeacherClassRecords()) {
-        return TEACHER_STATE.classes.find(item => String(item.id) === String(classKey)) || null;
+        return findTeacherClassById(classKey);
     }
 
     const [grade, classGroup = ""] = classKey.split("|");
@@ -2797,6 +2804,18 @@ function getSelectedTeacherClass() {
         class_name: student.class_name,
         task_class_id: taskClassId,
     };
+}
+
+
+function findTeacherClassById(classId) {
+    if (!classId) {
+        return null;
+    }
+
+    return [
+        ...TEACHER_STATE.classes,
+        ...TEACHER_STATE.adminClasses,
+    ].find(item => String(item.id) === String(classId)) || null;
 }
 
 

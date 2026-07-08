@@ -389,7 +389,7 @@ def save_class_row(
 ):
     """Validate and save class edits from teacher/admin screens."""
 
-    school = data.school.strip()
+    school = data.school.strip() if data.school else ""
     class_group = data.class_group.strip()
     task_class_id = data.task_class_id.strip()
 
@@ -450,7 +450,7 @@ def save_class_row(
 def create_class_row(data, teacher_id):
     """Validate and create a class row without importing students."""
 
-    school = data.school.strip()
+    school = data.school.strip() if data.school else ""
     class_group = data.class_group.strip()
     task_class_id = data.task_class_id.strip()
 
@@ -925,6 +925,42 @@ def upsert_teacher_student(
             detail="email is required"
         )
 
+    if not data.full_name or not data.full_name.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="full_name is required"
+        )
+
+    scope_id = teacher_scope_id(current_user)
+
+    if data.teacher_class_id is not None:
+        class_record = get_teacher_class(data.teacher_class_id, scope_id)
+
+        if class_record is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Class not found"
+            )
+
+        student = upsert_student_by_email(
+            email=data.email,
+            full_name=data.full_name.strip(),
+            school=class_record["school"],
+            grade=class_record["grade"],
+            class_group=class_record["class_group"],
+            task_class_id=class_record["task_class_id"],
+            teacher_id=class_record["teacher_id"],
+            class_id=class_record["id"],
+        )
+
+        return student
+
+    if current_user["role"] == "admin":
+        raise HTTPException(
+            status_code=400,
+            detail="teacher_class_id is required for admin student creation"
+        )
+
     if not data.school or data.grade is None or not data.class_group or not data.full_name:
         raise HTTPException(
             status_code=400,
@@ -944,7 +980,6 @@ def upsert_teacher_student(
         if data.task_class_id
         else f"{data.grade}class"
     )
-    scope_id = teacher_scope_id(current_user)
     class_record = ensure_teacher_class(
         scope_id,
         school,
