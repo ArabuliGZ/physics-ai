@@ -228,6 +228,16 @@
             background: #f9fafb;
         }
 
+        .app-topbar .student-password-button:hover,
+        .teacher-topbar-actions .teacher-secondary-button[data-teacher-password-action="true"]:hover {
+
+            border-color: #fed7aa;
+
+            background: #fff7ed;
+
+            color: #7c3a08;
+        }
+
 .teacher-admin-add-button {
     justify-self: start;
     min-height: 32px;
