@@ -1,39 +1,26 @@
-import os
+# Non-secret application configuration.
+# Secrets live in .env and are read only where they are needed.
 
 
-def env_int(name, default):
-    value = os.getenv(name)
-
-    if value is None or value.strip() == "":
-        return default
-
-    return int(value)
+# LLM provider selection.
+# Available values: "letovo", "openrouter".
+MODEL_PROVIDER = "letovo"
 
 
-def env_float(name, default):
-    value = os.getenv(name)
-
-    if value is None or value.strip() == "":
-        return default
-
-    return float(value)
+# Letovo Open WebUI / OpenAI-compatible endpoint.
+LETOVO_LLM_API_URL = "https://llm.letovo.site/openai/chat/completions"
+LETOVO_LLM_MODEL = "gemma-4-26b"
 
 
-def env_bool(name, default):
-    value = os.getenv(name)
-
-    if value is None or value.strip() == "":
-        return default
-
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+# OpenRouter fallback. Change MODEL_PROVIDER to "openrouter" to use it.
+# OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
+OPENROUTER_MODEL = "qwen/qwen3-vl-235b-a22b-thinking"
 
 
-# LLM settings. Values can be overridden in .env on the server.
-MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "openrouter")
-#OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-5")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3-vl-235b-a22b-thinking")
-MAX_TOKENS = env_int("MAX_TOKENS", 700)
-TEMPERATURE = env_float("TEMPERATURE", 0.2)
+# Shared LLM generation settings.
+MAX_TOKENS = 700
+TEMPERATURE = 0.2
+LLM_REQUEST_TIMEOUT = 180
 
 
-DEBUG = env_bool("DEBUG", True)
+DEBUG = True

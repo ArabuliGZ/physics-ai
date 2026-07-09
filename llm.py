@@ -4,10 +4,9 @@ import os
 import requests
 from dotenv import load_dotenv
 
-from config import *  # noqa: F403
-
-
 load_dotenv()
+
+from config import *  # noqa: F403
 
 
 # Не даём локальным proxy-переменным случайно перехватывать запросы к LLM.
@@ -18,6 +17,7 @@ os.environ.pop("https_proxy", None)
 
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+LETOVO_LLM_API_KEY = os.getenv("LETOVO_LLM_API_KEY")
 
 
 SYSTEM_PROMPT = """
@@ -229,6 +229,16 @@ def ask_llm(
     problem_image_base64=None,
     task_image_base64=None
 ):
+    if MODEL_PROVIDER == "letovo":  # noqa: F405
+        return ask_letovo_llm(
+            problem_text,
+            solution_text,
+            history,
+            hint_level,
+            problem_image_base64,
+            task_image_base64,
+        )
+
     if MODEL_PROVIDER == "openrouter":  # noqa: F405
         return ask_openrouter(
             problem_text,
@@ -260,23 +270,16 @@ def ask_llm(
     }
 
 
-def ask_openrouter(
+def build_check_payload(
+    model,
     problem_text,
     solution_text,
     history,
     hint_level,
     problem_image_base64=None,
-    task_image_base64=None
+    task_image_base64=None,
+    response_format=None
 ):
-    if not OPENROUTER_API_KEY:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "OPENROUTER_API_KEY is not configured",
-        }
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-
     user_prompt = f"""
 Задача:
 {problem_text}
@@ -286,7 +289,7 @@ def ask_openrouter(
 """
 
     payload = {
-        "model": OPENROUTER_MODEL,  # noqa: F405
+        "model": model,
         "messages": build_messages(
             build_system_prompt(hint_level),
             history,
@@ -298,21 +301,42 @@ def ask_openrouter(
         "temperature": TEMPERATURE,  # noqa: F405
     }
 
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "HTTP-Referer": "https://test.physais.ru",
-        "X-OpenRouter-Title": "Physics AI",
+    if response_format is not None:
+        payload["response_format"] = response_format
+
+    return payload
+
+
+def send_openai_compatible_request(url, payload, headers, provider_name):
+    request_headers = {
         "Content-Type": "application/json",
+        **headers,
     }
 
-    response = requests.post(
-        url,
-        json=payload,
-        headers=headers,
-        timeout=60,
-    )
+    try:
+        response = requests.post(
+            url,
+            json=payload,
+            headers=request_headers,
+            timeout=LLM_REQUEST_TIMEOUT,  # noqa: F405
+        )
+    except requests.exceptions.Timeout:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": (
+                "Модель слишком долго отвечает. "
+                "Попробуй отправить изображение меньшего размера или повторить позже."
+            ),
+        }
+    except requests.exceptions.RequestException as error:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": f"Не удалось подключиться к LLM: {error}",
+        }
 
-    print("OPENROUTER STATUS:", response.status_code)
+    print(f"{provider_name.upper()} STATUS:", response.status_code)
 
     try:
         raw = response.json()
@@ -321,7 +345,7 @@ def ask_openrouter(
             "status": "error",
             "is_passed": False,
             "message": (
-                "OpenRouter returned a non-JSON response "
+                f"{provider_name} returned a non-JSON response "
                 f"with status {response.status_code}"
             ),
         }
@@ -340,7 +364,7 @@ def ask_openrouter(
         elif isinstance(error_value, str):
             error_message = error_value
         else:
-            error_message = str(error_value or "OpenRouter request failed")
+            error_message = str(error_value or f"{provider_name} request failed")
 
         return {
             "status": "error",
@@ -350,3 +374,76 @@ def ask_openrouter(
 
     content = raw["choices"][0]["message"]["content"]
     return parse_json_response(content)
+
+
+def ask_letovo_llm(
+    problem_text,
+    solution_text,
+    history,
+    hint_level,
+    problem_image_base64=None,
+    task_image_base64=None
+):
+    if not LETOVO_LLM_API_KEY:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": "LETOVO_LLM_API_KEY is not configured",
+        }
+
+    payload = build_check_payload(
+        LETOVO_LLM_MODEL,  # noqa: F405
+        problem_text,
+        solution_text,
+        history,
+        hint_level,
+        problem_image_base64,
+        task_image_base64,
+        response_format={"type": "json_object"},
+    )
+
+    return send_openai_compatible_request(
+        LETOVO_LLM_API_URL,  # noqa: F405
+        payload,
+        {
+            "Authorization": f"Bearer {LETOVO_LLM_API_KEY}",
+        },
+        "letovo",
+    )
+
+
+def ask_openrouter(
+    problem_text,
+    solution_text,
+    history,
+    hint_level,
+    problem_image_base64=None,
+    task_image_base64=None
+):
+    if not OPENROUTER_API_KEY:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": "OPENROUTER_API_KEY is not configured",
+        }
+
+    payload = build_check_payload(
+        OPENROUTER_MODEL,  # noqa: F405
+        problem_text,
+        solution_text,
+        history,
+        hint_level,
+        problem_image_base64,
+        task_image_base64,
+    )
+
+    return send_openai_compatible_request(
+        "https://openrouter.ai/api/v1/chat/completions",
+        payload,
+        {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://test.physais.ru",
+            "X-OpenRouter-Title": "Physics AI",
+        },
+        "openrouter",
+    )
