@@ -30,10 +30,56 @@ const imageInput =
         "imageInput"
     );
 
+const MAX_SOLUTION_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_SOLUTION_FILE_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+]);
+const ALLOWED_SOLUTION_FILE_EXTENSIONS = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".pdf",
+];
+
 imageInput.addEventListener(
     "change",
     previewImage
 );
+
+function showImageUploadError(message) {
+
+    const preview =
+        document.getElementById(
+            "imagePreview"
+        );
+
+    preview.innerHTML = "";
+
+    const error =
+        document.createElement("div");
+
+    error.classList.add(
+        "upload-error"
+    );
+
+    error.textContent = message;
+
+    preview.appendChild(error);
+}
+
+function isAllowedSolutionFile(file) {
+
+    const fileName = file.name.toLowerCase();
+
+    return ALLOWED_SOLUTION_FILE_TYPES.has(file.type)
+        || ALLOWED_SOLUTION_FILE_EXTENSIONS.some(extension =>
+            fileName.endsWith(extension)
+        );
+}
 
 function previewImage(event) {
 
@@ -42,6 +88,26 @@ function previewImage(event) {
 
     if (!file)
         return;
+
+    if (!isAllowedSolutionFile(file)) {
+
+        resetSolutionImageMemory();
+        showImageUploadError(
+            "Можно прикрепить только JPG, PNG, WEBP или PDF."
+        );
+
+        return;
+    }
+
+    if (file.size > MAX_SOLUTION_IMAGE_BYTES) {
+
+        resetSolutionImageMemory();
+        showImageUploadError(
+            "Файл слишком большой. Максимальный размер — 10 МБ."
+        );
+
+        return;
+    }
 
     STATE.upload.attachedFile = file;
     STATE.upload.solutionImage = file;
@@ -60,15 +126,34 @@ function previewImage(event) {
         "preview-wrapper"
     );
 
-    const img =
-        document.createElement("img");
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
 
-    img.src =
-        URL.createObjectURL(file);
+        const fileBadge =
+            document.createElement("div");
 
-    img.classList.add(
-        "preview-image"
-    );
+        fileBadge.classList.add(
+            "preview-file"
+        );
+
+        fileBadge.textContent =
+            file.name || "PDF";
+
+        wrapper.appendChild(fileBadge);
+
+    } else {
+
+        const img =
+            document.createElement("img");
+
+        img.src =
+            URL.createObjectURL(file);
+
+        img.classList.add(
+            "preview-image"
+        );
+
+        wrapper.appendChild(img);
+    }
 
     const remove =
         document.createElement("button");
@@ -81,7 +166,6 @@ function previewImage(event) {
 
     remove.onclick = removeImage;
 
-    wrapper.appendChild(img);
     wrapper.appendChild(remove);
 
     preview.appendChild(wrapper);

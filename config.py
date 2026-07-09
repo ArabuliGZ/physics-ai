@@ -23,4 +23,14 @@ TEMPERATURE = 0.2
 LLM_REQUEST_TIMEOUT = 180
 
 
+# Uploaded solution images are compressed in the browser, but the backend keeps
+# the same hard safety limit for direct API requests.
+MAX_SOLUTION_IMAGE_BYTES = 10 * 1024 * 1024
+ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+
 DEBUG = True

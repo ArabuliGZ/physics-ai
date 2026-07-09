@@ -44,6 +44,42 @@ function addMessage(text, sender) {
 // ==================================
 // ===== ОТПРАВКА РЕШЕНИЯ =====
 // ==================================
+function canvasToCompressedJpeg(canvas) {
+
+    const MAX_SIZE = 1080;
+
+    let width = canvas.width;
+    let height = canvas.height;
+
+    if (width > height && width > MAX_SIZE) {
+        height *= MAX_SIZE / width;
+        width = MAX_SIZE;
+    } else if (height > MAX_SIZE) {
+        width *= MAX_SIZE / height;
+        height = MAX_SIZE;
+    }
+
+    const outputCanvas = document.createElement("canvas");
+
+    outputCanvas.width = Math.round(width);
+    outputCanvas.height = Math.round(height);
+
+    const outputContext = outputCanvas.getContext("2d");
+
+    outputContext.drawImage(
+        canvas,
+        0,
+        0,
+        outputCanvas.width,
+        outputCanvas.height
+    );
+
+    return outputCanvas.toDataURL(
+        "image/jpeg",
+        0.75
+    );
+}
+
 async function compressImage(file) {
 
     return new Promise((resolve) => {
@@ -52,54 +88,85 @@ async function compressImage(file) {
 
         img.onload = () => {
 
-            // ===== RESIZE =====
-
             const MAX_SIZE = 1080;
-
             let width = img.width;
             let height = img.height;
 
-            if (width > height) {
-
-                if (width > MAX_SIZE) {
-
-                    height *= MAX_SIZE / width;
-                    width = MAX_SIZE;
-                }
-
-            } else {
-
-                if (height > MAX_SIZE) {
-
-                    width *= MAX_SIZE / height;
-                    height = MAX_SIZE;
-                }
+            if (width > height && width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+            } else if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
             }
-
-            // ===== CANVAS =====
 
             const canvas = document.createElement("canvas");
 
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = Math.round(width);
+            canvas.height = Math.round(height);
 
             const ctx = canvas.getContext("2d");
 
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            // ===== JPEG EXPORT =====
-
-            const compressedBase64 =
+            resolve(
                 canvas.toDataURL(
                     "image/jpeg",
                     0.75
-                );
-
-            resolve(compressedBase64);
+                )
+            );
         };
 
         img.src = URL.createObjectURL(file);
     });
+}
+
+async function renderPdfFirstPageAsImage(file) {
+
+    if (!window.pdfjsLib) {
+        throw new Error("PDF-модуль не загрузился. Обнови страницу и попробуй ещё раз.");
+    }
+
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    const data = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+    const page = await pdf.getPage(1);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const renderScale = Math.min(
+        2,
+        Math.max(
+            1,
+            1440 / Math.max(baseViewport.width, baseViewport.height)
+        )
+    );
+    const viewport = page.getViewport({ scale: renderScale });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+
+    await page.render({
+        canvasContext: context,
+        viewport,
+    }).promise;
+
+    return canvasToCompressedJpeg(canvas);
+}
+
+async function prepareSolutionAttachment(file) {
+
+    if (!file) {
+        return null;
+    }
+
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        return renderPdfFirstPageAsImage(file);
+    }
+
+    return compressImage(file);
 }
 
 async function sendSolution(problemText, studentSolution, attachedFile = null) {
@@ -108,7 +175,7 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
     if (attachedFile) {
 
         imageBase64 =
-            await compressImage(attachedFile);
+            await prepareSolutionAttachment(attachedFile);
     }
 
     const payload = {
@@ -137,6 +204,11 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.detail || "Не получилось отправить решение.");
+    }
+
     return data;
 }
 
@@ -245,10 +317,20 @@ function addUserMessage(text, attachedFile = null) {
 
     // Если есть прикреплённая картинка, добавляем в один bubble
     if (attachedFile) {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(attachedFile);
-        img.classList.add("image-message");
-        messageDiv.appendChild(img);
+        if (
+            attachedFile.type === "application/pdf"
+            || attachedFile.name.toLowerCase().endsWith(".pdf")
+        ) {
+            const fileDiv = document.createElement("div");
+            fileDiv.classList.add("message-file");
+            fileDiv.textContent = attachedFile.name || "PDF";
+            messageDiv.appendChild(fileDiv);
+        } else {
+            const img = document.createElement("img");
+            img.src = URL.createObjectURL(attachedFile);
+            img.classList.add("image-message");
+            messageDiv.appendChild(img);
+        }
     }
 
     chat.appendChild(messageDiv);

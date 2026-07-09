@@ -100,6 +100,17 @@ def build_system_prompt(hint_level):
     return SYSTEM_PROMPT.format(hint_level=hint_level)
 
 
+def build_attachment_part(data_url):
+    """Build an OpenAI-compatible image content part."""
+
+    return {
+        "type": "image_url",
+        "image_url": {
+            "url": data_url,
+        },
+    }
+
+
 def build_messages(
     system_prompt,
     history,
@@ -133,24 +144,10 @@ def build_messages(
     ]
 
     if image_base64:
-        content.append(
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": image_base64,
-                },
-            }
-        )
+        content.append(build_attachment_part(image_base64))
 
     if task_image_base64:
-        content.append(
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": task_image_base64,
-                },
-            }
-        )
+        content.append(build_attachment_part(task_image_base64))
 
     messages.append(
         {

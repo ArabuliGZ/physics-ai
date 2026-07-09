@@ -13,6 +13,8 @@ from app.services.progress import record_task_attempt
 from app.services.sessions import find_student_by_session_token
 from app.services.students import allowed_task_class_id
 from app.services.students import get_student
+from config import ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES
+from config import MAX_SOLUTION_IMAGE_BYTES
 from llm import ask_llm
 
 
@@ -31,6 +33,32 @@ def bearer_token(authorization):
         return None
 
     return token.strip()
+
+
+def base64_payload_size(data_url):
+    """Return decoded byte size for a base64 data URL without decoding it."""
+
+    if not data_url:
+        return 0
+
+    _, separator, payload = data_url.partition(",")
+    encoded = payload if separator else data_url
+    encoded = "".join(encoded.split())
+    padding = len(encoded) - len(encoded.rstrip("="))
+
+    return (len(encoded) * 3) // 4 - padding
+
+
+def data_url_mime_type(data_url):
+    """Return MIME type from a data URL, or None when there is no header."""
+
+    if not data_url or not data_url.startswith("data:"):
+        return None
+
+    header, _, _ = data_url.partition(",")
+    mime_type = header[5:].split(";", 1)[0].lower()
+
+    return mime_type or None
 
 
 @router.post("/check")
@@ -84,6 +112,21 @@ async def check(
     # Если у задачи есть файл условия, прикладываем его к LLM только
     # когда это изображение. PDF показывается ученику, но не отправляется
     # в текущий image_url-формат запроса к модели.
+    if data.problem_image_base64:
+        mime_type = data_url_mime_type(data.problem_image_base64)
+
+        if mime_type not in ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES:
+            raise HTTPException(
+                status_code=415,
+                detail="В запрос можно отправить только изображение JPG, PNG или WEBP."
+            )
+
+        if base64_payload_size(data.problem_image_base64) > MAX_SOLUTION_IMAGE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Файл слишком большой. Максимальный размер — 10 МБ."
+            )
+
     if data.task_image_url:
 
         local_path = resolve_task_media_url(
