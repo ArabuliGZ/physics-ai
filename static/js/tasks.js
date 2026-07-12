@@ -368,15 +368,13 @@ async function showSelectedTask() {
 
 async function updateProgressTable(options = {}) {
     const table = document.getElementById("progress_table");
-    const summary = document.getElementById("progress_summary");
 
-    if (!table || !summary) {
+    if (!table) {
         return;
     }
 
     if (!STATE.student.current) {
         table.innerHTML = "<div class=\"progress-empty\">Войди, чтобы видеть прогресс.</div>";
-        summary.textContent = "";
         STATE.progress.renderedClassId = null;
         return;
     }
@@ -384,7 +382,6 @@ async function updateProgressTable(options = {}) {
     const group = document.getElementById("group_select").value;
     if (!group) {
         table.innerHTML = "";
-        summary.textContent = "";
         STATE.progress.renderedClassId = null;
         return;
     }
@@ -395,7 +392,6 @@ async function updateProgressTable(options = {}) {
     }
 
     table.innerHTML = "<div class=\"progress-empty\">Загружаю...</div>";
-    summary.textContent = "";
 
     const params = new URLSearchParams({
         class_id: group
@@ -415,11 +411,6 @@ async function updateProgressTable(options = {}) {
         }
 
         const rows = await response.json();
-        const solvedCount = rows.filter(row => row.is_passed === 1).length;
-        const triedCount = rows.filter(row => row.attempts_count > 0).length;
-
-        summary.textContent =
-            `${triedCount}/${rows.length} с попытками, ${solvedCount} сдано`;
 
         table.innerHTML = `
             <div class="progress-grid">
@@ -435,6 +426,10 @@ async function updateProgressTable(options = {}) {
 
 
 function renderProgressGroups(rows) {
+    if (!rows.length) {
+        return "<div class=\"progress-empty\">—</div>";
+    }
+
     const sections = [
         ...new Set(rows.map(row => `${row.chapter}.${row.topic}`))
     ].sort(compareDottedKeys);
@@ -443,6 +438,23 @@ function renderProgressGroups(rows) {
         section,
         isMajorStart: index > 0 && section.split(".")[0] !== sections[index - 1].split(".")[0],
     }));
+
+    const topicGroups = [];
+
+    for (const column of sectionColumns) {
+        const topicKey = column.section.split(".")[0];
+        const lastGroup = topicGroups[topicGroups.length - 1];
+
+        if (lastGroup && lastGroup.topicKey === topicKey) {
+            lastGroup.columns.push(column);
+        } else {
+            topicGroups.push({
+                topicKey,
+                columns: [column],
+                isMajorStart: topicGroups.length > 0,
+            });
+        }
+    }
 
     const taskNumbers = [
         ...new Set(rows.map(row => row.number))
@@ -478,11 +490,59 @@ function renderProgressGroups(rows) {
 
                             return row
                                 ? renderProgressCell(row, boundaryClass)
-                                : `<div class="progress-cell-placeholder ${boundaryClass}"></div>`;
+                                : `<div class="progress-cell-placeholder ${boundaryClass}">—</div>`;
                         }).join("")}
                     </div>
                 </div>
             `).join("")}
+
+            <div class="progress-footer">
+                <div class="progress-section-title progress-footer-title"></div>
+                <div class="progress-footer-rows">
+                    <div class="progress-cells">
+                        ${sectionColumns.map(column => {
+                            const boundaryClass = column.isMajorStart ? "progress-major-start" : "";
+                            const solvedCount = rows.filter(row => (
+                                `${row.chapter}.${row.topic}` === column.section &&
+                                row.is_passed === 1
+                            )).length;
+
+                            return `
+                                <div class="progress-summary-cell ${boundaryClass}">
+                                    ${solvedCount}
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+
+                    <div class="progress-cells">
+                        ${topicGroups.map(group => {
+                            const boundaryClass = group.isMajorStart ? "progress-major-start" : "";
+                            const groupSections = new Set(
+                                group.columns.map(column => column.section)
+                            );
+                            const topicRows = rows.filter(row => (
+                                groupSections.has(`${row.chapter}.${row.topic}`)
+                            ));
+                            const solvedCount = topicRows.filter(row => row.is_passed === 1).length;
+                            const totalCount = topicRows.length;
+                            const percent = totalCount
+                                ? Math.round((solvedCount / totalCount) * 100)
+                                : 0;
+
+                            return `
+                                <div
+                                    class="progress-summary-cell progress-topic-summary-cell ${boundaryClass}"
+                                    style="--progress-topic-span: ${group.columns.length};"
+                                >
+                                    <span>${solvedCount}/${totalCount}</span>
+                                    <span>(${percent}%)</span>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -530,7 +590,7 @@ function renderProgressCell(row, boundaryClass = "") {
             title="${row.chapter}.${row.topic}.${row.number}: ${row.attempts_count} попыток"
             onclick="openTaskFromProgress('${row.chapter}', '${row.topic}', '${row.number}')"
         >
-            <strong>${row.attempts_count}</strong>
+            <span>${row.attempts_count}</span>
             ${renderProgressTeacherOverrideMarker(row)}
         </button>
     `;

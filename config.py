@@ -14,7 +14,8 @@ LETOVO_LLM_MODEL = "gemma-4-26b"
 
 # OpenRouter fallback. Change MODEL_PROVIDER to "openrouter" to use it.
 # OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
-OPENROUTER_MODEL = "qwen/qwen3-vl-235b-a22b-thinking"
+OPENROUTER_MODEL = "qwen/qwen3.7-plus"
+#OPENROUTER_MODEL = "qwen/qwen3-vl-235b-a22b-thinking"
 
 
 # Shared LLM generation settings.

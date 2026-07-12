@@ -19,7 +19,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=password-hover-soft-1">
+    <link rel="stylesheet" href="/static/css/style.css?v=journal-active-schools-20260712">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -273,7 +273,7 @@
                     <span id="teacher_journal_summary"></span>
 
                     <button
-                        id="teacher_export_button"
+                        id="teacher_export_button_legacy"
                         type="button"
                         class="teacher-secondary-button"
                         onclick="downloadTeacherJournalCsv()"
@@ -303,13 +303,23 @@
             </div>
 
             <div
+                id="teacher_journal_class_card"
+                class="teacher-active-class-card"
+            ></div>
+
+            <span
+                id="teacher_single_result"
+                class="teacher-journal-result"
+            ></span>
+
+            <div
                 id="teacher_journal_table"
                 class="teacher-journal-table"
             ></div>
         </section>
 
         <section
-            class="teacher-panel"
+            class="teacher-panel teacher-legacy-single-panel"
             data-teacher-view="journal"
             hidden
         >
@@ -318,7 +328,7 @@
                     <h2>Добавить ученика в этот класс</h2>
                 </div>
 
-                <span id="teacher_single_result"></span>
+                <span id="teacher_single_result_legacy"></span>
             </div>
 
             <form
@@ -326,21 +336,21 @@
                 onsubmit="addSingleTeacherStudent(event)"
             >
                 <input
-                    id="teacher_single_full_name"
+                    id="teacher_single_full_name_legacy"
                     type="text"
                     placeholder="ФИО"
                     required
                 >
 
                 <input
-                    id="teacher_single_email"
+                    id="teacher_single_email_legacy"
                     type="email"
                     placeholder="email"
                     required
                 >
 
                 <button
-                    id="teacher_single_button"
+                    id="teacher_single_button_legacy"
                     type="submit"
                     class="teacher-secondary-button"
                 >
@@ -594,6 +604,89 @@
     </div>
 
     <div
+        id="teacher_single_student_dialog"
+        class="teacher-dialog"
+        hidden
+    >
+        <div
+            class="teacher-dialog-backdrop"
+            onclick="closeTeacherSingleStudentDialog()"
+        ></div>
+
+        <form
+            class="teacher-dialog-panel teacher-single-student-dialog-panel"
+            onsubmit="addSingleTeacherStudent(event)"
+        >
+            <div class="teacher-dialog-header">
+                <h2>Добавить ученика</h2>
+
+                <button
+                    type="button"
+                    class="teacher-dialog-close"
+                    onclick="closeTeacherSingleStudentDialog()"
+                    aria-label="Закрыть"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <label class="teacher-dialog-field">
+                <span>ФИО</span>
+                <input
+                    id="teacher_single_full_name"
+                    type="text"
+                    placeholder="ФИО"
+                    autocomplete="name"
+                    required
+                >
+            </label>
+
+            <label class="teacher-dialog-field">
+                <span>Email</span>
+                <input
+                    id="teacher_single_email"
+                    type="email"
+                    placeholder="email"
+                    autocomplete="email"
+                    required
+                >
+            </label>
+
+            <span
+                id="teacher_single_dialog_result"
+                class="teacher-dialog-result"
+            ></span>
+
+            <div class="teacher-dialog-actions">
+                <button
+                    id="teacher_single_button"
+                    type="submit"
+                    class="teacher-admin-action teacher-admin-action-save"
+                    aria-label="Сохранить ученика"
+                    title="Сохранить ученика"
+                >
+                    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 12.5l4.2 4.2L19 7"></path>
+                    </svg>
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-admin-action teacher-admin-action-cancel"
+                    onclick="closeTeacherSingleStudentDialog()"
+                    aria-label="Отменить добавление ученика"
+                    title="Отменить добавление ученика"
+                >
+                    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="8"></circle>
+                        <path d="M7 17L17 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div
         id="teacher_progress_dialog"
         class="teacher-dialog"
         hidden
@@ -726,6 +819,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=teacher-topbar-20260709"></script>
+    <script src="/static/js/teacher.js?v=journal-active-schools-20260712"></script>
 </body>
 </html>

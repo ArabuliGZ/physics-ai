@@ -29,6 +29,42 @@
     passwordDialogOpen: false,
 };
 
+const TEACHER_ICON_EDIT = `
+    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 20h4.5L19.4 9.1a2.1 2.1 0 0 0 0-3L18 4.7a2.1 2.1 0 0 0-3 0L4 15.7V20z"></path>
+        <path d="M13.6 6.1l4.3 4.3"></path>
+    </svg>
+`;
+
+const TEACHER_ICON_KEY = `
+    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="7.5" cy="12" r="3.5"></circle>
+        <path d="M11 12h9"></path>
+        <path d="M16 12v3"></path>
+        <path d="M19 12v2"></path>
+    </svg>
+`;
+
+const TEACHER_ICON_REMOVE = `
+    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 6l12 12"></path>
+        <path d="M18 6L6 18"></path>
+    </svg>
+`;
+
+const TEACHER_ICON_SAVE = `
+    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12.5l4.2 4.2L19 7"></path>
+    </svg>
+`;
+
+const TEACHER_ICON_CANCEL = `
+    <svg class="teacher-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8"></circle>
+        <path d="M7 17L17 7"></path>
+    </svg>
+`;
+
 
 document.addEventListener("DOMContentLoaded", () => {
     initTeacherSession();
@@ -673,7 +709,7 @@ function renderAdminTeachers() {
     }
 
     table.innerHTML = `
-        <table class="teacher-admin-list">
+        <table class="teacher-admin-list teacher-admin-teachers-list">
             <thead>
                 <tr>
                     <th>ФИО</th>
@@ -733,16 +769,20 @@ function renderAdminTeacherAddRow() {
                         type="button"
                         class="teacher-admin-action teacher-admin-action-save"
                         onclick="saveAdminTeacherAdd()"
+                        aria-label="Сохранить учителя"
+                        title="Сохранить учителя"
                     >
-                        Сохранить
+                        ${TEACHER_ICON_SAVE}
                     </button>
 
                     <button
                         type="button"
                         class="teacher-admin-action teacher-admin-action-cancel"
                         onclick="cancelAdminTeacherAdd()"
+                        aria-label="Отменить добавление учителя"
+                        title="Отменить добавление учителя"
                     >
-                        Отмена
+                        ${TEACHER_ICON_CANCEL}
                     </button>
                 </div>
             </td>
@@ -773,7 +813,7 @@ function renderAdminTeacherNameCell(teacher, isEditing) {
                 aria-label="Редактировать учителя"
                 title="Редактировать учителя"
             >
-                &#9998;
+                ${TEACHER_ICON_EDIT}
             </button>
             <button
                 type="button"
@@ -782,7 +822,7 @@ function renderAdminTeacherNameCell(teacher, isEditing) {
                 aria-label="Сбросить пароль учителя"
                 title="Сбросить пароль учителя"
             >
-                &#128273;
+                ${TEACHER_ICON_KEY}
             </button>
             <span class="teacher-admin-cell-text">${escapeHtml(teacher.full_name)}</span>
         </div>
@@ -815,16 +855,20 @@ function renderAdminTeacherAction(teacher, isEditing = false) {
                     type="button"
                     class="teacher-admin-action teacher-admin-action-save"
                     onclick="saveAdminTeacherEdit(${teacher.id})"
+                    aria-label="Сохранить учителя"
+                    title="Сохранить учителя"
                 >
-                    Сохранить
+                    ${TEACHER_ICON_SAVE}
                 </button>
 
                 <button
                     type="button"
                     class="teacher-admin-action teacher-admin-action-cancel"
                     onclick="cancelAdminTeacherEdit()"
+                    aria-label="Отменить редактирование учителя"
+                    title="Отменить редактирование учителя"
                 >
-                    Отмена
+                    ${TEACHER_ICON_CANCEL}
                 </button>
             </div>
         `;
@@ -1194,16 +1238,20 @@ function renderAdminSchoolAddRow() {
                         type="button"
                         class="teacher-admin-action teacher-admin-action-save"
                         onclick="saveAdminSchoolAdd()"
+                        aria-label="Сохранить школу"
+                        title="Сохранить школу"
                     >
-                        Сохранить
+                        ${TEACHER_ICON_SAVE}
                     </button>
 
                     <button
                         type="button"
                         class="teacher-admin-action teacher-admin-action-cancel"
                         onclick="cancelAdminSchoolEdit()"
+                        aria-label="Отменить добавление школы"
+                        title="Отменить добавление школы"
                     >
-                        Отмена
+                        ${TEACHER_ICON_CANCEL}
                     </button>
                 </div>
             </td>
@@ -1239,7 +1287,7 @@ function renderAdminSchoolNameCell(school, isEditing) {
                 aria-label="Редактировать школу"
                 title="Редактировать школу"
             >
-                &#9998;
+                ${TEACHER_ICON_EDIT}
             </button>
             <span class="teacher-admin-cell-text">${escapeHtml(school.name)}</span>
         </div>
@@ -1255,16 +1303,20 @@ function renderAdminSchoolAction(school, isEditing = false) {
                     type="button"
                     class="teacher-admin-action teacher-admin-action-save"
                     onclick="saveAdminSchoolEdit(${school.id})"
+                    aria-label="Сохранить школу"
+                    title="Сохранить школу"
                 >
-                    Сохранить
+                    ${TEACHER_ICON_SAVE}
                 </button>
 
                 <button
                     type="button"
                     class="teacher-admin-action teacher-admin-action-cancel"
                     onclick="cancelAdminSchoolEdit()"
+                    aria-label="Отменить редактирование школы"
+                    title="Отменить редактирование школы"
                 >
-                    Отмена
+                    ${TEACHER_ICON_CANCEL}
                 </button>
             </div>
         `;
@@ -1505,8 +1557,8 @@ function renderAdminClasses() {
                 <col class="admin-class-col-school">
                 <col class="admin-class-col-class">
                 <col class="admin-class-col-base">
-                <col class="admin-class-col-actions">
                 ${isAdmin ? "<col class=\"admin-class-col-teacher\">" : ""}
+                <col class="admin-class-col-actions">
             </colgroup>
             <thead>
                 <tr>
@@ -1543,7 +1595,6 @@ function renderAdminClasses() {
                             </select>
                         </div>
                     </th>
-                    <th><span class="teacher-admin-th-plain">Действия</span></th>
                     ${isAdmin ? `
                     <th>
                         <div class="teacher-admin-th-filter">
@@ -1557,6 +1608,7 @@ function renderAdminClasses() {
                         </div>
                     </th>
                     ` : ""}
+                    <th><span class="teacher-admin-th-plain">Действия</span></th>
                 </tr>
             </thead>
             <tbody>
@@ -1579,10 +1631,10 @@ function renderAdminClasses() {
                             </div>
                         </td>
                         <td>${renderAdminClassTaskBaseCell(classItem, isEditing)}</td>
+                        ${isAdmin ? `<td>${renderAdminClassTeacherCell(classItem, isEditing)}</td>` : ""}
                         <td>
                             ${renderAdminClassAction(classItem, isEditing)}
                         </td>
-                        ${isAdmin ? `<td>${renderAdminClassTeacherCell(classItem, isEditing)}</td>` : ""}
                     </tr>
                     `;
                 }).join("")}
@@ -1657,6 +1709,25 @@ function renderAdminClassAddRow(isAdmin) {
                     ${renderTaskBaseOptions()}
                 </select>
             </td>
+            ${isAdmin ? `
+            <td>
+                <select
+                    id="admin_class_add_teacher"
+                    class="teacher-admin-inline-select"
+                >
+                    <option value="" selected>
+                        Учитель
+                    </option>
+                    ${TEACHER_STATE.adminTeachers
+                        .filter(teacher => teacher.is_active === 1)
+                        .map(teacher => `
+                            <option value="${teacher.id}">
+                                ${escapeHtml(teacher.full_name)}
+                            </option>
+                        `).join("")}
+                </select>
+            </td>
+            ` : ""}
             <td>
                 <div class="teacher-admin-actions teacher-admin-actions-add-class">
                     <input
@@ -1679,38 +1750,23 @@ function renderAdminClassAddRow(isAdmin) {
                         type="button"
                         class="teacher-admin-action teacher-admin-action-save"
                         onclick="saveAdminClassAdd()"
+                        aria-label="Сохранить класс"
+                        title="Сохранить класс"
                     >
-                        Сохранить
+                        ${TEACHER_ICON_SAVE}
                     </button>
 
                     <button
                         type="button"
                         class="teacher-admin-action teacher-admin-action-cancel"
                         onclick="cancelAdminClassAdd()"
+                        aria-label="Отменить добавление класса"
+                        title="Отменить добавление класса"
                     >
-                        Отмена
+                        ${TEACHER_ICON_CANCEL}
                     </button>
                 </div>
             </td>
-            ${isAdmin ? `
-            <td>
-                <select
-                    id="admin_class_add_teacher"
-                    class="teacher-admin-inline-select"
-                >
-                    <option value="" selected>
-                        Учитель
-                    </option>
-                    ${TEACHER_STATE.adminTeachers
-                        .filter(teacher => teacher.is_active === 1)
-                        .map(teacher => `
-                            <option value="${teacher.id}">
-                                ${escapeHtml(teacher.full_name)}
-                            </option>
-                        `).join("")}
-                </select>
-            </td>
-            ` : ""}
         </tr>
     `;
 }
@@ -1986,7 +2042,7 @@ function renderAdminClassEditButton(classItem) {
             aria-label="Редактировать класс"
             title="Редактировать класс"
         >
-            &#9998;
+            ${TEACHER_ICON_EDIT}
         </button>
     `;
 }
@@ -2000,16 +2056,20 @@ function renderAdminClassAction(classItem, isEditing = false) {
                     type="button"
                     class="teacher-admin-action teacher-admin-action-save"
                     onclick="saveAdminClassEdit(${classItem.id})"
+                    aria-label="Сохранить класс"
+                    title="Сохранить класс"
                 >
-                    Сохранить
+                    ${TEACHER_ICON_SAVE}
                 </button>
 
                 <button
                     type="button"
                     class="teacher-admin-action teacher-admin-action-cancel"
                     onclick="cancelAdminClassEdit()"
+                    aria-label="Отменить редактирование класса"
+                    title="Отменить редактирование класса"
                 >
-                    Отмена
+                    ${TEACHER_ICON_CANCEL}
                 </button>
             </div>
         `;
@@ -2828,11 +2888,10 @@ async function addSingleTeacherStudent(event) {
     event.preventDefault();
 
     const button = document.getElementById("teacher_single_button");
-    const result = document.getElementById("teacher_single_result");
     const filters = readTeacherFilters();
 
     if (!filters?.school || !filters?.classKey || !filters?.taskClassId) {
-        result.textContent = "Сначала открой нужный журнал класса.";
+        setTeacherSingleResult("Сначала открой нужный журнал класса.");
         return;
     }
 
@@ -2845,7 +2904,7 @@ async function addSingleTeacherStudent(event) {
     const selectedClass = getSelectedTeacherClass() || findTeacherClassById(teacherClassId);
 
     if (!teacherClassId) {
-        result.textContent = "Сначала открой нужный журнал класса.";
+        setTeacherSingleResult("Сначала открой нужный журнал класса.");
         return;
     }
 
@@ -2860,12 +2919,12 @@ async function addSingleTeacherStudent(event) {
     };
 
     if (!payload.full_name || !payload.email) {
-        result.textContent = "Заполни ФИО и email.";
+        setTeacherSingleResult("Заполни ФИО и email.");
         return;
     }
 
     button.disabled = true;
-    result.textContent = "Добавляю...";
+    setTeacherSingleResult("Добавляю...");
 
     try {
         const response = await teacherFetch(
@@ -2884,18 +2943,19 @@ async function addSingleTeacherStudent(event) {
             throw new Error(data.detail || "student save failed");
         }
 
-        result.textContent = data.action === "created"
+        setTeacherSingleResult(data.action === "created"
             ? "Ученик добавлен."
-            : "Ученик обновлён.";
+            : "Ученик обновлён.");
 
         document.getElementById("teacher_single_full_name").value = "";
         document.getElementById("teacher_single_email").value = "";
 
+        closeTeacherSingleStudentDialog();
         rememberTeacherFilters();
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Single student save failed:", error);
-        result.textContent = error.message || "Не получилось добавить ученика.";
+        setTeacherSingleResult(error.message || "Не получилось добавить ученика.");
     } finally {
         button.disabled = false;
     }
@@ -2904,9 +2964,7 @@ async function addSingleTeacherStudent(event) {
 
 function fillTeacherFilters(filters = null) {
     const schoolSelect = document.getElementById("teacher_school_select");
-    const schools = hasTeacherClassRecords()
-        ? uniqueValues(TEACHER_STATE.classes, "school")
-        : uniqueValues(TEACHER_STATE.students, "school");
+    const schools = getTeacherJournalSchoolOptions();
 
     fillSelect(
         schoolSelect,
@@ -2937,6 +2995,57 @@ function handleTeacherSchoolChange() {
 function handleTeacherClassChange() {
     rememberTeacherFilters();
     renderTeacherJournal();
+}
+
+
+function openTeacherSingleStudentDialog() {
+    const result = document.getElementById("teacher_single_result");
+
+    if (!getSelectedTeacherClass()?.id) {
+        if (result) {
+            result.textContent = "Сначала открой нужный журнал класса.";
+        }
+        return;
+    }
+
+    const dialog = document.getElementById("teacher_single_student_dialog");
+
+    if (!dialog) {
+        return;
+    }
+
+    document.getElementById("teacher_single_full_name").value = "";
+    document.getElementById("teacher_single_email").value = "";
+
+    if (result) {
+        result.textContent = "";
+    }
+
+    dialog.hidden = false;
+    document.getElementById("teacher_single_full_name").focus();
+}
+
+
+function closeTeacherSingleStudentDialog() {
+    const dialog = document.getElementById("teacher_single_student_dialog");
+
+    if (dialog) {
+        dialog.hidden = true;
+    }
+}
+
+
+function setTeacherSingleResult(message = "") {
+    const pageResult = document.getElementById("teacher_single_result");
+    const dialogResult = document.getElementById("teacher_single_dialog_result");
+
+    if (pageResult) {
+        pageResult.textContent = message;
+    }
+
+    if (dialogResult) {
+        dialogResult.textContent = message;
+    }
 }
 
 
@@ -3093,26 +3202,222 @@ function hasTeacherClassRecords() {
 }
 
 
+function getTeacherJournalSchoolOptions() {
+    if (hasTeacherClassRecords()) {
+        return uniqueValues(
+            TEACHER_STATE.classes.filter(classItem => classItem.is_active),
+            "school"
+        );
+    }
+
+    return uniqueValues(TEACHER_STATE.students, "school");
+}
+
+
+function handleTeacherJournalSchoolSelectChange() {
+    const schoolSelect = document.getElementById("teacher_school_select");
+    const classSelect = document.getElementById("teacher_student_class_select");
+    const schoolEdit = document.getElementById("teacher_journal_school_select");
+
+    if (!schoolSelect || !classSelect || !schoolEdit) {
+        return;
+    }
+
+    schoolSelect.value = schoolEdit.value;
+    fillTeacherStudentClasses();
+    rememberTeacherFilters();
+    renderTeacherJournal();
+}
+
+
+function handleTeacherJournalClassSelectChange() {
+    const classSelect = document.getElementById("teacher_student_class_select");
+    const classEdit = document.getElementById("teacher_journal_class_select");
+
+    if (!classSelect || !classEdit) {
+        return;
+    }
+
+    classSelect.value = classEdit.value;
+    rememberTeacherFilters();
+    renderTeacherJournal();
+}
+
+
+function renderTeacherJournalSchoolEditOptions(selectedSchool = "") {
+    const schools = getTeacherJournalSchoolOptions();
+
+    return schools.map(school => `
+        <option
+            value="${escapeHtml(school)}"
+            ${school === selectedSchool ? "selected" : ""}
+        >
+            ${escapeHtml(school)}
+        </option>
+    `).join("");
+}
+
+
+function renderTeacherJournalClassEditOptions(selectedSchool = "", selectedClassKey = "") {
+    const classes = hasTeacherClassRecords()
+        ? TEACHER_STATE.classes
+            .filter(item => item.school === selectedSchool && item.is_active)
+            .map(item => ({
+                title: item.class_name,
+                key: String(item.id),
+                grade: item.grade,
+                class_group: item.class_group || "",
+                task_class_id: item.task_class_id,
+            }))
+        : TEACHER_STATE.students
+            .filter(student => student.school === selectedSchool)
+            .map(student => ({
+                title: student.class_name,
+                key: `${student.grade}|${student.class_group || ""}`,
+                grade: student.grade,
+                class_group: student.class_group || "",
+                task_class_id: student.task_class_id,
+            }))
+            .filter((item, index, items) => (
+                items.findIndex(candidate => candidate.key === item.key) === index
+            ));
+
+    return classes
+        .sort((left, right) => (
+            compareClassNames(left.grade, right.grade) ||
+            String(left.class_group).localeCompare(String(right.class_group), "ru") ||
+            compareClassNames(left.task_class_id, right.task_class_id)
+        ))
+        .map(item => `
+            <option
+                value="${escapeHtml(item.key)}"
+                ${item.key === selectedClassKey ? "selected" : ""}
+            >
+                ${escapeHtml(item.title)}
+            </option>
+        `).join("");
+}
+
+
+function renderTeacherJournalClassCard({
+    selectedClass = null,
+    studentsCount = 0,
+    tasksCount = 0,
+    canDownload = false,
+    canAddStudent = false,
+    loading = false,
+} = {}) {
+    const card = document.getElementById("teacher_journal_class_card");
+
+    if (!card) {
+        return;
+    }
+
+    if (!selectedClass) {
+        card.innerHTML = `
+            <div class="progress-empty">Выбери школу и класс.</div>
+        `;
+        return;
+    }
+
+    const schoolName = selectedClass.school || "—";
+    const className = selectedClass.class_name || [
+        selectedClass.grade,
+        selectedClass.class_group || "",
+    ].join("").trim() || "—";
+    const pupilsText = loading ? "..." : String(studentsCount);
+    const problemsText = loading ? "..." : String(tasksCount);
+    const selectedClassKey = document.getElementById("teacher_student_class_select")?.value || "";
+    const selectedSchool = selectedClass.school || "";
+    const schoolCell = `
+        <select
+            id="teacher_journal_school_select"
+            class="teacher-admin-inline-select"
+            onchange="handleTeacherJournalSchoolSelectChange()"
+        >
+            ${renderTeacherJournalSchoolEditOptions(selectedSchool)}
+        </select>
+    `;
+    const classCell = `
+        <select
+            id="teacher_journal_class_select"
+            class="teacher-admin-inline-select"
+            onchange="handleTeacherJournalClassSelectChange()"
+        >
+            ${renderTeacherJournalClassEditOptions(selectedSchool, selectedClassKey)}
+        </select>
+    `;
+    const actionsCell = `
+        <button
+            id="teacher_export_button"
+            type="button"
+            class="teacher-admin-action teacher-active-class-action"
+            onclick="downloadTeacherJournalCsv()"
+            ${canDownload ? "" : "disabled"}
+        >
+            CSV
+        </button>
+
+        <button
+            type="button"
+            class="teacher-admin-action teacher-active-class-action"
+            onclick="openTeacherSingleStudentDialog()"
+            ${canAddStudent ? "" : "disabled"}
+        >
+            Добавить ученика
+        </button>
+    `;
+
+    card.innerHTML = `
+        <table class="teacher-active-class-table">
+            <thead>
+                <tr>
+                    <th>Школа</th>
+                    <th>Класс</th>
+                    <th>Ученики</th>
+                    <th>Задачи</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>${schoolCell}</td>
+                    <td>${classCell}</td>
+                    <td>${escapeHtml(pupilsText)}</td>
+                    <td>${escapeHtml(problemsText)}</td>
+                    <td>
+                        <div class="teacher-admin-actions">
+                            ${actionsCell}
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+}
+
+
 async function renderTeacherJournal() {
     const classKey = document.getElementById("teacher_student_class_select").value;
     const selectedClass = getSelectedTeacherClass();
     const school = selectedClass?.school || document.getElementById("teacher_school_select").value;
     const classId = selectedClass?.task_class_id || "";
     const table = document.getElementById("teacher_journal_table");
-    const summary = document.getElementById("teacher_journal_summary");
-    const exportButton = document.getElementById("teacher_export_button");
 
     if (classKey && !classId) {
+        TEACHER_STATE.currentJournal = null;
         table.innerHTML = "<div class=\"progress-empty\">Для этого класса пока не выбрана база заданий.</div>";
-        summary.textContent = "";
-        exportButton.disabled = true;
+        renderTeacherJournalClassCard({
+            selectedClass,
+            canAddStudent: Boolean(selectedClass?.id),
+        });
         return;
     }
 
     if (!school || !classKey || !classId) {
+        TEACHER_STATE.currentJournal = null;
         table.innerHTML = "<div class=\"progress-empty\">Выбери школу и класс.</div>";
-        summary.textContent = "";
-        exportButton.disabled = true;
+        renderTeacherJournalClassCard();
         return;
     }
 
@@ -3120,7 +3425,11 @@ async function renderTeacherJournal() {
     const classGroup = selectedClass.class_group || "";
 
     table.innerHTML = "<div class=\"progress-empty\">Загружаю...</div>";
-    summary.textContent = "";
+    renderTeacherJournalClassCard({
+        selectedClass,
+        canAddStudent: Boolean(selectedClass?.id),
+        loading: true,
+    });
 
     try {
         const params = new URLSearchParams({
@@ -3142,18 +3451,28 @@ async function renderTeacherJournal() {
 
         const journal = await response.json();
 
-        summary.textContent = [
-            `${journal.students.length} учеников`,
-            `${journal.tasks.length} задач`
-        ].join(" · ");
-        exportButton.disabled = journal.students.length === 0;
+        TEACHER_STATE.currentJournal = {
+            ...(TEACHER_STATE.currentJournal || {}),
+            studentsCount: journal.students.length,
+            tasksCount: journal.tasks.length,
+        };
+
+        renderTeacherJournalClassCard({
+            selectedClass: journal.class || selectedClass,
+            studentsCount: journal.students.length,
+            tasksCount: journal.tasks.length,
+            canDownload: journal.students.length > 0,
+            canAddStudent: Boolean((journal.class || selectedClass)?.id),
+        });
 
         table.innerHTML = renderJournalTable(journal);
     } catch (error) {
         console.error("Teacher journal failed:", error);
         table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить журнал.</div>";
-        summary.textContent = "";
-        exportButton.disabled = true;
+        renderTeacherJournalClassCard({
+            selectedClass,
+            canAddStudent: Boolean(selectedClass?.id),
+        });
     }
 }
 
@@ -3182,7 +3501,9 @@ async function downloadTeacherJournalCsv() {
         params.set("teacher_class_id", selectedClass.id);
     }
 
-    button.disabled = true;
+    if (button) {
+        button.disabled = true;
+    }
 
     try {
         const response = await teacherFetch(`/teacher/journal/export?${params.toString()}`);
@@ -3208,7 +3529,9 @@ async function downloadTeacherJournalCsv() {
             message: "Не получилось скачать CSV.",
         });
     } finally {
-        button.disabled = false;
+        if (button) {
+            button.disabled = false;
+        }
     }
 }
 
@@ -3255,6 +3578,8 @@ function renderJournalTable(journal) {
 
     TEACHER_STATE.currentJournal = {
         teacherClassId,
+        studentsCount: journal.students.length,
+        tasksCount: journal.tasks.length,
         taskColumns,
         journalColumns,
         progressByCell,
@@ -3264,7 +3589,8 @@ function renderJournalTable(journal) {
         <table class="teacher-journal">
             <thead>
                 <tr>
-                    <th class="teacher-student-column" rowspan="2">Ученик</th>
+                    <th class="teacher-student-column" rowspan="2"></th>
+                    <th class="teacher-total-column" rowspan="2">Сдано</th>
                     ${headerGroups.map(group => `
                         <th
                             class="${group.className}"
@@ -3273,7 +3599,6 @@ function renderJournalTable(journal) {
                             ${group.title}
                         </th>
                     `).join("")}
-                    <th class="teacher-total-column" rowspan="2">Сдано</th>
                 </tr>
                 <tr>
                     ${journalColumns.map(column => `
@@ -3302,7 +3627,7 @@ function renderJournalTable(journal) {
                                         aria-label="Сбросить пароль ученика"
                                         title="Сбросить пароль ученика"
                                     >
-                                        &#128273;
+                                        ${TEACHER_ICON_KEY}
                                     </button>
                                     <button
                                         type="button"
@@ -3311,19 +3636,19 @@ function renderJournalTable(journal) {
                                         aria-label="Убрать ученика из журнала"
                                         title="Убрать ученика из журнала"
                                     >
-                                        &times;
+                                        ${TEACHER_ICON_REMOVE}
                                     </button>
                                 </div>
+                            </td>
+                            <td
+                                class="teacher-total-column"
+                                data-total-student-id="${student.id}"
+                            >
+                                ${passedCount}/${taskColumns.length}
                             </td>
                             ${journalColumns.map(column => (
                                 renderJournalColumnCell(column, student, progressByCell, teacherClassId)
                             )).join("")}
-                              <td
-                                  class="teacher-total-column"
-                                  data-total-student-id="${student.id}"
-                              >
-                                  ${passedCount}/${taskColumns.length}
-                              </td>
                           </tr>
                       `;
                 }).join("")}
@@ -3357,12 +3682,10 @@ async function resetTeacherStudentPassword(studentId, studentName) {
             throw new Error(data.detail || "student password reset failed");
         }
 
-        document.getElementById("teacher_single_result").textContent =
-            `Пароль сброшен на ${data.temporary_password || "test"}.`;
+        setTeacherSingleResult(`Пароль сброшен на ${data.temporary_password || "test"}.`);
     } catch (error) {
         console.error("Student password reset failed:", error);
-        document.getElementById("teacher_single_result").textContent =
-            "Не получилось сбросить пароль.";
+        setTeacherSingleResult("Не получилось сбросить пароль.");
     }
 }
 
@@ -3395,8 +3718,7 @@ async function deactivateTeacherStudent(studentId) {
         await loadTeacherDashboard();
     } catch (error) {
         console.error("Student deactivate failed:", error);
-        document.getElementById("teacher_single_result").textContent =
-            "Не получилось убрать ученика.";
+        setTeacherSingleResult("Не получилось убрать ученика.");
     }
 }
 
