@@ -18,6 +18,22 @@ os.environ.pop("https_proxy", None)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 LETOVO_LLM_API_KEY = os.getenv("LETOVO_LLM_API_KEY")
+DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
+
+
+def get_env_bool(name, default):
+    value = os.getenv(name)
+
+    if value is None:
+        return default
+
+    return value.strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+        "да",
+    )
 
 
 SYSTEM_PROMPT = """
@@ -220,18 +236,21 @@ def ask_llm(
             task_image_base64,
         )
 
+    if MODEL_PROVIDER in ("qwencloud", "qwen"):  # noqa: F405
+        return ask_qwencloud(
+            problem_text,
+            solution_text,
+            history,
+            hint_level,
+            problem_image_base64,
+            task_image_base64,
+        )
+
     if MODEL_PROVIDER == "yandex":  # noqa: F405
         return {
             "status": "error",
             "is_passed": False,
             "message": "YandexGPT пока не подключён",
-        }
-
-    if MODEL_PROVIDER == "qwen":  # noqa: F405
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "Qwen пока не подключён",
         }
 
     return {
@@ -417,4 +436,52 @@ def ask_openrouter(
             "X-OpenRouter-Title": "Physics AI",
         },
         "openrouter",
+    )
+
+
+def ask_qwencloud(
+    problem_text,
+    solution_text,
+    history,
+    hint_level,
+    problem_image_base64=None,
+    task_image_base64=None
+):
+    if not DASHSCOPE_API_KEY:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": "DASHSCOPE_API_KEY is not configured",
+        }
+
+    qwen_model = os.getenv("QWEN_CLOUD_MODEL", QWEN_CLOUD_MODEL)  # noqa: F405
+    qwen_api_url = os.getenv(
+        "QWEN_CLOUD_LLM_API_URL",
+        QWEN_CLOUD_LLM_API_URL,  # noqa: F405
+    )
+    qwen_enable_thinking = get_env_bool(
+        "QWEN_CLOUD_ENABLE_THINKING",
+        QWEN_CLOUD_ENABLE_THINKING,  # noqa: F405
+    )
+
+    payload = build_check_payload(
+        qwen_model,
+        problem_text,
+        solution_text,
+        history,
+        hint_level,
+        problem_image_base64,
+        task_image_base64,
+    )
+
+    if qwen_enable_thinking:
+        payload["enable_thinking"] = True
+
+    return send_openai_compatible_request(
+        qwen_api_url,
+        payload,
+        {
+            "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
+        },
+        "qwencloud",
     )

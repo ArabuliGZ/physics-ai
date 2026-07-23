@@ -3,8 +3,8 @@
 
 
 # LLM provider selection.
-# Available values: "letovo", "openrouter".
-MODEL_PROVIDER = "letovo"
+# Available values: "letovo", "openrouter", "qwencloud".
+MODEL_PROVIDER = "qwencloud"
 
 
 # Letovo Open WebUI / OpenAI-compatible endpoint.
@@ -16,6 +16,13 @@ LETOVO_LLM_MODEL = "gemma-4-26b"
 # OPENROUTER_MODEL = "anthropic/claude-sonnet-4"
 OPENROUTER_MODEL = "qwen/qwen3.7-plus"
 #OPENROUTER_MODEL = "qwen/qwen3-vl-235b-a22b-thinking"
+
+
+# QwenCloud / DashScope OpenAI-compatible endpoint.
+# Change MODEL_PROVIDER to "qwencloud" to use it.
+QWEN_CLOUD_LLM_API_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
+QWEN_CLOUD_MODEL = "qwen3.7-plus"
+QWEN_CLOUD_ENABLE_THINKING = False
 
 
 # Shared LLM generation settings.
