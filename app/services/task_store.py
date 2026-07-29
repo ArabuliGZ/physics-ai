@@ -111,5 +111,25 @@ def build_task_response(task):
     return response
 
 
+def find_task(class_id, chapter, topic, number):
+    """Return a backend task by its stable public identifiers."""
+
+    if None in (class_id, chapter, topic, number):
+        return None
+
+    task_key = tuple(str(value) for value in (class_id, chapter, topic, number))
+
+    for task in TASKS:
+        candidate_key = tuple(
+            str(task.get(field))
+            for field in ("class_id", "chapter", "topic", "number")
+        )
+
+        if candidate_key == task_key:
+            return task
+
+    return None
+
+
 TASKS = load_tasks()
 GROUPS = load_groups()

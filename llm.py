@@ -85,8 +85,23 @@ SYSTEM_PROMPT = """
 """
 
 
-def build_system_prompt(hint_level):
-    return SYSTEM_PROMPT.format(hint_level=hint_level)
+def build_system_prompt(hint_level, reference_answer=None):
+    prompt = SYSTEM_PROMPT.format(hint_level=hint_level)
+
+    if reference_answer is None or not str(reference_answer).strip():
+        return prompt
+
+    return (
+        prompt
+        + "\n\n"
+        + "Эталонный ответ из базы:\n"
+        + str(reference_answer).strip()
+        + "\n\n"
+        + "Используй эталон только для внутренней проверки решения. "
+        + "Не раскрывай его ученику напрямую, пока ученик сам не получил "
+        + "ответ или явно не попросил полное решение. Учитывай эквивалентные "
+        + "формы записи, допустимые округления и возможную опечатку в эталоне."
+    )
 
 
 def build_attachment_part(data_url):
@@ -214,7 +229,8 @@ def ask_llm(
     history,
     hint_level,
     problem_image_base64=None,
-    task_image_base64=None
+    task_image_base64=None,
+    reference_answer=None,
 ):
     if MODEL_PROVIDER == "letovo":  # noqa: F405
         return ask_letovo_llm(
@@ -224,6 +240,7 @@ def ask_llm(
             hint_level,
             problem_image_base64,
             task_image_base64,
+            reference_answer,
         )
 
     if MODEL_PROVIDER == "openrouter":  # noqa: F405
@@ -234,6 +251,7 @@ def ask_llm(
             hint_level,
             problem_image_base64,
             task_image_base64,
+            reference_answer,
         )
 
     if MODEL_PROVIDER in ("qwencloud", "qwen"):  # noqa: F405
@@ -244,6 +262,7 @@ def ask_llm(
             hint_level,
             problem_image_base64,
             task_image_base64,
+            reference_answer,
         )
 
     if MODEL_PROVIDER == "yandex":  # noqa: F405
@@ -268,7 +287,8 @@ def build_check_payload(
     hint_level,
     problem_image_base64=None,
     task_image_base64=None,
-    response_format=None
+    response_format=None,
+    reference_answer=None,
 ):
     user_prompt = f"""
 Задача:
@@ -281,7 +301,7 @@ def build_check_payload(
     payload = {
         "model": model,
         "messages": build_messages(
-            build_system_prompt(hint_level),
+            build_system_prompt(hint_level, reference_answer),
             history,
             user_prompt,
             problem_image_base64,
@@ -372,7 +392,8 @@ def ask_letovo_llm(
     history,
     hint_level,
     problem_image_base64=None,
-    task_image_base64=None
+    task_image_base64=None,
+    reference_answer=None,
 ):
     if not LETOVO_LLM_API_KEY:
         return {
@@ -390,6 +411,7 @@ def ask_letovo_llm(
         problem_image_base64,
         task_image_base64,
         response_format={"type": "json_object"},
+        reference_answer=reference_answer,
     )
 
     return send_openai_compatible_request(
@@ -408,7 +430,8 @@ def ask_openrouter(
     history,
     hint_level,
     problem_image_base64=None,
-    task_image_base64=None
+    task_image_base64=None,
+    reference_answer=None,
 ):
     if not OPENROUTER_API_KEY:
         return {
@@ -425,6 +448,7 @@ def ask_openrouter(
         hint_level,
         problem_image_base64,
         task_image_base64,
+        reference_answer=reference_answer,
     )
 
     return send_openai_compatible_request(
@@ -445,7 +469,8 @@ def ask_qwencloud(
     history,
     hint_level,
     problem_image_base64=None,
-    task_image_base64=None
+    task_image_base64=None,
+    reference_answer=None,
 ):
     if not DASHSCOPE_API_KEY:
         return {
@@ -472,6 +497,7 @@ def ask_qwencloud(
         hint_level,
         problem_image_base64,
         task_image_base64,
+        reference_answer=reference_answer,
     )
 
     if qwen_enable_thinking:

@@ -13,6 +13,7 @@ from app.services.progress import record_task_attempt
 from app.services.sessions import find_student_by_session_token
 from app.services.students import allowed_task_class_id
 from app.services.students import get_student
+from app.services.task_store import find_task
 from config import ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES
 from config import MAX_SOLUTION_IMAGE_BYTES
 from llm import ask_llm
@@ -139,13 +140,22 @@ async def check(
                 local_path
             )
 
+    task = find_task(
+        data.class_id,
+        data.chapter,
+        data.topic,
+        data.number,
+    )
+    reference_answer = task.get("answer") if task is not None else None
+
     result = ask_llm(
         data.problem,
         data.solution,
         data.history,
         data.hint_level,
         data.problem_image_base64,
-        task_image_base64
+        task_image_base64,
+        reference_answer,
     )
 
     result["attempt_saved"] = False
