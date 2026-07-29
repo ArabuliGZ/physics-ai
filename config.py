@@ -1,10 +1,16 @@
+import os
+
+
 # Non-secret application configuration.
 # Secrets live in .env and are read only where they are needed.
 
 
 # LLM provider selection.
 # Available values: "letovo", "openrouter", "qwencloud".
-MODEL_PROVIDER = "qwencloud"
+MODEL_PROVIDER = os.getenv(
+    "MODEL_PROVIDER",
+    "qwencloud",
+).strip().lower()
 
 
 # Letovo Open WebUI / OpenAI-compatible endpoint.

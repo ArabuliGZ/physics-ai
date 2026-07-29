@@ -14,7 +14,13 @@ from app.security import hash_password
 DEMO_SCHOOL = "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u0448\u043a\u043e\u043b\u0430"
 DEMO_CLASS_GROUP = "demo"
 STUDENTS_PER_GRADE = 12
-GRADES = (7, 8, 9)
+DEMO_TASK_CLASSES = (
+    (7, "7class"),
+    (8, "8class"),
+    (9, "9class"),
+    (10, "10class"),
+    (11, "11Uclass"),
+)
 
 
 def seed_demo_data():
@@ -41,8 +47,7 @@ def seed_demo_data():
             "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
         )
 
-        for grade in GRADES:
-            class_id = f"{grade}class"
+        for grade, class_id in DEMO_TASK_CLASSES:
             tasks = tasks_by_class.get(class_id, [])
 
             for index in range(1, STUDENTS_PER_GRADE + 1):
@@ -83,7 +88,7 @@ def reset_demo_passwords():
     demo_user_emails = ("teacher@test.ru", "admin@test.ru")
     demo_student_emails = [
         demo_email(grade, index)
-        for grade in GRADES
+        for grade, _class_id in DEMO_TASK_CLASSES
         for index in range(1, STUDENTS_PER_GRADE + 1)
     ]
 

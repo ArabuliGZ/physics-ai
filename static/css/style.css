@@ -1180,6 +1180,53 @@
     overflow-y: hidden;
 }
 
+.left-column #problem_view .problem-data-table-wrap {
+    max-width: 100%;
+    margin-top: 12px;
+    overflow-x: auto;
+    border: 1px solid var(--teacher-table-border);
+    border-radius: 6px;
+    background: var(--teacher-table-cell-bg);
+    box-shadow: var(--teacher-table-shadow);
+}
+
+.left-column #problem_view .problem-data-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: var(--teacher-table-text);
+    font-size: 13px;
+}
+
+.left-column #problem_view .problem-data-table th,
+.left-column #problem_view .problem-data-table td {
+    height: 36px;
+    padding: 6px 10px;
+    border-right: 1px solid var(--teacher-table-divider);
+    border-bottom: 1px solid var(--teacher-table-divider);
+    box-sizing: border-box;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.left-column #problem_view .problem-data-table th {
+    background: var(--teacher-table-header-bg);
+    font-weight: 700;
+}
+
+.left-column #problem_view .problem-data-table td {
+    background: var(--teacher-table-cell-bg);
+}
+
+.left-column #problem_view .problem-data-table tr > :last-child {
+    border-right: 0;
+}
+
+.left-column #problem_view .problem-data-table tbody tr:last-child > * {
+    border-bottom: 0;
+}
+
 .left-column #problem_image {
     order: 2;
     flex: 0 0 auto;
