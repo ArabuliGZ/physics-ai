@@ -2,6 +2,10 @@
 
 import sqlite3
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from app.database import database_connection
 from config import LETOVO_LLM_MODEL
 from config import MODEL_PROVIDER
