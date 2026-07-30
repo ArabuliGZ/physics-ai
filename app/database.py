@@ -142,6 +142,14 @@ def init_database():
                 FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
                 UNIQUE (student_id, class_id, chapter, topic, number)
             );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                updated_by INTEGER,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (updated_by) REFERENCES users (id)
+            );
             """
         )
 

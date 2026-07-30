@@ -16,7 +16,7 @@ HTML_NO_CACHE_HEADERS = {
     "Expires": "0",
 }
 
-TEACHER_PAGE_VERSION = "journal-active-schools-20260712"
+TEACHER_PAGE_VERSION = "admin-llm-settings-20260730"
 
 
 @router.get("/")

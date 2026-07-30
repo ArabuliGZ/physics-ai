@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from app.services.llm_settings import get_active_llm_provider
 from config import *  # noqa: F403
 
 
@@ -232,7 +233,9 @@ def ask_llm(
     task_image_base64=None,
     reference_answer=None,
 ):
-    if MODEL_PROVIDER == "letovo":  # noqa: F405
+    active_provider = get_active_llm_provider()
+
+    if active_provider == "letovo":
         return ask_letovo_llm(
             problem_text,
             solution_text,
@@ -243,7 +246,7 @@ def ask_llm(
             reference_answer,
         )
 
-    if MODEL_PROVIDER == "openrouter":  # noqa: F405
+    if active_provider == "openrouter":
         return ask_openrouter(
             problem_text,
             solution_text,
@@ -254,7 +257,7 @@ def ask_llm(
             reference_answer,
         )
 
-    if MODEL_PROVIDER in ("qwencloud", "qwen"):  # noqa: F405
+    if active_provider == "qwencloud":
         return ask_qwencloud(
             problem_text,
             solution_text,
@@ -264,13 +267,6 @@ def ask_llm(
             task_image_base64,
             reference_answer,
         )
-
-    if MODEL_PROVIDER == "yandex":  # noqa: F405
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "YandexGPT пока не подключён",
-        }
 
     return {
         "status": "error",

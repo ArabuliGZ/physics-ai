@@ -16,6 +16,7 @@ from fastapi import UploadFile
 from app.schemas import StudentCreateRequest
 from app.schemas import StudentLoginRequest
 from app.schemas import AdminClassTeacherRequest
+from app.schemas import AdminLlmSettingsRequest
 from app.schemas import AdminSchoolRequest
 from app.schemas import AdminTeacherRequest
 from app.schemas import ChangePasswordRequest
@@ -36,6 +37,8 @@ from app.services.progress import get_progress_map
 from app.services.progress import list_teacher_journal_progress
 from app.services.progress import list_student_progress
 from app.services.progress import set_task_progress_passed
+from app.services.llm_settings import get_llm_settings
+from app.services.llm_settings import set_active_llm_provider
 from app.services.schools import active_school_exists
 from app.services.schools import deactivate_school
 from app.services.schools import list_admin_schools
@@ -820,6 +823,32 @@ def reset_admin_demo_passwords(current_user=Depends(require_admin_user)):
     """Reset public demo accounts to the shared temporary password."""
 
     return reset_demo_passwords()
+
+
+@router.get("/admin/llm-settings")
+def get_admin_llm_settings(current_user=Depends(require_admin_user)):
+    """Return the active application-wide LLM and allowed choices."""
+
+    return get_llm_settings()
+
+
+@router.post("/admin/llm-settings")
+def update_admin_llm_settings(
+    data: AdminLlmSettingsRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Apply an LLM provider to all subsequent student checks."""
+
+    try:
+        return set_active_llm_provider(
+            data.provider,
+            current_user["id"],
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
+        ) from error
 
 
 @router.post("/teacher/import-students")

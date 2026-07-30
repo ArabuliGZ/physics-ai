@@ -88,6 +88,12 @@ class AdminClassTeacherRequest(BaseModel):
     teacher_id: int
 
 
+class AdminLlmSettingsRequest(BaseModel):
+    """Application-wide LLM selection made by an administrator."""
+
+    provider: str
+
+
 class ClassUpdateRequest(BaseModel):
     """Request body for editing a teacher class row."""
 

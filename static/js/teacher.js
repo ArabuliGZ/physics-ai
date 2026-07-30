@@ -4,6 +4,7 @@
     adminTeachers: [],
     adminSchools: [],
     adminClasses: [],
+    llmSettings: null,
     classes: [],
     students: [],
     tasks: [],
@@ -323,6 +324,7 @@ function switchTeacherView(viewName) {
     const adminViewByTeacherView = {
         "admin-schools": "schools",
         "admin-teachers": "teachers",
+        "admin-llm": "llm",
     };
     let isAdminView = Object.prototype.hasOwnProperty.call(adminViewByTeacherView, viewName);
 
@@ -359,7 +361,7 @@ function switchTeacherView(viewName) {
 
 
 function switchAdminView(viewName) {
-    const allowedViews = new Set(["classes", "teachers", "schools"]);
+    const allowedViews = new Set(["classes", "teachers", "schools", "llm"]);
 
     if (!allowedViews.has(viewName)) {
         viewName = "classes";
@@ -588,6 +590,7 @@ function logoutTeacher() {
     TEACHER_STATE.adminTeachers = [];
     TEACHER_STATE.adminSchools = [];
     TEACHER_STATE.adminClasses = [];
+    TEACHER_STATE.llmSettings = null;
     TEACHER_STATE.classes = [];
     TEACHER_STATE.students = [];
     TEACHER_STATE.selectedFilters = null;
@@ -668,24 +671,32 @@ async function loadAdminDashboardIfNeeded() {
         return;
     }
 
-    const [teachersResponse, schoolsResponse, classesResponse] = await Promise.all([
+    const [teachersResponse, schoolsResponse, classesResponse, llmResponse] = await Promise.all([
         teacherFetch("/admin/teachers"),
         teacherFetch("/admin/schools"),
         teacherFetch("/admin/classes"),
+        teacherFetch("/admin/llm-settings"),
     ]);
 
-    if (!teachersResponse.ok || !schoolsResponse.ok || !classesResponse.ok) {
+    if (
+        !teachersResponse.ok
+        || !schoolsResponse.ok
+        || !classesResponse.ok
+        || !llmResponse.ok
+    ) {
         throw new Error("admin dashboard request failed");
     }
 
     TEACHER_STATE.adminTeachers = await teachersResponse.json();
     TEACHER_STATE.adminSchools = await schoolsResponse.json();
     TEACHER_STATE.adminClasses = await classesResponse.json();
+    TEACHER_STATE.llmSettings = await llmResponse.json();
     renderAdminDashboard();
 }
 
 
 function renderAdminDashboard() {
+    renderAdminLlmSettings();
     renderAdminTeachers();
     renderAdminSchools();
     fillAdminClassSchoolFilter();
@@ -693,6 +704,75 @@ function renderAdminDashboard() {
     fillAdminImportForm();
     renderAdminClasses();
     switchAdminView(TEACHER_STATE.activeAdminView);
+}
+
+
+function renderAdminLlmSettings(message = "") {
+    const select = document.getElementById("admin_llm_provider");
+    const result = document.getElementById("admin_llm_result");
+    const settings = TEACHER_STATE.llmSettings;
+
+    if (!select || !result || !settings) {
+        return;
+    }
+
+    select.innerHTML = settings.options
+        .map(option => `
+            <option value="${escapeHtml(option.provider)}">
+                ${escapeHtml(option.label)} · ${escapeHtml(option.model)}
+            </option>
+        `)
+        .join("");
+    select.value = settings.active_provider;
+    result.textContent = message;
+}
+
+
+async function saveAdminLlmSettings() {
+    const select = document.getElementById("admin_llm_provider");
+    const button = document.getElementById("admin_llm_save");
+    const result = document.getElementById("admin_llm_result");
+    const provider = select?.value || "";
+
+    if (!provider || !button || !result) {
+        return;
+    }
+
+    if (provider === TEACHER_STATE.llmSettings?.active_provider) {
+        result.textContent = "Эта модель уже активна.";
+        return;
+    }
+
+    select.disabled = true;
+    button.disabled = true;
+    result.textContent = "Применяю...";
+
+    try {
+        const response = await teacherFetch(
+            "/admin/llm-settings",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ provider }),
+            }
+        );
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.detail || "llm settings update failed");
+        }
+
+        TEACHER_STATE.llmSettings = data;
+        renderAdminLlmSettings("Модель применена для всех пользователей.");
+    } catch (error) {
+        console.error("LLM settings update failed:", error);
+        result.textContent = "Не получилось сменить модель.";
+    } finally {
+        select.disabled = false;
+        button.disabled = false;
+    }
 }
 
 

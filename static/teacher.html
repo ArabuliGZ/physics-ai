@@ -19,7 +19,7 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="/static/css/style.css?v=journal-active-schools-20260712">
+    <link rel="stylesheet" href="/static/css/style.css?v=admin-llm-settings-20260730">
     <link rel="icon" href="/static/favicon.png">
     <style>
         [hidden],
@@ -201,6 +201,17 @@
                     hidden
                 >
                     Учителя
+                </button>
+
+                <button
+                    type="button"
+                    class="teacher-tab"
+                    data-teacher-tab="admin-llm"
+                    data-admin-only="true"
+                    onclick="switchTeacherView('admin-llm')"
+                    hidden
+                >
+                    Нейросеть
                 </button>
 
                 <button
@@ -394,6 +405,39 @@
             </nav>
 
             <div class="teacher-admin-grid">
+                <section
+                    class="teacher-admin-section"
+                    data-admin-view="llm"
+                    hidden
+                >
+                    <div class="teacher-admin-section-header">
+                        <h3>Нейросеть</h3>
+                    </div>
+
+                    <div class="teacher-llm-settings">
+                        <label>
+                            <span>Активная модель</span>
+
+                            <select id="admin_llm_provider"></select>
+                        </label>
+
+                        <button
+                            id="admin_llm_save"
+                            type="button"
+                            class="teacher-secondary-button"
+                            onclick="saveAdminLlmSettings()"
+                        >
+                            Применить
+                        </button>
+
+                        <span
+                            id="admin_llm_result"
+                            class="teacher-llm-result"
+                            aria-live="polite"
+                        ></span>
+                    </div>
+                </section>
+
                 <section
                     class="teacher-admin-section"
                     data-admin-view="teachers"
@@ -819,6 +863,6 @@
         </section>
     </div>
 
-    <script src="/static/js/teacher.js?v=journal-active-schools-20260712"></script>
+    <script src="/static/js/teacher.js?v=admin-llm-settings-20260730"></script>
 </body>
 </html>

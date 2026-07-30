@@ -1606,6 +1606,12 @@
     gap: 22px;
     margin: 0;
     padding: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.teacher-tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .teacher-tab {
@@ -1649,6 +1655,8 @@
     .teacher-tabs {
         order: 3;
         flex-basis: 100%;
+        width: 100%;
+        min-width: 0;
         max-width: none;
         justify-content: flex-start;
         padding-top: 2px;
@@ -1939,6 +1947,54 @@
 .teacher-admin-section-header h3 {
     margin: 0;
     font-size: 15px;
+}
+
+.teacher-llm-settings {
+    display: grid;
+    grid-template-columns: minmax(240px, 420px) auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: end;
+}
+
+.teacher-llm-settings label {
+    display: grid;
+    gap: 5px;
+    color: var(--teacher-table-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.teacher-llm-settings select {
+    width: 100%;
+    height: var(--teacher-table-cell-height);
+    padding: 0 var(--teacher-table-cell-x);
+    border: 1px solid var(--teacher-table-border);
+    border-radius: 6px;
+    background: var(--teacher-table-cell-bg);
+    color: var(--teacher-table-text);
+    font: inherit;
+}
+
+.teacher-llm-settings .teacher-secondary-button {
+    min-height: var(--teacher-table-cell-height);
+}
+
+.teacher-llm-result {
+    min-height: var(--teacher-table-cell-height);
+    display: flex;
+    align-items: center;
+    color: var(--teacher-table-muted);
+    font-size: 13px;
+}
+
+@media (max-width: 720px) {
+    .teacher-llm-settings {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .teacher-llm-result {
+        grid-column: 1 / -1;
+    }
 }
 
 .teacher-admin-section-header-stacked {
