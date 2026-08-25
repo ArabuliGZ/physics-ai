@@ -170,13 +170,10 @@ def init_database():
 
 
 def ensure_user_rows(connection):
-    """Create stable local test users for role-based login."""
+    """Keep the stable test teacher available for role-based login."""
 
     password_hash = hash_password(DEFAULT_TEST_PASSWORD)
-    users = (
-        ("teacher@test.ru", "teacher", "Тестовый учитель"),
-        ("admin@test.ru", "admin", "Администратор"),
-    )
+    users = (("teacher@test.ru", "teacher", "Тестовый учитель"),)
 
     for email, role, full_name in users:
         connection.execute(

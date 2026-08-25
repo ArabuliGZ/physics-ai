@@ -40,12 +40,6 @@ def seed_demo_data():
             "teacher",
             "\u0422\u0435\u0441\u0442\u043e\u0432\u044b\u0439 \u0443\u0447\u0438\u0442\u0435\u043b\u044c",
         )
-        ensure_demo_user(
-            connection,
-            "admin@test.ru",
-            "admin",
-            "\u0410\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
-        )
 
         for grade, class_id in DEMO_TASK_CLASSES:
             tasks = tasks_by_class.get(class_id, [])
@@ -85,7 +79,7 @@ def reset_demo_passwords():
     """Reset public demo accounts to the shared temporary password."""
 
     password_hash = hash_password(DEFAULT_TEST_PASSWORD)
-    demo_user_emails = ("teacher@test.ru", "admin@test.ru")
+    demo_user_emails = ("teacher@test.ru",)
     demo_student_emails = [
         demo_email(grade, index)
         for grade, _class_id in DEMO_TASK_CLASSES
@@ -142,7 +136,7 @@ def group_tasks_by_class():
 
 
 def ensure_demo_user(connection, email, role, full_name):
-    """Create or reactivate one demo teacher/admin account."""
+    """Create or reactivate the demo teacher account."""
 
     password_hash = hash_password(DEFAULT_TEST_PASSWORD)
 

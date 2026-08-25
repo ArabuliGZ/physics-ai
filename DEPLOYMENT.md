@@ -45,7 +45,6 @@ Useful test logins:
 
 ```text
 teacher@test.ru
-admin@test.ru
 7@test.ru
 8@test.ru
 9@test.ru
