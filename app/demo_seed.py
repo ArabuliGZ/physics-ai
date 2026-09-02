@@ -13,13 +13,15 @@ from app.security import hash_password
 
 DEMO_SCHOOL = "\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u0448\u043a\u043e\u043b\u0430"
 DEMO_CLASS_GROUP = "demo"
+DEMO_ADVANCED_CLASS_GROUP = "demo-ugl"
 STUDENTS_PER_GRADE = 12
 DEMO_TASK_CLASSES = (
-    (7, "7class"),
-    (8, "8class"),
-    (9, "9class"),
-    (10, "10class"),
-    (11, "11Uclass"),
+    (7, "7class", "7", DEMO_CLASS_GROUP, "7"),
+    (8, "8class", "8", DEMO_CLASS_GROUP, "8"),
+    (9, "9class", "9", DEMO_CLASS_GROUP, "9"),
+    (10, "10class", "10", DEMO_CLASS_GROUP, "10"),
+    (11, "11class", "11", DEMO_CLASS_GROUP, "11"),
+    (11, "11Uclass", "11y", DEMO_ADVANCED_CLASS_GROUP, "11У"),
 )
 
 
@@ -41,17 +43,19 @@ def seed_demo_data():
             "\u0422\u0435\u0441\u0442\u043e\u0432\u044b\u0439 \u0443\u0447\u0438\u0442\u0435\u043b\u044c",
         )
 
-        for grade, class_id in DEMO_TASK_CLASSES:
+        for grade, class_id, email_prefix, class_group, student_label in DEMO_TASK_CLASSES:
             tasks = tasks_by_class.get(class_id, [])
 
             for index in range(1, STUDENTS_PER_GRADE + 1):
-                email = demo_email(grade, index)
+                email = demo_email(email_prefix, index)
                 student_id, action = upsert_demo_student(
                     connection,
                     email,
                     teacher_id,
                     grade,
                     class_id,
+                    class_group,
+                    student_label,
                     index,
                 )
 
@@ -81,8 +85,9 @@ def reset_demo_passwords():
     password_hash = hash_password(DEFAULT_TEST_PASSWORD)
     demo_user_emails = ("teacher@test.ru",)
     demo_student_emails = [
-        demo_email(grade, index)
-        for grade, _class_id in DEMO_TASK_CLASSES
+        demo_email(email_prefix, index)
+        for _grade, _class_id, email_prefix, _class_group, _student_label
+        in DEMO_TASK_CLASSES
         for index in range(1, STUDENTS_PER_GRADE + 1)
     ]
 
@@ -166,23 +171,32 @@ def ensure_demo_user(connection, email, role, full_name):
     return row["id"]
 
 
-def demo_email(grade, index):
+def demo_email(prefix, index):
     """Return short grade logins plus numbered classmates."""
 
     if index == 1:
-        return f"{grade}@test.ru"
+        return f"{prefix}@test.ru"
 
-    return f"{grade}-demo-{index:02d}@test.ru"
+    return f"{prefix}-demo-{index:02d}@test.ru"
 
 
-def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
+def upsert_demo_student(
+    connection,
+    email,
+    teacher_id,
+    grade,
+    class_id,
+    class_group,
+    student_label,
+    index,
+):
     """Create or update one demo student."""
 
     password_hash = hash_password(DEFAULT_TEST_PASSWORD)
-    class_name = f"{grade}-demo"
+    class_name = f"{grade}-{class_group}"
     full_name = (
         f"\u0422\u0435\u0441\u0442\u043e\u0432\u044b\u0439 "
-        f"\u0443\u0447\u0435\u043d\u0438\u043a {grade}.{index:02d}"
+        f"\u0443\u0447\u0435\u043d\u0438\u043a {student_label}.{index:02d}"
     )
 
     existing = connection.execute(
@@ -221,7 +235,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
                 DEMO_SCHOOL,
                 class_name,
                 grade,
-                DEMO_CLASS_GROUP,
+                class_group,
                 class_id,
                 full_name,
             ),
@@ -250,7 +264,7 @@ def upsert_demo_student(connection, email, teacher_id, grade, class_id, index):
             DEMO_SCHOOL,
             class_name,
             grade,
-            DEMO_CLASS_GROUP,
+            class_group,
             class_id,
             full_name,
             existing["id"],
