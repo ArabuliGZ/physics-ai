@@ -40,10 +40,15 @@ LLM_REQUEST_TIMEOUT = 180
 # Uploaded solution images are compressed in the browser, but the backend keeps
 # the same hard safety limit for direct API requests.
 MAX_SOLUTION_IMAGE_BYTES = 10 * 1024 * 1024
+HEIC_SOLUTION_ATTACHMENT_MIME_TYPES = {
+    "image/heic",
+    "image/heif",
+}
 ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES = {
     "image/jpeg",
     "image/png",
     "image/webp",
+    *HEIC_SOLUTION_ATTACHMENT_MIME_TYPES,
 }
 
 

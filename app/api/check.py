@@ -11,10 +11,12 @@ from app.services.media import resolve_task_media_url
 from app.services.progress import get_task_progress
 from app.services.progress import record_task_attempt
 from app.services.sessions import find_student_by_session_token
+from app.services.solution_attachments import convert_heic_data_url_to_jpeg
 from app.services.students import allowed_task_class_id
 from app.services.students import get_student
 from app.services.task_store import find_task
 from config import ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES
+from config import HEIC_SOLUTION_ATTACHMENT_MIME_TYPES
 from config import MAX_SOLUTION_IMAGE_BYTES
 from llm import ask_llm
 
@@ -74,6 +76,7 @@ async def check(
     """
 
     task_image_base64 = None
+    solution_image_base64 = data.problem_image_base64
     has_tracking_data = (
         data.student_id is not None
         and data.class_id is not None
@@ -113,20 +116,34 @@ async def check(
     # Если у задачи есть файл условия, прикладываем его к LLM только
     # когда это изображение. PDF показывается ученику, но не отправляется
     # в текущий image_url-формат запроса к модели.
-    if data.problem_image_base64:
-        mime_type = data_url_mime_type(data.problem_image_base64)
+    if solution_image_base64:
+        mime_type = data_url_mime_type(solution_image_base64)
 
         if mime_type not in ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES:
             raise HTTPException(
                 status_code=415,
-                detail="В запрос можно отправить только изображение JPG, PNG или WEBP."
+                detail=(
+                    "В запрос можно отправить только изображение "
+                    "JPG, PNG, WEBP, HEIC или HEIF."
+                )
             )
 
-        if base64_payload_size(data.problem_image_base64) > MAX_SOLUTION_IMAGE_BYTES:
+        if base64_payload_size(solution_image_base64) > MAX_SOLUTION_IMAGE_BYTES:
             raise HTTPException(
                 status_code=413,
                 detail="Файл слишком большой. Максимальный размер — 10 МБ."
             )
+
+        if mime_type in HEIC_SOLUTION_ATTACHMENT_MIME_TYPES:
+            try:
+                solution_image_base64 = convert_heic_data_url_to_jpeg(
+                    solution_image_base64
+                )
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=415,
+                    detail="Не получилось прочитать файл HEIC или HEIF."
+                ) from error
 
     if data.task_image_url:
 
@@ -153,7 +170,7 @@ async def check(
         data.solution,
         data.history,
         data.hint_level,
-        data.problem_image_base64,
+        solution_image_base64,
         task_image_base64,
         reference_answer,
     )

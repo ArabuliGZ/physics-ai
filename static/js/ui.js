@@ -35,6 +35,8 @@ const ALLOWED_SOLUTION_FILE_TYPES = new Set([
     "image/jpeg",
     "image/png",
     "image/webp",
+    "image/heic",
+    "image/heif",
     "application/pdf",
 ]);
 const ALLOWED_SOLUTION_FILE_EXTENSIONS = [
@@ -42,6 +44,8 @@ const ALLOWED_SOLUTION_FILE_EXTENSIONS = [
     ".jpeg",
     ".png",
     ".webp",
+    ".heic",
+    ".heif",
     ".pdf",
 ];
 
@@ -81,6 +85,16 @@ function isAllowedSolutionFile(file) {
         );
 }
 
+function isHeicSolutionFile(file) {
+
+    const fileName = file.name.toLowerCase();
+
+    return file.type === "image/heic"
+        || file.type === "image/heif"
+        || fileName.endsWith(".heic")
+        || fileName.endsWith(".heif");
+}
+
 function previewImage(event) {
 
     const file =
@@ -93,7 +107,7 @@ function previewImage(event) {
 
         resetSolutionImageMemory();
         showImageUploadError(
-            "Можно прикрепить только JPG, PNG, WEBP или PDF."
+            "Можно прикрепить JPG, PNG, WEBP, HEIC, HEIF или PDF."
         );
 
         return;
@@ -126,7 +140,11 @@ function previewImage(event) {
         "preview-wrapper"
     );
 
-    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+    if (
+        file.type === "application/pdf"
+        || file.name.toLowerCase().endsWith(".pdf")
+        || isHeicSolutionFile(file)
+    ) {
 
         const fileBadge =
             document.createElement("div");
@@ -136,7 +154,7 @@ function previewImage(event) {
         );
 
         fileBadge.textContent =
-            file.name || "PDF";
+            file.name || "Файл";
 
         wrapper.appendChild(fileBadge);
 

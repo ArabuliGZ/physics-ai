@@ -156,6 +156,38 @@ async function renderPdfFirstPageAsImage(file) {
     return canvasToCompressedJpeg(canvas);
 }
 
+async function readHeicAsDataUrl(file) {
+
+    const mimeType = file.name.toLowerCase().endsWith(".heif")
+        || file.type === "image/heif"
+        ? "image/heif"
+        : "image/heic";
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const dataUrl = String(reader.result || "");
+            const separatorIndex = dataUrl.indexOf(",");
+
+            if (separatorIndex < 0) {
+                reject(new Error("Не получилось прочитать файл HEIC или HEIF."));
+                return;
+            }
+
+            resolve(
+                `data:${mimeType};base64,${dataUrl.slice(separatorIndex + 1)}`
+            );
+        };
+
+        reader.onerror = () => {
+            reject(new Error("Не получилось прочитать файл HEIC или HEIF."));
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
 async function prepareSolutionAttachment(file) {
 
     if (!file) {
@@ -164,6 +196,10 @@ async function prepareSolutionAttachment(file) {
 
     if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
         return renderPdfFirstPageAsImage(file);
+    }
+
+    if (isHeicSolutionFile(file)) {
+        return readHeicAsDataUrl(file);
     }
 
     return compressImage(file);
@@ -320,10 +356,11 @@ function addUserMessage(text, attachedFile = null) {
         if (
             attachedFile.type === "application/pdf"
             || attachedFile.name.toLowerCase().endsWith(".pdf")
+            || isHeicSolutionFile(attachedFile)
         ) {
             const fileDiv = document.createElement("div");
             fileDiv.classList.add("message-file");
-            fileDiv.textContent = attachedFile.name || "PDF";
+            fileDiv.textContent = attachedFile.name || "Файл";
             messageDiv.appendChild(fileDiv);
         } else {
             const img = document.createElement("img");
