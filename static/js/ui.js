@@ -75,6 +75,27 @@ function showImageUploadError(message) {
     preview.appendChild(error);
 }
 
+
+function typesetMath(elements) {
+
+    const mathJax = window.MathJax;
+
+    if (
+        !mathJax
+        || typeof mathJax.typesetPromise !== "function"
+    ) {
+        return Promise.resolve();
+    }
+
+    if (typeof mathJax.typesetClear === "function") {
+        mathJax.typesetClear(elements);
+    }
+
+    return mathJax.typesetPromise(elements).catch(error => {
+        console.warn("MathJax typesetting failed:", error);
+    });
+}
+
 function isAllowedSolutionFile(file) {
 
     const fileName = file.name.toLowerCase();

@@ -358,9 +358,7 @@ async function showSelectedTask() {
 
     // Перерисовываем LaTeX
 
-    MathJax.typesetClear([view]);
-
-    MathJax.typesetPromise([view]);
+    typesetMath([view]);
 
     updateCurrentProgressCell();
 }

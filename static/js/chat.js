@@ -27,8 +27,7 @@ function addMessage(text, sender) {
 
     chat.appendChild(div);
 
-    MathJax.typesetClear([div]);
-    MathJax.typesetPromise([div]);
+    typesetMath([div]);
 
     // Автоскролл только если
     // пользователь был внизу
@@ -348,7 +347,7 @@ function addUserMessage(text, attachedFile = null) {
         textDiv.classList.add("text-content");
         textDiv.innerHTML = text;
         messageDiv.appendChild(textDiv);
-        MathJax.typesetPromise([textDiv]);
+        typesetMath([textDiv]);
     }
 
     // Если есть прикреплённая картинка, добавляем в один bubble

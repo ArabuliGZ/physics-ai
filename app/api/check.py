@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from fastapi import Header
 from fastapi import HTTPException
+from starlette.concurrency import run_in_threadpool
 
 from app.schemas import CheckRequest
 from app.services.media import image_to_base64
@@ -165,7 +166,8 @@ async def check(
     )
     reference_answer = task.get("answer") if task is not None else None
 
-    result = ask_llm(
+    result = await run_in_threadpool(
+        ask_llm,
         data.problem,
         data.solution,
         data.history,
