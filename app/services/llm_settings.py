@@ -11,6 +11,7 @@ from config import LETOVO_LLM_MODEL
 from config import MODEL_PROVIDER
 from config import OPENROUTER_MODEL
 from config import QWEN_CLOUD_MODEL
+from config import TIMEWEB_LLM_MODEL
 
 
 LLM_PROVIDER_SETTING_KEY = "active_llm_provider"
@@ -29,6 +30,11 @@ LLM_PROVIDER_OPTIONS = (
         "provider": "openrouter",
         "label": "OpenRouter",
         "model": OPENROUTER_MODEL,
+    },
+    {
+        "provider": "timeweb",
+        "label": "Timeweb GPT",
+        "model": TIMEWEB_LLM_MODEL,
     },
 )
 VALID_LLM_PROVIDERS = {

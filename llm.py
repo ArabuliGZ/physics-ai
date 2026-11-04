@@ -20,6 +20,7 @@ os.environ.pop("https_proxy", None)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 LETOVO_LLM_API_KEY = os.getenv("LETOVO_LLM_API_KEY")
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
+TIMEWEB_CLOUD_API_KEY = os.getenv("TIMEWEB_CLOUD_API_KEY")
 
 
 def get_env_bool(name, default):
@@ -268,6 +269,17 @@ def ask_llm(
             reference_answer,
         )
 
+    if active_provider == "timeweb":
+        return ask_timeweb(
+            problem_text,
+            solution_text,
+            history,
+            hint_level,
+            problem_image_base64,
+            task_image_base64,
+            reference_answer,
+        )
+
     return {
         "status": "error",
         "is_passed": False,
@@ -506,4 +518,44 @@ def ask_qwencloud(
             "Authorization": f"Bearer {DASHSCOPE_API_KEY}",
         },
         "qwencloud",
+    )
+
+
+def ask_timeweb(
+    problem_text,
+    solution_text,
+    history,
+    hint_level,
+    problem_image_base64=None,
+    task_image_base64=None,
+    reference_answer=None,
+):
+    if not TIMEWEB_CLOUD_API_KEY:
+        return {
+            "status": "error",
+            "is_passed": False,
+            "message": "TIMEWEB_CLOUD_API_KEY is not configured",
+        }
+
+    payload = build_check_payload(
+        TIMEWEB_LLM_MODEL,  # noqa: F405
+        problem_text,
+        solution_text,
+        history,
+        hint_level,
+        problem_image_base64,
+        task_image_base64,
+        response_format={"type": "json_object"},
+        reference_answer=reference_answer,
+    )
+    payload["max_completion_tokens"] = payload.pop("max_tokens")
+    payload.pop("temperature", None)
+
+    return send_openai_compatible_request(
+        TIMEWEB_LLM_API_URL,  # noqa: F405
+        payload,
+        {
+            "Authorization": f"Bearer {TIMEWEB_CLOUD_API_KEY}",
+        },
+        "timeweb",
     )

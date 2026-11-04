@@ -6,7 +6,7 @@ import os
 
 
 # LLM provider selection.
-# Available values: "letovo", "openrouter", "qwencloud".
+# Available values: "letovo", "openrouter", "qwencloud", "timeweb".
 MODEL_PROVIDER = os.getenv(
     "MODEL_PROVIDER",
     "qwencloud",
@@ -29,6 +29,11 @@ OPENROUTER_MODEL = "qwen/qwen3.7-plus"
 QWEN_CLOUD_LLM_API_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
 QWEN_CLOUD_MODEL = "qwen3.7-plus"
 QWEN_CLOUD_ENABLE_THINKING = False
+
+
+# Timeweb AI Gateway / OpenAI-compatible endpoint.
+TIMEWEB_LLM_API_URL = "https://api.timeweb.ai/v1/chat/completions"
+TIMEWEB_LLM_MODEL = "openai/gpt-6-luna"
 
 
 # Shared LLM generation settings.
