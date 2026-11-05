@@ -67,7 +67,6 @@ from app.services.task_store import TASKS
 from app.services.users import authenticate_user
 from app.services.users import change_user_password
 from app.services.users import deactivate_teacher
-from app.services.users import find_user_by_email
 from app.services.users import get_active_teacher
 from app.services.users import list_admin_teachers
 from app.services.users import reset_teacher_password
@@ -94,19 +93,11 @@ def bearer_token(authorization):
 
 def require_teacher_user(
     authorization: str | None = Header(default=None, alias="Authorization"),
-    x_user_email: str | None = Header(default=None, alias="X-User-Email"),
 ):
-    """Return the current teacher/admin user from a session token.
-
-    X-User-Email remains as a temporary fallback while older browser sessions
-    are being replaced by token-based sessions.
-    """
+    """Return the current teacher/admin user from a valid session token."""
 
     token = bearer_token(authorization)
     user = find_user_by_session_token(token) if token else None
-
-    if user is None and x_user_email:
-        user = find_user_by_email(x_user_email)
 
     if user is None:
         raise HTTPException(
@@ -148,33 +139,24 @@ def require_student_or_legacy(
     student_id,
     authorization: str | None = None,
 ):
-    """Return the session student or fall back to legacy student_id lookup.
-
-    The fallback keeps existing frontend flows alive while student token
-    headers are being rolled out everywhere.
-    """
+    """Return the matching student from a valid session token."""
 
     token = bearer_token(authorization)
     session_student = find_student_by_session_token(token) if token else None
 
-    if session_student is not None:
-        if int(session_student["id"]) != int(student_id):
-            raise HTTPException(
-                status_code=403,
-                detail="Student session does not match requested student"
-            )
-
-        return session_student
-
-    student = get_student(student_id)
-
-    if student is None:
+    if session_student is None:
         raise HTTPException(
-            status_code=404,
-            detail="Student not found"
+            status_code=401,
+            detail="Student login is required"
         )
 
-    return student
+    if int(session_student["id"]) != int(student_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Student session does not match requested student"
+        )
+
+    return session_student
 
 
 def current_student_from_token(authorization):
@@ -273,8 +255,11 @@ def change_logged_in_user_password(
 
 
 @router.post("/students")
-def add_student(data: StudentCreateRequest):
-    """Create a student record in the local SQLite database."""
+def add_student(
+    data: StudentCreateRequest,
+    current_user=Depends(require_admin_user),
+):
+    """Create a legacy student record for an authenticated administrator."""
 
     school = data.school.strip()
     email = data.email.strip().lower() if data.email else None
@@ -360,8 +345,8 @@ def change_logged_in_student_password(
 
 
 @router.get("/students")
-def get_students():
-    """Return all students."""
+def get_students(current_user=Depends(require_admin_user)):
+    """Return all students to an authenticated administrator."""
 
     return list_students()
 

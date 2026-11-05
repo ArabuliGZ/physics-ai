@@ -88,7 +88,11 @@ function initTeacherSession() {
         try {
             TEACHER_STATE.user = JSON.parse(savedUser);
 
-            if (!TEACHER_STATE.user?.email || !TEACHER_STATE.user?.role) {
+            if (
+                !TEACHER_STATE.user?.email
+                || !TEACHER_STATE.user?.role
+                || !TEACHER_STATE.user?.session_token
+            ) {
                 throw new Error("invalid saved teacher");
             }
         } catch {
@@ -607,8 +611,6 @@ function teacherFetch(url, options = {}) {
 
     if (TEACHER_STATE.user?.session_token) {
         headers.set("Authorization", `Bearer ${TEACHER_STATE.user.session_token}`);
-    } else if (TEACHER_STATE.user?.email) {
-        headers.set("X-User-Email", TEACHER_STATE.user.email);
     }
 
     return fetch(url, {

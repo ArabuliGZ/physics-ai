@@ -61,12 +61,12 @@ def create_app():
         name="static"
     )
 
-    # Раздаем исходные файлы задач и изображения по старому публичному пути.
-    # Этот путь уже использует frontend, поэтому оставляем его без изменений.
+    # Наружу отдаем только изображения. Исходные JSON содержат правильные
+    # ответы и должны оставаться доступны лишь backend.
     app.mount(
-        "/tasks",
-        StaticFiles(directory="tasks"),
-        name="tasks"
+        "/tasks/images",
+        StaticFiles(directory="tasks/images"),
+        name="task-images"
     )
 
     # CORS оставлен таким же широким, как был до рефактора.
