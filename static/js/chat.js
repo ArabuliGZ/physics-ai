@@ -23,7 +23,7 @@ function addMessage(text, sender) {
 
     div.classList.add(sender);
 
-    div.innerHTML = text;
+    div.textContent = String(text ?? "");
 
     chat.appendChild(div);
 
@@ -345,7 +345,7 @@ function addUserMessage(text, attachedFile = null) {
     if (text) {
         const textDiv = document.createElement("div");
         textDiv.classList.add("text-content");
-        textDiv.innerHTML = text;
+        textDiv.textContent = text;
         messageDiv.appendChild(textDiv);
         typesetMath([textDiv]);
     }

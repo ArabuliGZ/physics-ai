@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -57,6 +58,13 @@ class RouteSecurityTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 401)
+
+    def test_chat_does_not_render_messages_as_html(self):
+        chat_source = Path("static/js/chat.js").read_text(encoding="utf-8")
+
+        self.assertNotIn("innerHTML = text", chat_source)
+        self.assertIn("div.textContent", chat_source)
+        self.assertIn("textDiv.textContent", chat_source)
 
 
 if __name__ == "__main__":
