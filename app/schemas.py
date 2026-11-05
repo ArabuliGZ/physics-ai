@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class CheckRequest(BaseModel):
     """Тело запроса /check от frontend."""
 
-    # Условие выбранной задачи.
+    # Legacy frontend field. Backend uses the canonical server-side task text.
     problem: str
 
     # Решение или вопрос ученика.
@@ -21,7 +21,7 @@ class CheckRequest(BaseModel):
     # Картинка, которую приложил ученик к своему решению.
     problem_image_base64: str | None = None
 
-    # URL картинки/файла условия выбранной задачи.
+    # Legacy frontend field. Backend resolves task media from the task record.
     task_image_url: str | None = None
 
     # Student and task identifiers are optional for backward compatibility.

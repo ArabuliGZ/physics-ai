@@ -8,13 +8,12 @@ from starlette.concurrency import run_in_threadpool
 from app.schemas import CheckRequest
 from app.services.media import image_to_base64
 from app.services.media import is_image_file
-from app.services.media import resolve_task_media_url
+from app.services.media import resolve_task_media
 from app.services.progress import get_task_progress
 from app.services.progress import record_task_attempt
 from app.services.sessions import find_student_by_session_token
 from app.services.solution_attachments import convert_heic_data_url_to_jpeg
 from app.services.students import allowed_task_class_id
-from app.services.students import get_student
 from app.services.task_store import find_task
 from config import ALLOWED_SOLUTION_ATTACHMENT_MIME_TYPES
 from config import HEIC_SOLUTION_ATTACHMENT_MIME_TYPES
@@ -72,25 +71,23 @@ async def check(
 ):
     """Проверяет решение ученика.
 
-    Поведение сохранено: текст задачи, ответ ученика, история и картинки
-    передаются в ask_llm, а результат модели возвращается frontend.
+    Условие, ответ и файл задачи всегда берутся из серверной базы. Клиент
+    передает только идентификаторы задачи и решение ученика.
     """
 
     task_image_base64 = None
     solution_image_base64 = data.problem_image_base64
-    has_tracking_data = (
-        data.student_id is not None
-        and data.class_id is not None
-        and data.chapter is not None
-        and data.topic is not None
-        and data.number is not None
-    )
     token = bearer_token(authorization)
     session_student = find_student_by_session_token(token) if token else None
 
+    if session_student is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Student login is required"
+        )
+
     if (
-        has_tracking_data
-        and session_student is not None
+        data.student_id is not None
         and int(session_student["id"]) != int(data.student_id)
     ):
         raise HTTPException(
@@ -98,20 +95,36 @@ async def check(
             detail="Student session does not match submitted student"
         )
 
-    student = (
-        session_student
-        if session_student is not None
-        else get_student(data.student_id) if has_tracking_data else None
+    task_identifiers = (
+        data.class_id,
+        data.chapter,
+        data.topic,
+        data.number,
     )
 
-    if (
-        has_tracking_data
-        and student is not None
-        and data.class_id != allowed_task_class_id(student)
-    ):
+    if any(value is None or not str(value).strip() for value in task_identifiers):
+        raise HTTPException(
+            status_code=400,
+            detail="Task identifiers are required"
+        )
+
+    if data.class_id != allowed_task_class_id(session_student):
         raise HTTPException(
             status_code=403,
             detail="This task base is not available for the selected student"
+        )
+
+    task = find_task(
+        data.class_id,
+        data.chapter,
+        data.topic,
+        data.number,
+    )
+
+    if task is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
         )
 
     # Если у задачи есть файл условия, прикладываем его к LLM только
@@ -146,29 +159,24 @@ async def check(
                     detail="Не получилось прочитать файл HEIC или HEIF."
                 ) from error
 
-    if data.task_image_url:
-
-        local_path = resolve_task_media_url(
-            data.task_image_url
-        )
-
-        if is_image_file(local_path):
-
-            task_image_base64 = image_to_base64(
-                local_path
+    if task.get("image"):
+        try:
+            local_path = resolve_task_media(
+                task["class_id"],
+                task["image"],
             )
+        except HTTPException as error:
+            if error.status_code != 404:
+                raise
+        else:
+            if is_image_file(local_path):
+                task_image_base64 = image_to_base64(local_path)
 
-    task = find_task(
-        data.class_id,
-        data.chapter,
-        data.topic,
-        data.number,
-    )
-    reference_answer = task.get("answer") if task is not None else None
+    reference_answer = task.get("answer")
 
     result = await run_in_threadpool(
         ask_llm,
-        data.problem,
+        task["problem"],
         data.solution,
         data.history,
         data.hint_level,
@@ -181,26 +189,26 @@ async def check(
     result["attempt_id"] = None
     result["progress"] = None
 
-    if has_tracking_data and student is not None:
-        attempt = record_task_attempt(
-            student_id=data.student_id,
-            class_id=data.class_id,
-            chapter=data.chapter,
-            topic=data.topic,
-            number=data.number,
-            solution_text=data.solution,
-            ai_response=result.get("message"),
-            is_passed=bool(result.get("is_passed"))
-        )
+    student_id = int(session_student["id"])
+    attempt = record_task_attempt(
+        student_id=student_id,
+        class_id=data.class_id,
+        chapter=data.chapter,
+        topic=data.topic,
+        number=data.number,
+        solution_text=data.solution,
+        ai_response=result.get("message"),
+        is_passed=bool(result.get("is_passed"))
+    )
 
-        result["attempt_saved"] = True
-        result["attempt_id"] = attempt["id"]
-        result["progress"] = get_task_progress(
-            data.student_id,
-            data.class_id,
-            data.chapter,
-            data.topic,
-            data.number
-        )
+    result["attempt_saved"] = True
+    result["attempt_id"] = attempt["id"]
+    result["progress"] = get_task_progress(
+        student_id,
+        data.class_id,
+        data.chapter,
+        data.topic,
+        data.number
+    )
 
     return result
