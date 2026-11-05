@@ -176,11 +176,14 @@ def clean_json_response(content):
 def parse_json_response(content):
     content = clean_json_response(content)
 
-    if content is None:
+    if not content:
         return {
             "status": "error",
             "is_passed": False,
-            "message": "Модель не вернула текст",
+            "message": (
+                "Модель не успела сформировать ответ. "
+                "Попробуй отправить решение ещё раз."
+            ),
         }
 
     try:
@@ -548,7 +551,8 @@ def ask_timeweb(
         response_format={"type": "json_object"},
         reference_answer=reference_answer,
     )
-    payload["max_completion_tokens"] = payload.pop("max_tokens")
+    payload.pop("max_tokens")
+    payload["max_completion_tokens"] = TIMEWEB_MAX_COMPLETION_TOKENS  # noqa: F405
     payload.pop("temperature", None)
 
     return send_openai_compatible_request(

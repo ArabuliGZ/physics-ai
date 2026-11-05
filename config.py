@@ -34,6 +34,7 @@ QWEN_CLOUD_ENABLE_THINKING = False
 # Timeweb AI Gateway / OpenAI-compatible endpoint.
 TIMEWEB_LLM_API_URL = "https://api.timeweb.ai/v1/chat/completions"
 TIMEWEB_LLM_MODEL = "openai/gpt-6-luna"
+TIMEWEB_MAX_COMPLETION_TOKENS = 2000
 
 
 # Shared LLM generation settings.
