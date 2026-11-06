@@ -424,6 +424,10 @@ def ask_letovo_llm(
         response_format={"type": "json_object"},
         reference_answer=reference_answer,
     )
+    payload["max_tokens"] = LETOVO_MAX_COMPLETION_TOKENS  # noqa: F405
+    payload.pop("temperature", None)
+    payload["reasoning_effort"] = LETOVO_REASONING_EFFORT  # noqa: F405
+    payload["thinking"] = {"type": "enabled"}
 
     return send_openai_compatible_request(
         LETOVO_LLM_API_URL,  # noqa: F405

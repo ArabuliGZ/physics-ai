@@ -16,6 +16,8 @@ MODEL_PROVIDER = os.getenv(
 # Letovo Open WebUI / OpenAI-compatible endpoint.
 LETOVO_LLM_API_URL = "https://llm.letovo.site/openai/chat/completions"
 LETOVO_LLM_MODEL = "deepseek-v4-flash"
+LETOVO_REASONING_EFFORT = "low"
+LETOVO_MAX_COMPLETION_TOKENS = 2500
 
 
 # OpenRouter fallback. Change MODEL_PROVIDER to "openrouter" to use it.
