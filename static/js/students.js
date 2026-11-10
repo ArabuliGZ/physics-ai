@@ -11,17 +11,40 @@ function clearSavedStudent() {
 }
 
 
-function studentFetch(url, options = {}) {
+function handleExpiredStudentSession() {
+    if (!STATE.student.current) {
+        return;
+    }
+
+    clearSavedStudent();
+    resetStudentWorkspace();
+    renderStudentSession();
+
+    const errorBox = document.getElementById("student_login_error");
+
+    if (errorBox) {
+        errorBox.textContent = "Сессия истекла. Войди снова.";
+    }
+}
+
+
+async function studentFetch(url, options = {}) {
     const headers = new Headers(options.headers || {});
 
     if (STATE.student.current?.session_token) {
         headers.set("Authorization", `Bearer ${STATE.student.current.session_token}`);
     }
 
-    return fetch(url, {
+    const response = await fetch(url, {
         ...options,
         headers,
     });
+
+    if (response.status === 401) {
+        handleExpiredStudentSession();
+    }
+
+    return response;
 }
 
 
@@ -144,7 +167,7 @@ function resetStudentWorkspace() {
 }
 
 
-function initStudentSession() {
+async function initStudentSession() {
     const savedStudent = localStorage.getItem("physics_ai_student");
 
     if (savedStudent) {
@@ -162,6 +185,36 @@ function initStudentSession() {
     }
 
     renderStudentSession();
+
+    if (!STATE.student.current) {
+        return;
+    }
+
+    const studentId = STATE.student.current.id;
+    const sessionToken = STATE.student.current.session_token;
+
+    try {
+        const response = await studentFetch(`/students/${studentId}`);
+
+        if (response.status === 403) {
+            handleExpiredStudentSession();
+            return;
+        }
+
+        if (!response.ok) {
+            return;
+        }
+
+        const currentStudent = await response.json();
+
+        saveStudent({
+            ...currentStudent,
+            session_token: sessionToken,
+        });
+        renderStudentSession();
+    } catch (error) {
+        console.warn("Student session validation failed:", error);
+    }
 }
 
 

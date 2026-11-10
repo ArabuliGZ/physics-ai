@@ -66,6 +66,17 @@ class RouteSecurityTests(unittest.TestCase):
         self.assertIn("div.textContent", chat_source)
         self.assertIn("textDiv.textContent", chat_source)
 
+    def test_expired_student_session_returns_to_login(self):
+        students_source = Path("static/js/students.js").read_text(
+            encoding="utf-8"
+        )
+        main_source = Path("static/js/main.js").read_text(encoding="utf-8")
+
+        self.assertIn("response.status === 401", students_source)
+        self.assertIn("handleExpiredStudentSession", students_source)
+        self.assertIn("initStudentSession()", main_source)
+        self.assertIn("Promise.all", main_source)
+
 
 if __name__ == "__main__":
     unittest.main()

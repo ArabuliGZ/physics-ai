@@ -240,6 +240,10 @@ async function sendSolution(problemText, studentSolution, attachedFile = null) {
 
     const data = await response.json();
 
+    if (response.status === 401) {
+        throw new Error("student_session_expired");
+    }
+
     if (!response.ok) {
         throw new Error(data.detail || "Не получилось отправить решение.");
     }
@@ -321,10 +325,12 @@ async function checkSolution() {
 
     } catch (error) {
 
-        addMessage(
-            "Не получилось отправить решение. Попробуй еще раз.",
-            "assistant"
-        );
+        if (error.message !== "student_session_expired") {
+            addMessage(
+                "Не получилось отправить решение. Попробуй еще раз.",
+                "assistant"
+            );
+        }
 
     } finally {
 

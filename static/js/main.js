@@ -43,6 +43,14 @@ autoResize(
     document.getElementById("solution")
 );
 
-initStudentSession();
+async function initializeStudentApp() {
+    await Promise.all([
+        initStudentSession(),
+        loadTasks(),
+    ]);
+}
 
-loadTasks();
+
+initializeStudentApp().catch(error => {
+    console.error("Student app initialization failed:", error);
+});

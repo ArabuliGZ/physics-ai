@@ -417,7 +417,9 @@ async function updateProgressTable(options = {}) {
         `;
         STATE.progress.renderedClassId = group;
     } catch {
-        table.innerHTML = "<div class=\"progress-empty\">Не получилось загрузить прогресс.</div>";
+        table.innerHTML = STATE.student.current
+            ? "<div class=\"progress-empty\">Не получилось загрузить прогресс.</div>"
+            : "<div class=\"progress-empty\">Войди, чтобы видеть прогресс.</div>";
         STATE.progress.renderedClassId = null;
     }
 }
