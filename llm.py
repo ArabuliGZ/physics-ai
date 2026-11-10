@@ -17,7 +17,6 @@ os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 LETOVO_LLM_API_KEY = os.getenv("LETOVO_LLM_API_KEY")
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY")
 TIMEWEB_CLOUD_API_KEY = os.getenv("TIMEWEB_CLOUD_API_KEY")
@@ -177,35 +176,47 @@ def parse_json_response(content):
     content = clean_json_response(content)
 
     if not content:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": (
+        return technical_llm_error(
+            (
                 "Модель не успела сформировать ответ. "
                 "Попробуй отправить решение ещё раз."
-            ),
-        }
+            )
+        )
 
     try:
         parsed = json.loads(content)
         return normalize_llm_result(parsed)
     except Exception:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": content,
-        }
+        return technical_llm_error(content)
+
+
+def technical_llm_error(message):
+    """Mark provider failures that may be retried through a fallback."""
+
+    return {
+        "status": "error",
+        "is_passed": False,
+        "message": str(message),
+        "_retryable": True,
+    }
+
+
+def public_llm_result(result):
+    """Remove internal fallback metadata before returning an API response."""
+
+    public_result = dict(result or {})
+    public_result.pop("_retryable", None)
+    return public_result
 
 
 def normalize_llm_result(result):
     """Normalize model JSON so progress tracking has a stable boolean."""
 
     if not isinstance(result, dict):
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": str(result),
-        }
+        return technical_llm_error(result)
+
+    if "status" not in result and "is_passed" not in result:
+        return technical_llm_error(result)
 
     status = result.get("status", "error")
     is_passed = result.get("is_passed")
@@ -238,56 +249,48 @@ def ask_llm(
     reference_answer=None,
 ):
     active_provider = get_active_llm_provider()
-
-    if active_provider == "letovo":
-        return ask_letovo_llm(
-            problem_text,
-            solution_text,
-            history,
-            hint_level,
-            problem_image_base64,
-            task_image_base64,
-            reference_answer,
-        )
-
-    if active_provider == "openrouter":
-        return ask_openrouter(
-            problem_text,
-            solution_text,
-            history,
-            hint_level,
-            problem_image_base64,
-            task_image_base64,
-            reference_answer,
-        )
-
-    if active_provider == "qwencloud":
-        return ask_qwencloud(
-            problem_text,
-            solution_text,
-            history,
-            hint_level,
-            problem_image_base64,
-            task_image_base64,
-            reference_answer,
-        )
-
-    if active_provider == "timeweb":
-        return ask_timeweb(
-            problem_text,
-            solution_text,
-            history,
-            hint_level,
-            problem_image_base64,
-            task_image_base64,
-            reference_answer,
-        )
-
-    return {
-        "status": "error",
-        "is_passed": False,
-        "message": "Неизвестный provider",
+    provider_functions = {
+        "letovo": ask_letovo_llm,
+        "qwencloud": ask_qwencloud,
+        "timeweb": ask_timeweb,
     }
+    provider_order = []
+
+    if active_provider in provider_functions:
+        provider_order.append(active_provider)
+
+    for provider in ("qwencloud", "letovo"):
+        if not provider_order or provider != provider_order[-1]:
+            provider_order.append(provider)
+
+    last_result = technical_llm_error("Неизвестный provider")
+
+    for index, provider in enumerate(provider_order):
+        result = provider_functions[provider](
+            problem_text,
+            solution_text,
+            history,
+            hint_level,
+            problem_image_base64,
+            task_image_base64,
+            reference_answer,
+        )
+
+        if not isinstance(result, dict):
+            result = technical_llm_error(result)
+
+        last_result = result
+
+        if not result.get("_retryable"):
+            return public_llm_result(result)
+
+        if index + 1 < len(provider_order):
+            print(
+                f"LLM FALLBACK: {provider} failed; "
+                f"trying {provider_order[index + 1]}"
+            )
+
+    return public_llm_result(last_result)
 
 
 def build_check_payload(
@@ -342,38 +345,34 @@ def send_openai_compatible_request(url, payload, headers, provider_name):
             timeout=LLM_REQUEST_TIMEOUT,  # noqa: F405
         )
     except requests.exceptions.Timeout:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": (
+        return technical_llm_error(
+            (
                 "Модель слишком долго отвечает. "
                 "Попробуй отправить изображение меньшего размера или повторить позже."
-            ),
-        }
+            )
+        )
     except requests.exceptions.RequestException as error:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": f"Не удалось подключиться к LLM: {error}",
-        }
+        return technical_llm_error(f"Не удалось подключиться к LLM: {error}")
 
     print(f"{provider_name.upper()} STATUS:", response.status_code)
 
     try:
         raw = response.json()
     except ValueError:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": (
+        return technical_llm_error(
+            (
                 f"{provider_name} returned a non-JSON response "
                 f"with status {response.status_code}"
-            ),
-        }
+            )
+        )
 
     print(raw)
 
-    if response.status_code >= 400 or "choices" not in raw:
+    if (
+        response.status_code >= 400
+        or not isinstance(raw, dict)
+        or not raw.get("choices")
+    ):
         error_value = raw.get("error") if isinstance(raw, dict) else raw
 
         if isinstance(error_value, dict):
@@ -387,11 +386,7 @@ def send_openai_compatible_request(url, payload, headers, provider_name):
         else:
             error_message = str(error_value or f"{provider_name} request failed")
 
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": error_message,
-        }
+        return technical_llm_error(error_message)
 
     content = raw["choices"][0]["message"]["content"]
     return parse_json_response(content)
@@ -407,11 +402,7 @@ def ask_letovo_llm(
     reference_answer=None,
 ):
     if not LETOVO_LLM_API_KEY:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "LETOVO_LLM_API_KEY is not configured",
-        }
+        return technical_llm_error("LETOVO_LLM_API_KEY is not configured")
 
     payload = build_check_payload(
         LETOVO_LLM_MODEL,  # noqa: F405
@@ -439,45 +430,6 @@ def ask_letovo_llm(
     )
 
 
-def ask_openrouter(
-    problem_text,
-    solution_text,
-    history,
-    hint_level,
-    problem_image_base64=None,
-    task_image_base64=None,
-    reference_answer=None,
-):
-    if not OPENROUTER_API_KEY:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "OPENROUTER_API_KEY is not configured",
-        }
-
-    payload = build_check_payload(
-        OPENROUTER_MODEL,  # noqa: F405
-        problem_text,
-        solution_text,
-        history,
-        hint_level,
-        problem_image_base64,
-        task_image_base64,
-        reference_answer=reference_answer,
-    )
-
-    return send_openai_compatible_request(
-        "https://openrouter.ai/api/v1/chat/completions",
-        payload,
-        {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "HTTP-Referer": "https://test.physais.ru",
-            "X-OpenRouter-Title": "Physics AI",
-        },
-        "openrouter",
-    )
-
-
 def ask_qwencloud(
     problem_text,
     solution_text,
@@ -488,11 +440,7 @@ def ask_qwencloud(
     reference_answer=None,
 ):
     if not DASHSCOPE_API_KEY:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "DASHSCOPE_API_KEY is not configured",
-        }
+        return technical_llm_error("DASHSCOPE_API_KEY is not configured")
 
     qwen_model = os.getenv("QWEN_CLOUD_MODEL", QWEN_CLOUD_MODEL)  # noqa: F405
     qwen_api_url = os.getenv(
@@ -538,11 +486,7 @@ def ask_timeweb(
     reference_answer=None,
 ):
     if not TIMEWEB_CLOUD_API_KEY:
-        return {
-            "status": "error",
-            "is_passed": False,
-            "message": "TIMEWEB_CLOUD_API_KEY is not configured",
-        }
+        return technical_llm_error("TIMEWEB_CLOUD_API_KEY is not configured")
 
     payload = build_check_payload(
         TIMEWEB_LLM_MODEL,  # noqa: F405

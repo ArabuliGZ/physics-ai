@@ -9,7 +9,6 @@ load_dotenv()
 from app.database import database_connection
 from config import LETOVO_LLM_MODEL
 from config import MODEL_PROVIDER
-from config import OPENROUTER_MODEL
 from config import QWEN_CLOUD_MODEL
 from config import TIMEWEB_LLM_MODEL
 
@@ -25,11 +24,6 @@ LLM_PROVIDER_OPTIONS = (
         "provider": "qwencloud",
         "label": "QwenCloud",
         "model": QWEN_CLOUD_MODEL,
-    },
-    {
-        "provider": "openrouter",
-        "label": "OpenRouter",
-        "model": OPENROUTER_MODEL,
     },
     {
         "provider": "timeweb",
@@ -59,7 +53,7 @@ def normalize_llm_provider(provider):
     if fallback == "qwen":
         fallback = "qwencloud"
 
-    return fallback if fallback in VALID_LLM_PROVIDERS else "letovo"
+    return fallback if fallback in VALID_LLM_PROVIDERS else "qwencloud"
 
 
 def get_stored_llm_provider():
@@ -82,6 +76,7 @@ def get_stored_llm_provider():
         return None
 
     provider = str(row["value"] or "").strip().lower()
+
     return provider if provider in VALID_LLM_PROVIDERS else None
 
 

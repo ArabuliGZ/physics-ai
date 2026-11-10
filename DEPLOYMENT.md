@@ -18,16 +18,13 @@ In Timeweb DNS:
 - For a subdomain like `app.example.ru`, this is usually a `CNAME`.
 - For the root domain like `example.ru`, use the exact record Render provides.
 
-OpenRouter stays external: the browser calls this app at `/check`, and only the
-backend calls `https://openrouter.ai/api/v1/chat/completions`. Keep
-`OPENROUTER_API_KEY` in Render environment variables, not in frontend JavaScript.
-
 Recommended Render environment variables:
 
 ```text
-MODEL_PROVIDER=openrouter
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=anthropic/claude-sonnet-4
+MODEL_PROVIDER=qwencloud
+DASHSCOPE_API_KEY=...
+TIMEWEB_CLOUD_API_KEY=...
+LETOVO_LLM_API_KEY=...
 SEED_DEMO_DATA=0
 ```
 
